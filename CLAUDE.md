@@ -33,7 +33,7 @@ En webapp til elektrikerarbejde: overblik over tavler, grupper, lokaler, brugsge
 
 Brugerens projekter ligger i browserens localStorage på `rehhoff.github.io`. En ny version af `index.html` læser de samme nøgler, så data overlever opdateringer, så længe disse regler holdes:
 
-1. Omdøb eller fjern aldrig disse nøgler: `tavleoversigt.projekter`, `tavleoversigt.p.<id>`, `tavleoversigt.backups`, `tavleoversigt.tema` (samt de gamle `tavleoversigt.v1` og `tavleoversigt.v2`, som stadig migreres).
+1. Omdøb eller fjern aldrig disse nøgler: `tavleoversigt.projekter`, `tavleoversigt.p.<id>`, `tavleoversigt.backups`, `tavleoversigt.tema`, `tavleoversigt.sync` (samt de gamle `tavleoversigt.v1` og `tavleoversigt.v2`, som stadig migreres).
 2. Ændrer du datamodellen, så udvid `norm()` med standardværdier og migrering af gamle felter, og hæv `SCHEMA`. Første indlæsning efter en hævning tager automatisk en backup i browseren (`lavBackup`), før noget skrives.
 3. Slet aldrig et felt, som brugeren har data i, uden at flytte dataene først.
 4. Test altid en opgradering: opret data i den gamle version, åbn den nye på samme origin, og kontrollér at projekterne er intakte (se `tests/smoke.py`).
@@ -60,6 +60,6 @@ Alt er vejledende og står også i appen:
 
 ## Kendte begrænsninger og åbne forslag
 
-- Data findes kun i den browser, de er oprettet i. Backupfil er eneste kopi på tværs af enheder.
+- Data ligger i browseren. Synkronisering mellem enheder kræver, at brugeren forbinder en GitHub Gist med et token (Dokumentation → Synkronisering). Ellers er en backupfil eneste kopi på tværs af enheder.
 - Tailwind kører fra CDN og giver en advarsel i konsollen. En bygget CSS-fil vil fjerne afhængigheden.
-- Forslag Alexander ikke har taget stilling til endnu: egen I<sub>z</sub>-tabel for XLPE, krydsafbryder, afbrydere i enstregsdiagram, tændingsdiagrammer i eksporten, deling mellem enheder.
+- Forslag Alexander ikke har taget stilling til endnu: egen I<sub>z</sub>-tabel for XLPE, krydsafbryder, afbrydere i enstregsdiagram, tændingsdiagrammer i eksporten.
