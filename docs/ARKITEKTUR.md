@@ -27,9 +27,10 @@ Faner i `views`: Tavle, Enstregsdiagram, Tændingsdiagram, Samlepunkter & dåser
 | `tavleoversigt.p.<id>` | Ét projekt som JSON |
 | `tavleoversigt.backups` | Op til tre automatiske backups `{ tid, grund, app, schema, idx, raw:{id:json} }` |
 | `tavleoversigt.tema` | `auto`, `light` eller `dark` |
+| `tavleoversigt.sync` | Synkronisering: `{ token, gistId, login, base:{ id: hash }, sidst }`. Findes kun, når synkronisering er slået til |
 | `tavleoversigt.v1`, `.v2` | Gamle formater, migreres ved første start |
 
-`norm()` lægger standardværdier på og migrerer gamle felter, hver gang et projekt læses. Backupfilen har formatet `{ format:'tavleoversigt-backup', app, schema, eksporteret, aktiv, projekter:[{ id, data }] }`.
+`norm()` lægger standardværdier på og migrerer gamle felter, hver gang et projekt læses. Synkroniseringens Gist indeholder markøren `tavleoversigt.json` og én fil `tavleoversigt-<id>.json` pr. projekt. `base` er hver projekts hash ved seneste synkronisering og bruges til tre-vejs fletning (se `docs/planer/2026-11-15-gist-synk.md`). Backupfilen har formatet `{ format:'tavleoversigt-backup', app, schema, eksporteret, aktiv, projekter:[{ id, data }] }`.
 
 ## Datamodel for et projekt
 
@@ -54,6 +55,7 @@ Relationer: gruppe → tavle, gruppe → HPFI, brugsgenstand → gruppe, lokale 
 | Område | Funktioner |
 |---|---|
 | Lagring | `save`, `skriv`, `laes`, `skrivIdx`, `lavBackup`, `gendanBackup`, `backupJson`, `importBackup` |
+| Synkronisering | `synkForbind`, `synkNu`, `synkKoer` (fletning), `synkHent`, `synkSletLokalt`, `synkSenere`, `synkAfbryd`, `gh`, `hashD` |
 | Strøm og last | `strom`, `instI`, `egenI`, `gruppeI`, `gruppeFaser`, `subFaser`, `faseInfo`, `autoBalance` |
 | Kabler | `du`, `duLokal`, `duOp`, `tavleDu`, `tilgDu`, `iz`, `izFejl`, `forslag`, `lmax` |
 | Kontrol | `gruppeFejl`, `warnings`, `mangler`, `linkFejl` |
@@ -63,4 +65,4 @@ Relationer: gruppe → tavle, gruppe → HPFI, brugsgenstand → gruppe, lokale 
 
 ## Test
 
-`tests/smoke.py` åbner appen i headless Chrome med Alpine fra `node_modules`, skifter alle faner, åbner alle formularer, kører beregninger og eksport og tjekker en opgradering med bevarede data. Tailwind-CDN'et blokeres i testen, så layoutet ikke testes. Kør `npm install` og derefter `python3 tests/smoke.py`.
+`tests/smoke.py` åbner appen i headless Chrome med Alpine fra `node_modules`, skifter alle faner, åbner alle formularer, kører beregninger og eksport tjekker en opgradering med bevarede data og synkroniserer mellem to browserkontekster mod en falsk GitHub-API. Tailwind-CDN'et blokeres i testen, så layoutet ikke testes. Kør `npm install` og derefter `python3 tests/smoke.py`.

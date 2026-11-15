@@ -177,7 +177,7 @@ button.din-item{cursor:pointer}
       </div>
       <input id="p-navn" class="hd text-3xl font-bold bg-transparent w-full min-w-0 border-b border-transparent hover:border-line focus:border-accent" x-model="db.projekt.navn" @change="save()" aria-label="Projektnavn" placeholder="Projektnavn">
       <p class="text-sm text-muted" x-show="stamTxt()" x-text="stamTxt()"></p>
-      <p class="text-xs mt-1" :class="storageOk ? 'text-muted' : 'warn'" x-text="(storageOk ? 'Gemmes automatisk i browseren' : 'Browseren tillader ikke lokal lagring. Hent en backup under Dokumentation.') + ' · version ' + appVersion"></p>
+      <p class="text-xs mt-1" :class="storageOk ? 'text-muted' : 'warn'" x-text="(storageOk ? 'Gemmes automatisk i browseren' : 'Browseren tillader ikke lokal lagring. Hent en backup under Dokumentation.') + (synk ? (synkFejl ? ' · synkronisering fejlede, se Dokumentation' : synkKoerer ? ' · synkroniserer …' : ' · synkroniseres via GitHub') : '') + ' · version ' + appVersion"></p>
     </div>
     <div class="flex flex-wrap gap-2">
       <div class="relative" @click.outside="soegAaben=false">
@@ -353,13 +353,13 @@ button.din-item{cursor:pointer}
                 <span class="text-xs uppercase tracking-wider text-muted">Fase</span>
                 <template x-if="sg().faser!=3">
                   <span class="flex gap-1"><template x-for="p in ['L1','L2','L3']" :key="p">
-                    <button class="btn num" :class="sg().fase===p && 'sel'" @click="setFase(sel, p)" x-text="p"></button></template></span>
+                    <button class="btn num" :class="sg()?.fase===p && 'sel'" @click="setFase(sel, p)" x-text="p"></button></template></span>
                 </template>
                 <template x-if="sg().faser==3"><span class="ph F3">L1 L2 L3</span></template>
                 <span class="text-xs uppercase tracking-wider text-muted ml-auto">HPFI</span>
                 <select class="inp inp-s" id="i-rcd" aria-label="HPFI" @change="setRcd(sel, $event.target.value)">
                   <option value="" :selected="!sg().rcdId">Ingen</option>
-                  <template x-for="r in rcdsFor(sg().tavleId)" :key="r.id"><option :value="r.id" :selected="sg().rcdId===r.id" x-text="r.navn"></option></template>
+                  <template x-for="r in rcdsFor(sg()?.tavleId)" :key="r.id"><option :value="r.id" :selected="sg()?.rcdId===r.id" x-text="r.navn"></option></template>
                 </select>
               </div>
               <template x-for="u in underTavler(sel)" :key="u.id"><p class="text-xs num">Forsyner undertavle <button class="underline" @click="sporTil('t:' + u.id)" x-text="u.navn"></button></p></template>
@@ -883,7 +883,7 @@ button.din-item{cursor:pointer}
       </div>
       <div class="panel p-3 flex flex-col gap-2">
         <h2 class="hd text-lg">Datasikring</h2>
-        <p class="text-xs text-muted">Projekterne gemmes i denne browser på denne enhed. Opdateringer af appen sletter dem ikke, og der tages automatisk en backup i browseren, før data opgraderes. Ryddes browserdata, eller skifter du enhed, er en backupfil den eneste kopi.</p>
+        <p class="text-xs text-muted">Projekterne gemmes i denne browser på denne enhed. Opdateringer af appen sletter dem ikke, og der tages automatisk en backup i browseren, før data opgraderes. Ryddes browserdata, eller skifter du enhed, er en backupfil eller synkronisering via GitHub den eneste kopi.</p>
         <button class="btn justify-center btn-primary" @click="hentBackup()" x-text="'Hent backup af alle ' + projekter.length + ' projekter'"></button>
         <p class="text-xs num" :class="!sidstBackup && 'warn'" x-text="sidstBackup ? 'Seneste backupfil: ' + datoTxt(sidstBackup) : 'Der er ikke hentet en backupfil endnu.'"></p>
         <p class="text-xs text-muted" x-text="persistent ? 'Browseren har givet varig lagring, så data ryddes ikke automatisk ved pladsmangel.' : 'Browseren har ikke bekræftet varig lagring. Hent en backupfil jævnligt.'"></p>
@@ -898,6 +898,29 @@ button.din-item{cursor:pointer}
             </template>
           </div>
         </template>
+      </div>
+      <div class="panel p-3 flex flex-col gap-2">
+        <h2 class="hd text-lg">Synkronisering mellem enheder</h2>
+        <template x-if="!synk">
+          <div class="flex flex-col gap-2">
+            <p class="text-xs text-muted">Projekterne kan gemmes i en hemmelig Gist på din egen GitHub-konto og hentes på dine andre enheder. Opret et token, der kun har adgangen gist, og indsæt det her på hver enhed.</p>
+            <a class="btn justify-center" href="https://github.com/settings/tokens/new?scopes=gist&amp;description=El-oversigtsappen" target="_blank" rel="noopener">Opret token på GitHub ↗</a>
+            <label class="f" for="synk-token">GitHub-token<input id="synk-token" class="inp num" type="password" autocomplete="off" spellcheck="false" x-model="synkTokenInput" placeholder="ghp_…" @keydown.enter="synkForbind()"></label>
+            <button class="btn justify-center btn-primary" :disabled="!synkTokenInput.trim() || synkKoerer" @click="synkForbind()" x-text="synkKoerer ? 'Forbinder …' : 'Forbind'"></button>
+            <p class="text-xs text-muted">Tokenet gemmes kun i denne browser. Giv det ingen andre rettigheder end gist.</p>
+          </div>
+        </template>
+        <template x-if="synk">
+          <div class="flex flex-col gap-2">
+            <p class="text-xs" x-text="'Forbundet' + (synk?.login ? ' som ' + synk.login : '') + '. Ændringer sendes automatisk. Ændringer fra dine andre enheder hentes ved start, når fanen vises igen, og efter hver ændring.'"></p>
+            <p class="text-xs num" x-text="synkKoerer ? 'Synkroniserer …' : synk?.sidst ? 'Seneste synkronisering: ' + datoTxt(synk.sidst) : 'Ikke synkroniseret endnu.'"></p>
+            <button class="btn justify-center btn-primary" :disabled="synkKoerer" @click="synkNu()">Synkronisér nu</button>
+            <a class="text-xs text-muted underline" :href="'https://gist.github.com/' + (synk?.gistId || '')" target="_blank" rel="noopener">Åbn Gist'en på GitHub, med historik over alle versioner ↗</a>
+            <p class="text-xs text-muted">Er et projekt rettet på to enheder, før de nåede at synkronisere, beholdes begge udgaver, og den ene får "fra anden enhed" i navnet. Uændrede eksempelprojekter synkroniseres ikke.</p>
+            <button class="btn justify-center" :class="confirm==='synkaf' && 'armed btn-danger'" @click="ask('synkaf', () => synkAfbryd())" x-text="confirm==='synkaf' ? 'Bekræft: slå fra på denne enhed' : 'Slå synkronisering fra'"></button>
+          </div>
+        </template>
+        <p class="text-xs warn" x-show="synkFejl" x-text="synkFejl"></p>
       </div>
       <div class="panel p-3 flex flex-col gap-2">
         <h2 class="hd text-lg">Eksport</h2>
@@ -1402,8 +1425,19 @@ button.din-item{cursor:pointer}
 <script>
 const KEY = 'tavleoversigt.v2', OLD = 'tavleoversigt.v1', TKEY = 'tavleoversigt.tema', IDX = 'tavleoversigt.projekter';
 /* Versioner: APP_VERSION følger CHANGELOG.md. SCHEMA hæves kun, når datamodellen ændres, og udløser en automatisk backup før migrering. */
-const APP_VERSION = '9.0.0', SCHEMA = 9, BKEY = 'tavleoversigt.backups', BMAX = 3;
+const APP_VERSION = '9.1.0', SCHEMA = 9, BKEY = 'tavleoversigt.backups', BMAX = 3;
 const PK = id => 'tavleoversigt.p.' + id, MEM = {};
+/* Synkronisering: en hemmelig GitHub Gist med en markørfil og én fil pr. projekt. Se docs/planer/2026-11-15-gist-synk.md. */
+const SKEY = 'tavleoversigt.sync', GFIL = 'tavleoversigt.json', GP = id => 'tavleoversigt-' + id + '.json', GPRE = /^tavleoversigt-([A-Za-z0-9_-]+)\.json$/, GH = 'https://api.github.com';
+let SYNK_T = null;
+const hashTxt = s => {
+  let h1 = 0xdeadbeef, h2 = 0x41c6ce57;
+  for (let i = 0; i < s.length; i++) { const c = s.charCodeAt(i); h1 = Math.imul(h1 ^ c, 2654435761); h2 = Math.imul(h2 ^ c, 1597334677); }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(36);
+};
+const hashD = d => hashTxt(JSON.stringify(norm(JSON.parse(JSON.stringify(d)))));
 let SLDW = 1240;
 const IK = {
   el:'<svg viewBox="0 0 16 16" class="ik" aria-hidden="true"><path d="M9.5 1 3 9h4l-1 6 6.5-8H8.5z" fill="currentColor"/></svg>',
@@ -1583,6 +1617,7 @@ function app() {
     datakabler: ['Cat6', 'Cat6A', 'Cat7', 'Fiber OM4', 'Fiber OS2'],
     ampTrin: [25, 35, 50, 63, 80, 100, 125, 160, 200, 250, 315, 400, 630], svFilter: '',
     kabeltyper: KABLER,
+    synk: null, synkTokenInput: '', synkKoerer: false, synkIgen: false, synkFejl: '', iSynk: false,
     tvs: TV, appVersion: APP_VERSION, backups: [], sidstBackup: '', persistent: false, lokF: '', q: '', soegAaben: false, sk: { key:'koekken', navn:'Køkken', tavleId:'' }, skabeloner: SKABELONER, anlaegNavn: ANLAEG,
     enhNavne: [...new Set(EFFEKT.map(x => x[2]))].sort((a, b) => a.localeCompare(b, 'da')), sim: {}, hurtig: { aaben:false, type:'lokale', felt:'', f:{} }, eAuto: true, belEnhSidst: 'W', dragL: null, overL: null, mFilter: '', dAuto: { type:true, lok:true },
     manglerKat: { gruppe:'Uden gruppe', tilgang:'Dåse uden tilgang', afgang:'Dåse uden afgang', port:'Mangler port i rack' },
@@ -1633,8 +1668,11 @@ function app() {
           if (d) { this.db = d; this.hist = []; this.say('Projektet blev ændret i en anden fane og er indlæst igen.'); }
         } else if (ev.key === IDX && ev.newValue) {
           try { const x = JSON.parse(ev.newValue); if (Array.isArray(x.liste)) { this.projekter = x.liste; if (x.sidstBackup) this.sidstBackup = x.sidstBackup; } } catch (e) {}
-        }
+        } else if (ev.key === SKEY) this.synk = this.synkLaes();
       });
+      this.synk = this.synkLaes();
+      if (this.synk) this.synkNu();
+      document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && this.synk) this.synkNu(); });
     },
     /* projekter: hvert projekt gemmes under sin egen nøgle */
     skriv(id, d) { const s = JSON.stringify(d); MEM[id] = s; try { localStorage.setItem(PK(id), s); } catch (e) { this.storageOk = false; } },
@@ -1643,7 +1681,7 @@ function app() {
       try { const d = JSON.parse(s); return d && Array.isArray(d.tavler) ? norm(d) : null; } catch (e) { return null; }
     },
     meta(id, d) { const p = d.projekt; return { id, navn:p.navn || 'Uden navn', sagsnr:p.sagsnr, kunde:p.kunde, adresse:p.adresse, grupper:d.grupper.length, enheder:d.enheder.length, opdateret:new Date().toISOString() }; },
-    skrivIdx() { try { localStorage.setItem(IDX, JSON.stringify({ aktiv:this.pid, liste:this.projekter, schema:SCHEMA, app:APP_VERSION, sidstBackup:this.sidstBackup || '' })); } catch (e) { this.storageOk = false; } },
+    skrivIdx() { try { localStorage.setItem(IDX, JSON.stringify({ aktiv:this.pid, liste:this.projekter, schema:SCHEMA, app:APP_VERSION, sidstBackup:this.sidstBackup || '' })); } catch (e) { this.storageOk = false; } this.synkSenere(); },
     save() {
       this.storageOk = true; this.skriv(this.pid, this.db);
       const m = this.meta(this.pid, this.db), i = this.projekter.findIndex(p => p.id === this.pid);
@@ -2777,6 +2815,116 @@ function app() {
       }
       this.skrivIdx(); this.io = '';
       this.say(n + ' projekter indlæst fra backup' + (spring ? ', ' + spring + ' sprunget over, fordi de allerede findes uændret.' : '.'));
+    },
+    /* synkronisering mellem enheder via en hemmelig GitHub Gist (tre-vejs fletning pr. projekt) */
+    synkLaes() { try { const s = JSON.parse(localStorage.getItem(SKEY)); if (s && s.token) return Object.assign({ gistId:'', login:'', base:{}, sidst:'' }, s); } catch (e) {} return null; },
+    synkGem() { try { if (this.synk) localStorage.setItem(SKEY, JSON.stringify(this.synk)); else localStorage.removeItem(SKEY); } catch (e) {} },
+    synkMarkoer() { return JSON.stringify({ format:'tavleoversigt-sync', app:APP_VERSION, schema:SCHEMA, opdateret:new Date().toISOString() }); },
+    async gh(sti, opt) {
+      const o = opt || {}, h = { Accept:'application/vnd.github+json', Authorization:'Bearer ' + this.synk.token };
+      if (o.body) h['Content-Type'] = 'application/json';
+      let r; try { r = await fetch(GH + sti, { method:o.method || 'GET', body:o.body, headers:h, cache:'no-store' }); } catch (e) { throw new Error('Ingen forbindelse til GitHub. Ændringerne er gemt i browseren og sendes, når der er net igen.'); }
+      if (!r.ok) {
+        const e = new Error(r.status === 401 ? 'GitHub afviste tokenet. Slå synkronisering fra, og forbind med et nyt token.' : r.status === 404 ? 'Gist\'en blev ikke fundet, eller tokenet mangler adgangen gist.'
+          : r.status === 403 || r.status === 429 ? 'GitHub afviste forespørgslen (manglende adgang eller for mange kald). Prøv igen om lidt.' : 'GitHub svarede med fejl ' + r.status + '.');
+        e.status = r.status; throw e;
+      }
+      return r.status === 204 ? null : r.json();
+    },
+    async synkForbind() {
+      const token = this.synkTokenInput.trim(); if (!token || this.synkKoerer) return;
+      this.synk = { token, gistId:'', login:'', base:{}, sidst:'' }; this.synkFejl = ''; this.synkKoerer = true;
+      try {
+        try { this.synk.login = (await this.gh('/user')).login || ''; } catch (e) { if (e.status === 401) throw e; }
+        let gid = '';
+        for (let side = 1; side <= 10 && !gid; side++) {
+          const gs = await this.gh('/gists?per_page=100&page=' + side);
+          const g = gs.find(g => g.files && g.files[GFIL]); if (g) gid = g.id;
+          if (gs.length < 100) break;
+        }
+        if (!gid) gid = (await this.gh('/gists', { method:'POST', body:JSON.stringify({ description:'El-oversigtsappen: synkroniserede projekter', public:false, files:{ [GFIL]:{ content:this.synkMarkoer() } } }) })).id;
+        this.synk.gistId = gid; this.synkGem(); this.synkTokenInput = '';
+      } catch (e) { this.synk = null; this.synkGem(); this.synkFejl = e.message; this.synkKoerer = false; return; }
+      this.synkKoerer = false; await this.synkNu();
+      if (!this.synkFejl) this.say('Synkronisering slået til. Projekterne gemmes nu også i din Gist på GitHub.');
+    },
+    synkAfbryd() {
+      clearTimeout(SYNK_T); this.synk = null; this.synkGem(); this.synkFejl = '';
+      this.say('Synkronisering slået fra på denne enhed. Projekterne her og Gist\'en på GitHub er urørte.');
+    },
+    synkSenere() { if (!this.synk || this.iSynk) return; clearTimeout(SYNK_T); SYNK_T = setTimeout(() => this.synkNu(), 4000); },
+    async synkNu() {
+      if (this.synkKoerer) { this.synkIgen = true; return; }
+      const s = this.synkLaes(); this.synk = s; if (!s || !s.gistId) return;
+      clearTimeout(SYNK_T); this.synkKoerer = true; this.synkFejl = '';
+      try { await this.synkKoer(); this.synk.sidst = new Date().toISOString(); this.synkGem(); }
+      catch (e) { this.synkFejl = e.message || 'Synkroniseringen mislykkedes.'; }
+      finally { this.synkKoerer = false; if (this.synkIgen && this.synk) { this.synkIgen = false; this.synkNu(); } }
+    },
+    async synkKoer() {
+      const g = await this.gh('/gists/' + this.synk.gistId), fjern = {}, ugyldig = new Set();
+      for (const [navn, f] of Object.entries(g.files || {})) {
+        const m = GPRE.exec(navn); if (!m) continue;
+        let txt = f.content;
+        if (f.truncated || txt == null) { let r = null; try { r = await fetch(f.raw_url, { cache:'no-store' }); } catch (e) {} if (!r || !r.ok) throw new Error('Kunne ikke hente ' + navn + ' fra GitHub.'); txt = await r.text(); }
+        let d = null; try { d = JSON.parse(txt); } catch (e) {}
+        if (!d || !Array.isArray(d.tavler)) { ugyldig.add(m[1]); continue; }
+        d = norm(d); fjern[m[1]] = { d, h:hashD(d) };
+      }
+      /* Herfra og til PATCH er alt synkront, så brugeren kan ikke ændre noget midt i fletningen. */
+      this.iSynk = true;
+      const base = this.synk.base || {}, nyBase = {}, filer = {}, n = { hentet:0, sendt:0, slettet:0, konflikt:0 };
+      const fjernSlet = [];
+      try {
+        if (this.storageOk) this.skriv(this.pid, this.db);
+        const eks = new Set([seed(), seed2()].map(d => { d.projekt.dato = ''; return hashD(d); }));
+        const erEks = d => { const c = JSON.parse(JSON.stringify(d)); c.projekt.dato = ''; return eks.has(hashD(c)); };
+        const lokale = new Set(this.projekter.map(p => p.id));
+        for (const id of new Set([...lokale, ...Object.keys(fjern), ...Object.keys(base)])) {
+          const L = lokale.has(id) ? this.laes(id) : null, R = fjern[id], B = base[id];
+          if (ugyldig.has(id) || (lokale.has(id) && !L)) { if (B) nyBase[id] = B; continue; }
+          const Lh = L && hashD(L), send = () => { filer[GP(id)] = { content:JSON.stringify(L) }; nyBase[id] = Lh; n.sendt++; };
+          if (L && R) {
+            if (Lh === R.h) nyBase[id] = Lh;
+            else if (R.h === B) send();
+            else if (Lh === B) { this.synkHent(id, R.d); nyBase[id] = R.h; n.hentet++; }
+            else {
+              const kid = uid(), k = R.d; k.projekt.navn = (k.projekt.navn || 'Projekt') + ' (fra anden enhed ' + this.datoTxt(new Date().toISOString()) + ')';
+              this.synkHent(kid, k); filer[GP(kid)] = { content:JSON.stringify(k) }; nyBase[kid] = hashD(k);
+              send(); n.sendt--; n.konflikt++;
+            }
+          } else if (L) {
+            if (!B) { if (!erEks(L)) send(); }
+            else if (Lh === B) { this.synkSletLokalt(id); n.slettet++; }
+            else send();
+          } else if (R) {
+            if (B && R.h === B) { filer[GP(id)] = null; fjernSlet.push(id); n.slettet++; }
+            else { this.synkHent(id, R.d); nyBase[id] = R.h; n.hentet++; }
+          }
+        }
+        if (n.hentet || n.slettet || n.konflikt) this.skrivIdx();
+      } finally { this.iSynk = false; }
+      if (Object.keys(filer).length) {
+        filer[GFIL] = { content:this.synkMarkoer() };
+        await this.gh('/gists/' + this.synk.gistId, { method:'PATCH', body:JSON.stringify({ files:filer }) });
+      }
+      this.synk.base = nyBase;
+      if (n.konflikt) this.say(n.konflikt + ' projekt' + (n.konflikt > 1 ? 'er' : '') + ' var ændret på to enheder. Begge udgaver er beholdt, og den anden hedder "fra anden enhed".');
+      else if (n.hentet || n.slettet) this.say('Synkroniseret: ' + [n.hentet && n.hentet + ' hentet', n.slettet && n.slettet + ' slettet'].filter(Boolean).join(', ') + '.');
+    },
+    synkHent(id, d) {
+      this.skriv(id, d); const m = this.meta(id, d), i = this.projekter.findIndex(p => p.id === id);
+      if (i > -1) this.projekter.splice(i, 1, m); else this.projekter.push(m);
+      if (id === this.pid) { this.db = this.laes(id) || d; this.hist = []; }
+    },
+    synkSletLokalt(id) {
+      delete MEM[id]; try { localStorage.removeItem(PK(id)); } catch (e) {}
+      this.projekter = this.projekter.filter(p => p.id !== id);
+      if (id === this.pid) {
+        const nx = this.projekter[0], d = nx && this.laes(nx.id);
+        if (d) { this.pid = nx.id; this.db = d; } else { const t = tom(); t.projekt.navn = 'Nyt projekt'; this.pid = uid(); this.db = t; this.skriv(this.pid, t); this.projekter = [this.meta(this.pid, t)]; }
+        this.hist = []; this.sldSel = null; this.sel = (this.sorteredeGrupper()[0] || {}).id || null;
+      }
     },
     importJson(txt, somNyt) {
       let d; try { d = JSON.parse(txt); } catch (e) { this.say('Kunne ikke læse JSON. Kontrollér at hele teksten er med.'); return; }

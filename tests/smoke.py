@@ -32,6 +32,55 @@ async def route(r):
 
 A = "Alpine.$data(document.querySelector('[x-data]'))"
 
+# Falsk GitHub-API til synkroniseringstesten: én hemmelig Gist delt mellem to "enheder".
+GIST = {}
+CORS = {'access-control-allow-origin': '*', 'access-control-allow-headers': 'authorization, content-type, accept',
+        'access-control-allow-methods': 'GET, POST, PATCH, OPTIONS'}
+
+
+def gist_json():
+    return {'id': 'g1', 'files': {n: {'filename': n, 'content': c, 'truncated': False, 'raw_url': 'https://gist.test/raw/' + n}
+                                  for n, c in GIST.items()}}
+
+
+async def github(r):
+    req, u = r.request, r.request.url
+    svar = lambda data, status=200: r.fulfill(status=status, headers=CORS, content_type='application/json', body=json.dumps(data))
+    if req.method == 'OPTIONS':
+        return await r.fulfill(status=204, headers=CORS)
+    if req.headers.get('authorization') != 'Bearer test-token':
+        return await svar({'message': 'Bad credentials'}, 401)
+    sti = u.split('api.github.com', 1)[1]
+    if sti == '/user':
+        return await svar({'login': 'testbruger'})
+    if sti.startswith('/gists?'):
+        return await svar([gist_json()] if GIST else [])
+    if sti == '/gists' and req.method == 'POST':
+        GIST.update({n: f['content'] for n, f in json.loads(req.post_data)['files'].items()})
+        return await svar(gist_json(), 201)
+    if sti == '/gists/g1' and req.method == 'GET':
+        return await svar(gist_json())
+    if sti == '/gists/g1' and req.method == 'PATCH':
+        for n, f in json.loads(req.post_data)['files'].items():
+            if f is None: GIST.pop(n, None)
+            else: GIST[n] = f['content']
+        return await svar(gist_json())
+    await svar({'message': 'Not Found'}, 404)
+
+
+async def ny_enhed(b):
+    ctx = await b.new_context(viewport={'width': 1300, 'height': 1000})
+    await ctx.route('**/*', route)
+    await ctx.route('https://api.github.com/**', github)
+    pg = await ctx.new_page()
+    pg.on('pageerror', lambda e: fejl.append(str(e)) if 'tailwind' not in str(e) else None)
+    await pg.goto(URL); await pg.wait_for_timeout(400)
+    return pg
+
+
+def projekter_i_gist():
+    return sorted(json.loads(c)['projekt']['navn'] for n, c in GIST.items() if n != 'tavleoversigt.json')
+
 
 async def main():
     if not ALPINE.exists():
@@ -80,6 +129,32 @@ async def main():
         await pg.evaluate(f"{A}.importJson({json.dumps(Path(fil).read_text(encoding='utf-8'))}, true)")
         n1 = await pg.evaluate(f"{A}.projekter.length")
         tjek('backup kan hentes og genindlæses uden dubletter', n1 == n0, (n0, n1))
+
+        # 6. Synkronisering via Gist mellem to enheder
+        pa, pb = await ny_enhed(b), await ny_enhed(b)
+        navne = lambda pg: pg.evaluate(f"{A}.projekter.map(p=>p.navn)")
+        r = await pa.evaluate(f"""async()=>{{const a={A};a.synkTokenInput='forkert';await a.synkForbind();return {{s:!!a.synk,f:a.synkFejl}}}}""")
+        tjek('synk: forkert token afvises', not r['s'] and 'token' in r['f'], r)
+        await pa.evaluate(f"""async()=>{{const a={A};a.synkTokenInput='test-token';await a.synkForbind();
+          a.pf={{navn:'Synkprojekt',sagsnr:'S1',kunde:'',adresse:''}};a.nytProjekt();await a.synkNu();}}""")
+        tjek('synk: nyt projekt sendes, eksempler gør ikke', projekter_i_gist() == ['Synkprojekt'], projekter_i_gist())
+        await pb.evaluate(f"""async()=>{{const a={A};a.synkTokenInput='test-token';await a.synkForbind();}}""")
+        tjek('synk: anden enhed henter projektet', 'Synkprojekt' in await navne(pb), await navne(pb))
+        await pb.evaluate(f"""async()=>{{const a={A};a.skift(a.projekter.find(p=>p.navn==='Synkprojekt').id);a.mutate(()=>{{a.db.projekt.kunde='Rettet på B'}});await a.synkNu();}}""")
+        r = await pa.evaluate(f"""async()=>{{const a={A};await a.synkNu();return a.db.projekt.kunde}}""")
+        tjek('synk: ændring på B når frem til A (aktivt projekt genindlæst)', r == 'Rettet på B', r)
+        await pa.evaluate(f"""async()=>{{const a={A};a.mutate(()=>{{a.db.projekt.kunde='A samtidig'}});}}""")
+        await pb.evaluate(f"""async()=>{{const a={A};a.mutate(()=>{{a.db.projekt.kunde='B samtidig'}});await a.synkNu();}}""")
+        await pa.evaluate(f"""async()=>{{await {A}.synkNu();}}""")
+        r = await pa.evaluate(f"""(()=>{{const a={A};return a.projekter.filter(p=>/Synkprojekt/.test(p.navn)).map(p=>a.laes(p.id).projekt.kunde).sort()}})()""")
+        tjek('synk: samtidige ændringer beholder begge udgaver', r == ['A samtidig', 'B samtidig'], r)
+        await pb.evaluate(f"""async()=>{{await {A}.synkNu();}}""")
+        tjek('synk: konfliktkopien når også B', len([n for n in await navne(pb) if 'Synkprojekt' in n]) == 2, await navne(pb))
+        await pa.evaluate(f"""async()=>{{const a={A};a.sletProjekt(a.projekter.find(p=>/fra anden enhed/.test(p.navn)).id);await a.synkNu();}}""")
+        await pb.evaluate(f"""async()=>{{await {A}.synkNu();}}""")
+        tjek('synk: sletning på A slår igennem på B', [n for n in await navne(pb) if 'Synkprojekt' in n] == ['Synkprojekt'] and len(projekter_i_gist()) == 1, (await navne(pb), projekter_i_gist()))
+        r = await pb.evaluate(f"""async()=>{{const a={A};a.synkAfbryd();return {{s:localStorage.getItem('tavleoversigt.sync'),n:a.projekter.length}}}}""")
+        tjek('synk: slå fra fjerner token men ikke projekter', r['s'] is None and r['n'] >= 3, r)
 
         await b.close()
 
