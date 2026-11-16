@@ -15,10 +15,11 @@ En webapp til elektrikerarbejde: overblik over tavler, grupper, lokaler, brugsge
 
 - Appen er bygget af Claude Fable (version 1 til 8).
 - Claude Opus må lave ændringer direkte, når resultatet holder samme kvalitet: samme design, test før commit og opdateret dokumentation.
+- Claude Opus må planlægge alle opgaver, også store og svære (beregningsmotoren, datamodellen, enstregsdiagrammet, nye faner, migreringer).
+  - I planen tager Opus selv stilling til, om opgaven bedst udføres af Fable, Opus eller Sonnet, og skriver det i planen med en kort begrundelse.
+- Claude Fable må gennemgå og ændre enhver plan, hvis den ønsker det, også før eller under implementeringen. Ændringer noteres i planen med dato og begrundelse.
 - Claude Sonnet (og mindre modeller) må kun implementere efter en skriftlig plan fra Opus eller Fable.
-  - Fable planlægger store eller svære opgaver: beregningsmotoren, datamodellen, enstregsdiagrammet, nye faner, migreringer.
-  - Opus kan planlægge mindre opgaver: tekster, enkeltfelter, små UI-rettelser, nye effektforslag.
-  - Planen gemmes i `docs/planer/ÅÅÅÅ-MM-DD-emne.md` før implementeringen og nævnes i commit-beskeden.
+- Planen gemmes i `docs/planer/ÅÅÅÅ-MM-DD-emne.md` før implementeringen og nævnes i commit-beskeden.
 - Er du i tvivl om din rolle, så spørg Alexander, før du ændrer kode.
 
 ## Ønsker fra Alexander, der altid gælder
