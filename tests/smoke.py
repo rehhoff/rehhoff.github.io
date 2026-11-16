@@ -171,6 +171,30 @@ async def main():
              and r['sporE'][-2:] == ['a:' + r['id'], 'e:' + r['lampe']] and r['valgt'] and r['lampeTr'] and r['info'] == ['Afbryder', 'afbryder', True], r)
         tjek('dokumentationen har et tændingsdiagram pr. afbryder', r['afsnit'] and r['diagrammer'] == r['n'] >= 9 and r['navne'] and not r['docKlik'], r)
 
+        # 2e. Print og PDF: firmaoplysninger, logo, underskriftsfelt og A4-CSS i dokumentationen
+        r = await pg.evaluate(f"""(()=>{{const a={A};a.firma={{navn:'',cvr:'',adresse:'',telefon:'',logo:''}};const u=a.docHtml();
+          return {{uden:!u.includes('class="fa"')&&!u.includes('<img'), sig:u.includes('class="sig"')&&u.includes('Montør')&&u.includes('KLS'), a4:u.includes('@page{{size:A4;margin:15mm}}'),
+            gruppeskema:u.includes('<h1>Gruppeskema'), gemt:localStorage.getItem('tavleoversigt.firma')}}}})()""")
+        tjek('dokumentation uden firmaoplysninger som før, med underskriftsfelt og A4-CSS', r['uden'] and r['sig'] and r['a4'] and r['gruppeskema'] and r['gemt'] is None, r)
+        png = bytes.fromhex('89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000d49444154789c6360f8cfc00000030101001'
+                            '8dd8db00000000049454e44ae426082')
+        sidstVisning = await pg.evaluate(f"{A}.view"); await pg.evaluate(f"{A}.view='dokumentation'"); await pg.wait_for_timeout(200)
+        await pg.set_input_files('#fa-logo', files=[{'name': 'logo.png', 'mimeType': 'image/png', 'buffer': png}])
+        await pg.fill('#fa-navn', 'Test El ApS'); await pg.fill('#fa-cvr', '12345678'); await pg.wait_for_timeout(500)
+        r = await pg.evaluate(f"""(()=>{{const a={A};const u=a.docHtml(), s=JSON.parse(localStorage.getItem('tavleoversigt.firma')), f=a.firmaLaes();
+          return {{navn:u.includes('Test El ApS')&&u.includes('CVR 12345678'), logo:u.includes('<img src="data:image/'), gemt:s.navn==='Test El ApS'&&s.logo.startsWith('data:image/'), laes:f.cvr==='12345678'&&f.logo===a.firma.logo,
+            smaa:a.firma.logo.length<100000}}}})()""")
+        tjek('firmanavn, CVR og logo kommer med i dokumentationen og huskes i browseren', all(r.values()), r)
+        async with pg.expect_popup() as pop:
+            await pg.evaluate(f"{A}.udskriv()")
+        vindue = await pop.value
+        await vindue.wait_for_load_state()
+        r = await vindue.evaluate("[document.body.innerText.includes('Test El ApS'), document.body.innerText.includes('Underskrift'), document.querySelectorAll('img').length]")
+        tjek('udskriv() åbner et vindue med dokumentationen', r == [True, True, 1], r)
+        await vindue.close()
+        await pg.evaluate(f"{A}.view={json.dumps(sidstVisning)}")
+        await pg.evaluate(f"(()=>{{{A}.firma={{navn:'',cvr:'',adresse:'',telefon:'',logo:''}};localStorage.removeItem('tavleoversigt.firma')}})()")
+
         # 3. Beregning: ændring af tværsnit sænker spændingsfaldet
         r = await pg.evaluate(f"(()=>{{const a={A};const e=a.db.enheder.find(x=>Number(x.effekt)>1000);const f=a.du(e);const g=a.du(e,(e.tv||1.5)*4);return [f,g]}})()")
         tjek('spændingsfald falder med større tværsnit', r[0] > r[1] > 0, r)

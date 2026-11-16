@@ -811,8 +811,19 @@
       </div>
       <div class="panel p-3 flex flex-col gap-2">
         <h2 class="hd text-lg">Eksport</h2>
-        <button class="btn justify-center btn-primary" @click="hent(filnavn('dokumentation','html'), docHtml())">Hent dokumentation som HTML-fil</button>
-        <p class="text-xs text-muted">Indeholder stamdata, enstregsdiagram, gruppeskema og måleskema for det aktive projekt. Åbn filen i en browser og udskriv den derfra, eller gem som PDF. Udskrift direkte fra denne side er ikke mulig.</p>
+        <button class="btn justify-center btn-primary" @click="udskriv()">Udskriv / gem som PDF</button>
+        <button class="btn justify-center" @click="hent(filnavn('dokumentation','html'), docHtml())">Hent dokumentation som HTML-fil</button>
+        <p class="text-xs text-muted">Indeholder stamdata, enstregsdiagram, gruppeskema, måleskema og underskriftsfelt for det aktive projekt, sat op til A4. Vælg "Gem som PDF" som printer i udskriftsdialogen for at få en PDF-fil.</p>
+        <div class="flex flex-col gap-2 border-t border-line pt-2">
+          <h3 class="text-sm font-semibold">Firma på dokumentationen</h3>
+          <label class="f" for="fa-navn">Firmanavn<input id="fa-navn" class="inp" x-model="firma.navn" @input="firmaGem()"></label>
+          <label class="f" for="fa-cvr">CVR<input id="fa-cvr" class="inp" x-model="firma.cvr" @input="firmaGem()"></label>
+          <label class="f" for="fa-adr">Adresse<input id="fa-adr" class="inp" x-model="firma.adresse" @input="firmaGem()"></label>
+          <label class="f" for="fa-tlf">Telefon<input id="fa-tlf" class="inp" x-model="firma.telefon" @input="firmaGem()"></label>
+          <label class="f" for="fa-logo">Logo (PNG eller JPEG)<input id="fa-logo" class="inp" type="file" accept="image/png,image/jpeg,image/gif,image/webp" @change="firmaLogo($event)"></label>
+          <template x-if="firma.logo"><div class="flex items-center gap-2"><img :src="firma.logo" alt="Logo" class="max-h-12 max-w-[10rem] bg-white rounded"><button class="btn" @click="firmaFjernLogo()">Fjern logo</button></div></template>
+          <p class="text-xs text-muted">Gemmes kun i denne browser, gælder alle projekter og synkroniseres ikke.</p>
+        </div>
         <button class="btn justify-center" @click="hent(filnavn('projekt','json'), exportJson())">Hent projekt som JSON</button>
         <button class="btn justify-center" @click="kopier(exportJson())">Kopiér JSON</button>
         <button class="btn justify-center" @click="kopier(gruppeTsv())">Kopiér gruppeskema til regneark</button>

@@ -1,4 +1,5 @@
 /* Lagring: projekter i localStorage, eksport, import, backup og synkronisering via GitHub Gist. Metoderne samles i app() i js/app.js, så this er hele app-tilstanden. */
+const FKEY = 'tavleoversigt.firma';
 const APP_LAGRING = () => ({
     /* projekter: hvert projekt gemmes under sin egen nøgle */
     skriv(id, d) { const s = JSON.stringify(d); MEM[id] = s; try { localStorage.setItem(PK(id), s); } catch (e) { this.storageOk = false; } },
@@ -241,13 +242,54 @@ const APP_LAGRING = () => ({
         this.gruppeKabler(g.id), this.lokalerIGruppe(g.id).map(l => l.navn).join(', '), this.fmt(this.gruppeI(g.id))]);
       return rows.map(r => r.join('\t')).join('\n');
     },
+    /* firmaoplysninger til dokumentationen: gælder alle projekter, gemmes kun i denne browser og synkroniseres ikke */
+    firmaLaes() {
+      const f = { navn:'', cvr:'', adresse:'', telefon:'', logo:'' };
+      try { const s = JSON.parse(localStorage.getItem(FKEY)); if (s && typeof s === 'object') for (const k in f) if (typeof s[k] === 'string') f[k] = s[k]; } catch (e) {}
+      return f;
+    },
+    firmaGem() { try { localStorage.setItem(FKEY, JSON.stringify(this.firma)); } catch (e) { this.say('Firmaoplysningerne kunne ikke gemmes i browseren.'); } },
+    /* logo: læses som data-URL og skaleres ned til højst 400 px i bredden */
+    firmaLogo(ev) {
+      const fil = ev.target.files && ev.target.files[0]; ev.target.value = '';
+      if (!fil) return;
+      if (!/^image\/(png|jpeg|gif|webp)$/.test(fil.type)) { this.say('Logoet skal være en PNG-, JPEG-, GIF- eller WebP-fil.'); return; }
+      const r = new FileReader();
+      r.onerror = () => this.say('Logoet kunne ikke læses.');
+      r.onload = () => {
+        const im = new Image();
+        im.onerror = () => this.say('Logoet kunne ikke læses.');
+        im.onload = () => {
+          const k = Math.min(1, 400 / im.naturalWidth), c = document.createElement('canvas');
+          c.width = Math.max(1, Math.round(im.naturalWidth * k)); c.height = Math.max(1, Math.round(im.naturalHeight * k));
+          c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
+          this.firma.logo = c.toDataURL(fil.type === 'image/jpeg' ? 'image/jpeg' : 'image/png', 0.85); this.firmaGem(); this.say('Logo gemt.');
+        };
+        im.src = r.result;
+      };
+      r.readAsDataURL(fil);
+    },
+    firmaFjernLogo() { this.firma.logo = ''; this.firmaGem(); },
+    /* åbner dokumentationen i et nyt vindue og starter udskrivning (eller gem som PDF) */
+    udskriv() {
+      const w = window.open('', '_blank');
+      if (!w) { this.say('Browseren blokerede det nye vindue. Tillad pop-up for denne side, eller hent dokumentationen som HTML-fil.'); return null; }
+      w.document.open(); w.document.write(this.docHtml()); w.document.close();
+      setTimeout(() => { try { w.focus(); w.print(); } catch (e) {} }, 400);
+      return w;
+    },
     docHtml() {
-      const p = this.db.projekt, td = v => '<td>' + esc(v) + '</td>';
+      const p = this.db.projekt, td = v => '<td>' + esc(v) + '</td>', f = this.firma || {};
       let h = '<!DOCTYPE html><html lang="da"><head><meta charset="utf-8"><title>Tavleskema ' + esc(p.navn) + '</title><style>' +
-        'body{font:12px/1.4 Arial,sans-serif;color:#111;margin:20mm 15mm}h1{font-size:20px;margin:0}h2{font-size:15px;margin:18px 0 4px}' +
-        'table{border-collapse:collapse;width:100%}th,td{border:1px solid #666;padding:3px 5px;text-align:left;vertical-align:top}th{background:#e8eaeb;font-size:10px;text-transform:uppercase}' +
-        '.st th{width:14%}svg{max-width:100%;height:auto;border:1px solid #999}.af{page-break-inside:avoid;margin:0 0 14px}.af h2{margin:10px 0 0}.af p{margin:2px 0 4px}' +
-        '.k{border:1px solid #b3204f;color:#b3204f;padding:4px 6px;margin:4px 0;font-weight:bold}.s{page-break-after:always}.m{color:#555}@media print{body{margin:0}}</style></head><body>';
+        '@page{size:A4;margin:15mm}body{font:12px/1.4 Arial,sans-serif;color:#111;margin:20mm 15mm}h1{font-size:20px;margin:0}h2{font-size:15px;margin:18px 0 4px;break-after:avoid}' +
+        'table{border-collapse:collapse;width:100%}tr{break-inside:avoid}th,td{border:1px solid #666;padding:3px 5px;text-align:left;vertical-align:top}th{background:#e8eaeb;font-size:10px;text-transform:uppercase}' +
+        '.st th{width:14%}svg{max-width:100%;height:auto;border:1px solid #999;break-inside:avoid}.af{page-break-inside:avoid;break-inside:avoid;margin:0 0 14px}.af h2{margin:10px 0 0}.af p{margin:2px 0 4px}' +
+        '.k{border:1px solid #b3204f;color:#b3204f;padding:4px 6px;margin:4px 0;font-weight:bold}.s{page-break-after:always;break-after:page}.m{color:#555}' +
+        '.fa{display:flex;align-items:center;gap:14px;border-bottom:2px solid #111;padding-bottom:8px;margin-bottom:12px}.fa img{max-height:60px;max-width:200px}.fa b{font-size:15px}' +
+        '.sig{break-inside:avoid;margin-top:28px}.sig .sb{display:flex;gap:30px}.sig .sb div{flex:1}.sig .l{border-bottom:1px solid #111;height:34px}.sig .t{font-size:10px;color:#555;margin:2px 0 8px}' +
+        '@media print{body{margin:0}}</style></head><body>';
+      const fl = [f.cvr && 'CVR ' + f.cvr, f.adresse, f.telefon && 'Tlf. ' + f.telefon].filter(Boolean);
+      if (f.navn || fl.length || f.logo) h += '<div class="fa">' + (/^data:image\//.test(f.logo || '') ? '<img src="' + esc(f.logo) + '" alt="Logo">' : '') + '<div>' + (f.navn ? '<b>' + esc(f.navn) + '</b><br>' : '') + esc(fl.join(' · ')) + '</div></div>';
       h += '<section class="s"><h1>' + esc(p.navn || 'Projekt') + '</h1><table class="st"><tr><th>Sagsnr.</th>' + td(p.sagsnr) + '<th>Kunde</th>' + td(p.kunde) + '</tr><tr><th>Adresse</th>' + td(p.adresse) + '<th>Installatør</th>' + td(p.installatoer) + '</tr><tr><th>Dato</th>' + td(p.dato) +
         '<th>Omfang</th>' + td(this.db.tavler.length + ' tavler, ' + this.db.grupper.length + ' grupper, ' + this.db.enheder.length + ' brugsgenstande') + '</tr></table><h2>Enstregsdiagram</h2>' + this.sld(true) + '</section>';
       this.db.tavler.forEach((t, i) => {
@@ -285,6 +327,8 @@ const APP_LAGRING = () => ({
           '<p>' + esc((a.art === 'krone' ? 'Tænding 1: ' : 'Lamper: ') + (this.afbLamper(a, 'a') || 'ingen valgt') + (a.art === 'krone' ? ' · Tænding 2: ' + (this.afbLamper(a, 'b') || 'ingen valgt') : '')) + '</p></div>';
         h += '</section>';
       }
+      const blok = t => '<div><b>' + t + '</b><div class="l"></div><div class="t">Navn</div><div class="l"></div><div class="t">Dato</div><div class="l"></div><div class="t">Underskrift</div></div>';
+      h += '<section class="sig"><h2>Underskrift</h2><div class="sb">' + blok('Montør') + blok('Ansvarlig for kvalitetsledelsessystem (KLS)') + '</div></section>';
       return h + '</body></html>';
     }
 });

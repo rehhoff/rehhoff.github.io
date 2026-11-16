@@ -18,6 +18,7 @@ function app() {
     ampTrin: [25, 35, 50, 63, 80, 100, 125, 160, 200, 250, 315, 400, 630], svFilter: '',
     kabeltyper: KABLER,
     online: navigator.onLine !== false, installPrompt: null, installeret: false, swOk: false,
+    firma: { navn:'', cvr:'', adresse:'', telefon:'', logo:'' },
     synk: null, synkTokenInput: '', synkKoerer: false, synkIgen: false, synkFejl: '', iSynk: false,
     tvs: TV, appVersion: APP_VERSION, backups: [], sidstBackup: '', persistent: false, lokF: '', q: '', soegAaben: false, sk: { key:'koekken', navn:'Køkken', tavleId:'' }, skabeloner: SKABELONER, anlaegNavn: ANLAEG,
     enhNavne: [...new Set(EFFEKT.map(x => x[2]))].sort((a, b) => a.localeCompare(b, 'da')), sim: {}, hurtig: { aaben:false, type:'lokale', felt:'', f:{} }, eAuto: true, belEnhSidst: 'W', dragL: null, overL: null, mFilter: '', dAuto: { type:true, lok:true },
@@ -60,7 +61,7 @@ function app() {
       }
       this.save();
       this.sel = (this.gruppe('g7') || this.sorteredeGrupper()[0] || {}).id || null;
-      this.brugTema();
+      this.brugTema(); this.firma = this.firmaLaes();
       const route = () => { const h = location.hash.slice(1); if (this.views.some(v => v.id === h)) { this.view = h; if (h === 'enstreg') this.$nextTick(() => this.tilpas()); } };
       route(); window.addEventListener('hashchange', route);
       this.backups = this.hentBackups();
