@@ -66,6 +66,7 @@ Forudsætninger i beregningerne. Alt er vejledende og står også i appen:
 - Projektets standard er metode C, 30 °C (jord 20 °C), 1 kreds, bundtet. Grupper og tilgangskabler kan overskrive den. Dåser følger gruppen.
 - Gruppens last = summen af brugsgenstandenes strøm × gruppens samtidighedsfaktor + rackforbrug.
 - Effektforslag er typiske mærkeeffekter, ikke dimensioneringsværdier.
+- Målinger (aftalt 2026-11-16): Z<sub>s</sub> ≤ 2/3 · U<sub>0</sub>/I<sub>a</sub> med I<sub>a</sub> = 5/10/20 × I<sub>n</sub> for B/C/D, HPFI-udløsetid ≤ 300 ms ved 1 × IΔn, isolationsmodstand ≥ 1 MΩ.
 
 ## 5. Roller og planer
 

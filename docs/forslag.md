@@ -5,7 +5,6 @@ Forslag, Alexander ikke har besluttet endnu, eller som venter på at blive lavet
 | # | Forslag | Udfører | Begrundelse |
 |---|---|---|---|
 | 4 | Afbrydere i enstregsdiagrammet, krydsafbryder og tændingsdiagrammer i eksporten | Fable | Enstregsdiagrammet er den sværeste del af koden |
-| 2 | Automatisk vurdering af målinger: Z<sub>s</sub> ≤ U<sub>0</sub>/I<sub>a</sub> efter B/C og I<sub>n</sub>, HPFI-udløsetid ≤ grænsen | Opus | Få formler, men skal passe med 1. Fable gennemgår planen |
 | 8 | Gendan fra Gist-historik: vis og gendan et projekt fra en tidligere dato som kopi | Opus | Bygger på synkroniseringen |
 | 9 | Bygget Tailwind-CSS i stedet for CDN | Opus | Fjerner advarslen i konsollen og CDN-afhængigheden. Kræves for 6 |
 | 6 | Offline-app (PWA) med `sw.js` og `manifest.json` | Opus | Efter 9 |
@@ -13,4 +12,4 @@ Forslag, Alexander ikke har besluttet endnu, eller som venter på at blive lavet
 | 3 | Materialeliste: kabelmeter pr. type og tværsnit, dåser og materiel | Sonnet | Lægger kun eksisterende data sammen |
 | 5 | Dokumentation klar til print som PDF med logo og underskriftsfelt | Sonnet | Ændrer kun eksporten |
 
-Foreslået rækkefølge: Fable tager 4 (1 er lavet i 10.1.0), mens prøveperioden kører. Opus laver imens 2 (A er lavet i 10.2.0). Bagefter 9 → 6 → 7, og 3, 5 og 8 efter behov.
+Foreslået rækkefølge: Fable tager 4 (1 er lavet i 10.1.0), mens prøveperioden kører. A og 2 er lavet i 10.2.0 og 10.3.0. Bagefter 9 → 6 → 7, og 3, 5 og 8 efter behov.

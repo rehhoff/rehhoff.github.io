@@ -8,8 +8,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com/3.4.17"></script>
-<script src="js/tailwind.config.js?v=10.2.0"></script>
-<link rel="stylesheet" href="css/app.css?v=10.2.0">
+<script src="js/tailwind.config.js?v=10.3.0"></script>
+<link rel="stylesheet" href="css/app.css?v=10.3.0">
 </head>
 <body class="min-h-full">
 <p id="fail" hidden style="margin:16px;padding:12px;border:1px solid var(--crit);color:var(--crit)">Appen kunne ikke starte, fordi Alpine.js ikke blev indlæst. Genindlæs siden.</p>
@@ -829,15 +829,16 @@
             </template></tbody>
           </table>
           <h3 class="mt-4">Verifikation · måleskema</h3>
-          <p class="kl mt-1">Kladde til egenkontrol. Dette er ikke en gyldig installationsattest eller sikkerhedsdokumentation. Verifikation udføres og dokumenteres efter DS/HD 60364-6 af autoriseret virksomhed.</p>
+          <p class="kl mt-1">Grænser: Z<sub>s</sub> ≤ 2/3 · U<sub>0</sub>/I<sub>a</sub> (I<sub>a</sub> = 5/10/20 × I<sub>n</sub> for B/C/D), HPFI ≤ 300 ms ved 1 × IΔn, isolationsmodstand ≥ 1 MΩ. Kladde til egenkontrol. Dette er ikke en gyldig installationsattest eller sikkerhedsdokumentation. Verifikation udføres og dokumenteres efter DS/HD 60364-6 af autoriseret virksomhed.</p>
           <table>
-            <thead><tr><th>Gr.</th><th>Betegnelse</th><th>Isolationsmodstand (MΩ)</th><th>Sløjfeimpedans Z<sub>s</sub> (Ω)</th><th>HPFI udløsetid (ms)</th><th>Visuel kontrol</th></tr></thead>
+            <thead><tr><th>Gr.</th><th>Betegnelse</th><th>Isolationsmodstand (MΩ)</th><th>Sløjfeimpedans Z<sub>s</sub> (Ω)</th><th>HPFI udløsetid (ms)</th><th>Visuel kontrol</th><th>Vurdering</th></tr></thead>
             <tbody><template x-for="g in grupperFor(t.id)" :key="g.id">
               <tr><td class="num" x-text="g.nr"></td><td x-text="g.navn"></td>
-                <td><input type="text" inputmode="decimal" :id="'mr-'+g.id" :aria-label="'Isolationsmodstand gruppe ' + g.nr" x-model="g.maal.riso" @change="save()"></td>
-                <td><input type="text" inputmode="decimal" :id="'mz-'+g.id" :aria-label="'Sløjfeimpedans gruppe ' + g.nr" x-model="g.maal.zs" @change="save()"></td>
-                <td><input type="text" inputmode="decimal" :id="'mt-'+g.id" :aria-label="'Udløsetid gruppe ' + g.nr" x-model="g.maal.rcd" @change="save()"></td>
-                <td><input type="checkbox" :id="'mo-'+g.id" :aria-label="'Visuel kontrol gruppe ' + g.nr" x-model="g.maal.ok" @change="save()"></td></tr>
+                <td><input type="text" inputmode="decimal" :id="'mr-'+g.id" :aria-label="'Isolationsmodstand gruppe ' + g.nr" x-model="g.maal.riso" @change="save()" :style="maalVurdering(g).riso === false && 'border-color:var(--crit);color:var(--crit)'"></td>
+                <td><input type="text" inputmode="decimal" :id="'mz-'+g.id" :aria-label="'Sløjfeimpedans gruppe ' + g.nr" x-model="g.maal.zs" @change="save()" :style="maalVurdering(g).zs === false && 'border-color:var(--crit);color:var(--crit)'"><span class="block text-xs text-muted num" x-show="zsMax(g)" x-text="'maks. ' + fmt(zsMax(g), 2) + ' Ω'"></span></td>
+                <td><input type="text" inputmode="decimal" :id="'mt-'+g.id" :aria-label="'Udløsetid gruppe ' + g.nr" x-model="g.maal.rcd" @change="save()" :style="maalVurdering(g).rcd === false && 'border-color:var(--crit);color:var(--crit)'"><span class="block text-xs text-muted" x-text="maalVurdering(g).harRcd ? 'maks. 300 ms' : 'ingen HPFI'"></span></td>
+                <td><input type="checkbox" :id="'mo-'+g.id" :aria-label="'Visuel kontrol gruppe ' + g.nr" x-model="g.maal.ok" @change="save()"></td>
+                <td class="text-xs" :class="maalVurdering(g).status === 'fejl' ? 'warn' : maalVurdering(g).status === 'mangler' && 'text-muted'" x-text="maalVurdering(g).txt"></td></tr>
             </template></tbody>
           </table>
         </div>
@@ -1317,11 +1318,11 @@
   </div>
 </div>
 
-<script src="js/data.js?v=10.2.0"></script>
-<script src="js/beregning.js?v=10.2.0"></script>
-<script src="js/diagram.js?v=10.2.0"></script>
-<script src="js/lagring.js?v=10.2.0"></script>
-<script src="js/app.js?v=10.2.0"></script>
+<script src="js/data.js?v=10.3.0"></script>
+<script src="js/beregning.js?v=10.3.0"></script>
+<script src="js/diagram.js?v=10.3.0"></script>
+<script src="js/lagring.js?v=10.3.0"></script>
+<script src="js/app.js?v=10.3.0"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.14.1/cdn.min.js"></script>
 </body>
 </html>

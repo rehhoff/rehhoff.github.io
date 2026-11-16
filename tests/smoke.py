@@ -171,6 +171,19 @@ async def main():
         tjek('beskeder: højst tre, ingen dubletter, fejl bliver stående, × lukker',
              r['tre'] == ['to', 'tre', 'fire'] and r['foer'] == 2 and r['efter'] == ['Fejl'] and r['tom'] == 0, r)
 
+        # Vurdering af målinger
+        r = await pg.evaluate(f"""(()=>{{const a={A};const g=a.db.grupper.find(x=>a.rcd(x));const gem=JSON.stringify(g);
+          Object.assign(g,{{kar:'B',In:10}});g.maal={{riso:'>999',zs:'3,0',rcd:'25',ok:true}};const ok=a.maalVurdering(g);
+          g.maal.zs='3,1';const over=a.maalVurdering(g);const adv=a.warnings().some(w=>w.k==='m'+g.id);
+          g.maal={{riso:'0,5',zs:'',rcd:'350',ok:false}};const flere=a.maalVurdering(g);
+          const rcdId=g.rcdId;g.rcdId='';g.maal={{riso:'2',zs:'1',rcd:'999',ok:true}};const udenRcd=a.maalVurdering(g);g.rcdId=rcdId;
+          const c16=a.zsMax({{kar:'C',In:16}});Object.assign(g,JSON.parse(gem));
+          return {{b10:Math.round(a.zsMax({{kar:'B',In:10}})*100)/100,c16:Math.round(c16*100)/100,ok:ok.status,over:over.status,adv,
+                   flere:[flere.riso,flere.rcd,flere.status],uden:[udenRcd.rcd,udenRcd.status]}}}})()""")
+        tjek('målinger: Zs-grænse 2/3·U0/Ia, HPFI 300 ms, Riso 1 MΩ, advarsel ved fejl',
+             r['b10'] == 3.07 and r['c16'] == 0.96 and r['ok'] == 'ok' and r['over'] == 'fejl' and r['adv']
+             and r['flere'] == [False, False, 'fejl'] and r['uden'] == [None, 'ok'], r)
+
         # 4. Opgradering: data uden skema bevares, og der tages backup
         await pg.evaluate("""(()=>{const i=JSON.parse(localStorage.getItem('tavleoversigt.projekter'));delete i.schema;
           const id=i.aktiv;const p=JSON.parse(localStorage.getItem('tavleoversigt.p.'+id));p.projekt.navn='Testprojekt før opgradering';
