@@ -142,13 +142,13 @@ const APP_BEREGNING = () => ({
       }
       return out;
     },
-    /* selektivitet (aftalt 2026-11-16): forsikring ≥ 1,6 × største efterfølgende sikring. HPFI i serie: den forreste type S og IΔn ≥ 3 × den bageste. Vejledende. */
+    /* selektivitet (aftalt 2026-11-16): forsikring ≥ 1,6 × største efterfølgende sikring. En tavle forsynet fra en gruppe tjekkes på gruppen, ikke på sin egen forsikring. HPFI i serie: den forreste type S og IΔn ≥ 3 × den bageste. Vejledende. */
     rcdForan(tid, n) { const t = this.tavle(tid), g = t && this.gruppe(t.fraGruppe); if (!g || n > 8) return null; return this.rcd(g) || this.rcdForan(g.tavleId, (n || 0) + 1); },
     selektivitet() {
       const out = [], stoerst = l => l.reduce((m, x) => !m || x.In > m.In ? x : m, null), gr = tid => this.grupperFor(tid).map(g => ({ In:Number(g.In) || 0, txt:'gruppe ' + g.nr + ' (' + g.kar + g.In + ')' }));
       for (const t of this.db.tavler) {
         const m = stoerst(gr(t.id).concat(this.db.tavler.filter(u => u.fra === t.id && u.id !== t.id && !this.gruppe(u.fraGruppe)).map(u => ({ In:Number(u.forsikring) || 0, txt:'forsikringen i ' + u.navn + ' (' + u.forsikring + ' A)' }))));
-        if (m && t.forsikring < 1.6 * m.In) out.push({ k:'sf:' + t.id, t:t.id, txt:`${t.navn}: forsikring ${t.forsikring} A er under 1,6 × ${m.txt}. Selektivitet er ikke sikret.` });
+        if (m && !this.gruppe(t.fraGruppe) && t.forsikring < 1.6 * m.In) out.push({ k:'sf:' + t.id, t:t.id, txt:`${t.navn}: forsikring ${t.forsikring} A er under 1,6 × ${m.txt}. Selektivitet er ikke sikret.` });
         for (const g of this.grupperFor(t.id)) {
           const mu = stoerst(this.underTavler(g.id).flatMap(u => gr(u.id).map(x => Object.assign(x, { txt:u.navn + ' ' + x.txt }))));
           if (mu && g.In < 1.6 * mu.In) out.push({ k:'sg:' + g.id, t:t.id, g:g.id, txt:`${t.navn} · gruppe ${g.nr} ${g.navn}: ${g.kar}${g.In} er under 1,6 × ${mu.txt}. Selektivitet er ikke sikret.` });

@@ -2,6 +2,14 @@
 
 Nyeste øverst. Versionsnummeret står også i appen som `APP_VERSION`. Hver version siger, hvilken model der lavede den.
 
+## 10.12.2 · 2026-11-16 · Claude Opus
+
+Selektivitet for undertavler (forslag 18, godkendt af Alexander).
+
+- En undertavle, der forsynes fra en gruppe, tjekkes kun på den gruppe i 1,6-reglen, ikke også på sit eget felt Forsikring. Før kom samme problem som to advarsler (fx gruppe 10 og UT1 i eksemplet Parcelhus).
+- Røgtesten: tjek af, at undertavlens egen forsikring ikke giver en advarsel.
+- Ingen ændring af datamodellen. `SCHEMA` er uændret 12.
+
 ## 10.12.1 · 2026-11-16 · Claude Fable
 
 Gennemgang af 10.11.0 og 10.12.0 (håndregning og browser).
