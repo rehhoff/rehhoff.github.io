@@ -137,7 +137,7 @@ function app() {
       return out;
     },
     daaseI(did) { return this.nedstroem(did).reduce((s, e) => s + this.strom(e), 0); },
-    daaseIz(d) { const g = this.gruppe(d.gruppeId); return (IZ[g && g.faser == 3 ? 3 : 2][Number(d.tv)]) || 0; },
+    daaseIz(d) { const g = this.gruppe(d.gruppeId); return this.izBeregn(d.kabel, d.tv, !!g && g.faser == 3, this.forhold(g)); },
     daaseIzFejl(d) { const g = this.gruppe(d.gruppeId); return !!g && !!this.daaseIz(d) && g.In > this.daaseIz(d); },
     duSeg(I, L, A, tre) { return tre ? Math.sqrt(3) * L * I * RHO / A / 400 * 100 : 2 * L * I * RHO / A / 230 * 100; },
     duOp(did) {

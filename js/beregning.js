@@ -14,11 +14,45 @@ const APP_BEREGNING = () => ({
       const I = this.strom(e), A = Number(e.tv) || 1, g = Math.max(0, this.duGraense(e) - (e.daaseId ? this.duOp(e.daaseId) : 0) - this.tavleDu((this.gruppe(e.gruppeId) || {}).tavleId, 0)) / 100; if (!I) return null;
       return this.tre(e) ? g * 400 * A / (Math.sqrt(3) * I * RHO) : g * 230 * A / (2 * I * RHO);
     },
-    iz(e, tv) { return (IZ[this.tre(e) ? 3 : 2][Number(tv || e.tv)]) || 0; },
+    iz(e, tv) { return this.izBeregn(e.kabel, tv || e.tv, this.tre(e), this.forhold(this.gruppe(e.gruppeId))); },
     izFejl(e) { const g = this.gruppe(e.gruppeId); return !!g && !!this.iz(e) && g.In > this.iz(e); },
     forslag(e) {
       const g = this.gruppe(e.gruppeId); if (!g) return null;
       return TV.find(s => this.iz(e, s) >= g.In && this.du(e, s) <= this.duGraense(e)) || null;
+    },
+    /* Iz med installationsmetode og korrektionsfaktorer (DS/HD 60364-5-52 anneks B). Iz = tabelværdi × k_temp × k_samlet. */
+    forhold(o, pre) {
+      const p = this.db.projekt, v = k => o ? o[pre ? pre + k[0].toUpperCase() + k.slice(1) : k] : '';
+      const metode = METODER[v('metode')] ? v('metode') : METODER[p.metode] ? p.metode : 'C', jord = JORD(metode), t = v('temp'), n = Math.round(Number(v('samlet')));
+      return { metode, jord, temp: t !== '' && t != null && TEMPS.includes(Number(t)) ? Number(t) : jord ? (TEMPS.includes(Number(p.jtemp)) ? Number(p.jtemp) : 20) : (TEMPS.includes(Number(p.temp)) ? Number(p.temp) : 30),
+        samlet: n >= 1 ? Math.min(20, n) : Math.min(20, Math.max(1, Math.round(Number(p.samlet)) || 1)), lag: LAG[v('lag')] ? v('lag') : LAG[p.lag] ? p.lag : 'bundt' };
+    },
+    kTemp(iso, f) { return K_TEMP[f.jord ? 'jord' : 'luft'][iso][f.temp] || 1; },
+    kSamlet(f) {
+      if (f.samlet <= 1 && f.lag !== 'loft') return 1;
+      if (f.jord) { const k = K_JORD_SAMLET[f.metode]; return k[Math.min(f.samlet, k.length) - 1]; }
+      const k = LAG[f.lag].k, i = KREDSE.findIndex(n => n >= f.samlet);
+      return k[Math.min(i < 0 ? KREDSE.length - 1 : i, k.length - 1)];
+    },
+    izTabel(kabel, tv, tre, metode) { const i = TV.indexOf(Number(tv)); return i < 0 ? 0 : IZT[ISO(kabel)][tre ? 3 : 2][metode || 'C'][i]; },
+    izBeregn(kabel, tv, tre, f) {
+      f = f || this.forhold(null); const z = this.izTabel(kabel, tv, tre, f.metode); if (!z) return 0;
+      const k = this.kTemp(ISO(kabel), f) * this.kSamlet(f);
+      return k === 1 ? z : Math.round(z * k * 10) / 10;
+    },
+    /* Forklaring til brugerfladen: faktorer og tabeller for et kabel under gruppens eller tilgangskablets forhold */
+    korrektion(o, pre, kabel) {
+      const f = this.forhold(o, pre), iso = ISO(kabel || 'PVC'), kt = this.kTemp(iso, f), ks = this.kSamlet(f);
+      const lag = f.jord ? (f.metode === 'D1' ? 'rør i jord, rørene rører hinanden' : 'direkte i jord, kablerne rører hinanden') : LAG[f.lag].navn.toLowerCase();
+      return { f, iso, kt, ks, k: kt * ks,
+        txt: 'Metode ' + f.metode + ', ' + (iso === 'XLPE' ? 'XLPE 90 °C' : 'PVC 70 °C') + ', ' + (f.jord ? 'jord ' : 'luft ') + f.temp + ' °C (k_temp ' + this.fmt(kt, 2) + '), ' +
+          f.samlet + (f.samlet === 1 ? ' kreds' : ' kredse') + (f.samlet > 1 || (!f.jord && f.lag === 'loft') ? ' ' + lag : '') + ' (k_samlet ' + this.fmt(ks, 2) + ')' +
+          (f.jord && f.samlet > 6 ? '. Tabellen for jord går til 6 kredse; regnet med 6' : '') };
+    },
+    setSamlet(v) { const n = Math.round(tal(v)); if (n >= 1 && n <= 20) this.mutate(() => { this.db.projekt.samlet = n; }); },
+    forholdTxt(o, pre) {
+      const f = this.forhold(o, pre), egen = o && ['metode', 'temp', 'samlet', 'lag'].some(k => (o[pre ? pre + k[0].toUpperCase() + k.slice(1) : k] || '') !== '');
+      return f.metode + ' · ' + f.temp + ' °C · ' + f.samlet + (f.samlet === 1 ? ' kreds' : ' kredse') + (egen ? '' : ' (projekt)');
     },
     underTavler(gid) { return gid ? this.db.tavler.filter(t => t.fraGruppe === gid) : []; },
     gruppeFaser(g, seen) {
@@ -187,7 +221,7 @@ const APP_BEREGNING = () => ({
     tilg3(t) { const g = this.gruppe(t.fraGruppe); return g ? g.faser == 3 : true; },
     tilgI(t) { const s = this.subFaser(t.id, new Set()); return this.tilg3(t) ? Math.max(s.L1, s.L2, s.L3) : s.L1 + s.L2 + s.L3; },
     tilgDu(t) { return Number(t.tLaengde) > 0 ? this.duSeg(this.tilgI(t), Number(t.tLaengde), Number(t.tTv) || 1, this.tilg3(t)) : 0; },
-    tilgIz(t) { return Number(t.tLaengde) > 0 ? (IZ[this.tilg3(t) ? 3 : 2][Number(t.tTv)] || 0) : 0; },
+    tilgIz(t) { return Number(t.tLaengde) > 0 ? this.izBeregn(t.tKabel, t.tTv, this.tilg3(t), this.forhold(t, 't')) : 0; },
     tilgBeskyt(t) { const g = this.gruppe(t.fraGruppe); return g ? g.In : t.forsikring; },
     tilgIzFejl(t) { const z = this.tilgIz(t); return z > 0 && this.tilgBeskyt(t) > z; },
     tavleDu(tid, n) {

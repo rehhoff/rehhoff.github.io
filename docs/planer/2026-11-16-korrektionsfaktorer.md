@@ -57,3 +57,15 @@ Opus laver imens forslag A (beskeder i bunden) i `js/app.js`, `js/lagring.js` og
 ## Udgivelse
 
 Minor-version (ny funktion). Versionen sættes ved merge ud fra den aktuelle `main`, efter reglerne i `CLAUDE.md` afsnit 2 og 3.
+
+## Ændringer under implementeringen
+
+2026-11-16, Claude Fable (sessionen startede på Opus 5.5 og skiftede til Fable 5.2 undervejs; noteret efter `CLAUDE.md` afsnit 5):
+
+- Afklaring med Alexander: isolationstabel som foreslået (PVC/PKAJ/PKL → PVC, XLPE/Brandkabel → XLPE). Placering som foreslået (projektstandard i Beregning, overskrives på gruppe og tilgangskabel). Desuden skal man kunne vælge fremføringsform i B.52.17.
+- Metode F er udeladt. Den gælder kun enlederkabler, og appens kabler er flerlederkabler. D2 er tilføjet ved siden af D1.
+- Nye felter ud over planen: `projekt.jtemp` (jordtemperatur, standard 20 °C, basis for B.52.15) og `lag` / `tLag` (fremføringsform, standard `bundt`). Ved D1/D2 betyder temperaturfeltet jordtemperatur, og samlet fremføring bruger B.52.19 (D1) og B.52.18 (D2), kabler/rør der rører hinanden, højst 6 kredse.
+- Temperaturen vælges i trin på 5 °C (10–60 °C), så der ikke interpoleres.
+- Iz med korrektion afrundes til 0,1 A. Uden korrektion bruges tabelværdien uændret.
+- XLPE-kabler i eksisterende projekter får højere I<sub>z</sub> (egen tabel). Det er en tilsigtet følge af afklaring 1. Regressionstesten kræver uændret I<sub>z</sub> for PVC-familien og den nye tabelværdi for XLPE, og uændret ΔU, forslag og advarsler.
+- Normen kunne ikke hentes. Værdierne er fra IEC 60364-5-52:2009, som DS/HD 60364-5-52:2011 bygger på. Mindre sikre værdier, som Alexander bør kontrollere mod sin udgave: D1/D2 (B.52.2–B.52.5), metode E (B.52.10/B.52.12), B.52.18 og B.52.19.
