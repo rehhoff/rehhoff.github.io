@@ -122,6 +122,46 @@ async def main():
         r = await pg.evaluate(f"(()=>{{const a={A};const e=a.db.enheder.find(x=>Number(x.effekt)>1000);const f=a.du(e);const g=a.du(e,(e.tv||1.5)*4);return [f,g]}})()")
         tjek('spændingsfald falder med større tværsnit', r[0] > r[1] > 0, r)
 
+        # 3b. Iz efter DS/HD 60364-5-52 anneks B: tabelværdier og korrektionsfaktorer
+        r = await pg.evaluate(f"""(()=>{{const a={A};const F=(m,t,n,l)=>({{metode:m,jord:m[0]==='D',temp:t,samlet:n,lag:l||'bundt'}});
+          const z=(k,tv,tre,f)=>a.izBeregn(k,tv,tre,f||F('C',30,1));
+          return [z('PVC',2.5,false),z('PVC',2.5,true),z('XLPE',2.5,false),z('Brandkabel',2.5,true),z('PKAJ',1.5,false,F('A1',30,1)),z('PVC',10,true,F('E',30,1)),
+            z('XLPE',16,false,F('D1',20,1)),z('XLPE',4,true,F('B2',30,1)),z('PVC',2.5,false,F('C',40,1)),z('XLPE',2.5,false,F('C',40,1)),z('PVC',2.5,false,F('C',30,3)),
+            z('PVC',2.5,false,F('C',40,3)),z('PVC',2.5,false,F('C',30,4,'bakke')),z('PVC',2.5,false,F('D1',30,2)),z('PVC',2.5,false,F('C',30,25)),a.izBeregn('PVC',2.5,false),
+            a.forhold(null).metode+a.forhold(null).temp+a.forhold(null).samlet+a.forhold(null).lag]}})()""")
+        forventet = [27, 24, 33, 30, 14.5, 60, 91, 35, 23.5, 30, 18.9, 16.4, 20.8, 21.9, 10.3, 27, 'C301bundt']
+        tjek('Iz: normværdier og korrektionsfaktorer (B.52.2–B.52.5, B.52.10/12, B.52.14/15, B.52.17/19)', r == forventet, list(zip(forventet, r)))
+
+        # 3c. Regression: eksempelprojekterne med standardforhold (C, 30 °C, 1 kreds) som før skema 10.
+        #     PVC, PKAJ og PKL uændret; XLPE og brandkabel bruger nu XLPE-tabellen (B.52.3/B.52.5). ΔU, forslag og advarsler uændrede.
+        base = json.loads((ROD / 'tests' / 'regression-skema9.json').read_text(encoding='utf-8'))
+        ny = await pg.evaluate(f"""(()=>{{const a={A};const aktiv=a.aktivId||null, out={{}};const før=a.projekter.find(p=>p.id===a.aktiv)||null;
+          for (const p of a.projekter.slice()) {{ a.skift(p.id); const d=a.db;
+            out[d.projekt.navn]={{e:Object.fromEntries(d.enheder.map(e=>[e.id,[a.iz(e),+a.du(e).toFixed(9),e.kabel,a.forslag(e),a.izTabel(e.kabel,e.tv,a.tre(e),'C')]])),
+              d:Object.fromEntries(d.daaser.map(x=>[x.id,[a.daaseIz(x),x.kabel,a.izTabel(x.kabel,x.tv,(a.gruppe(x.gruppeId)||{{}}).faser==3,'C')]])),
+              t:Object.fromEntries(d.tavler.map(t=>[t.id,[a.tilgIz(t),t.tKabel,Number(t.tLaengde)>0?a.izTabel(t.tKabel,t.tTv,a.tilg3(t),'C'):0]])),
+              w:a.warnings().map(w=>w.k+'|'+w.txt)}}; }}
+          if (a.projekter[0]) a.skift(a.projekter[0].id); return out}})()""")
+        afvig = []
+        for navn, b0 in base.items():
+            n0 = ny.get(navn)
+            if not n0: afvig.append(('mangler', navn)); continue
+            for i, (iz, du, kab, fs) in b0['e'].items():
+                iz1, du1, kab1, fs1, tab = n0['e'][i]
+                if du1 != du or fs1 != fs or iz1 != (tab if kab in ('XLPE', 'Brandkabel') else iz): afvig.append((navn, i, b0['e'][i], n0['e'][i]))
+            for k in 'dt':
+                for i, (iz, kab) in b0[k].items():
+                    iz1, kab1, tab = n0[k][i]
+                    if iz1 != (tab if kab in ('XLPE', 'Brandkabel') else iz): afvig.append((navn, k, i, b0[k][i], n0[k][i]))
+            if n0['w'] != b0['w']: afvig.append((navn, 'advarsler', b0['w'], n0['w']))
+        tjek('regression: eksempelprojekter giver samme Iz (PVC), ΔU, forslag og advarsler', not afvig and len(base) >= 2, afvig[:5])
+
+        # 3d. Forhold på gruppen slår igennem på Iz og kabelforslag
+        r = await pg.evaluate(f"""(()=>{{const a={A};const e=a.db.enheder.find(x=>x.kabel==='PVC'&&Number(x.effekt)>0&&a.gruppe(x.gruppeId));const g=a.gruppe(e.gruppeId);
+          const z0=a.iz(e), gem=[g.metode,g.temp,g.samlet,g.lag]; g.metode='A2'; g.temp=45; g.samlet=6; const z1=a.iz(e), forv=a.izTabel(e.kabel,e.tv,a.tre(e),'A2');
+          const s=a.forslag(e); [g.metode,g.temp,g.samlet,g.lag]=gem; return {{z0, z1, k:Math.round(forv*0.79*0.57*10)/10, s, tv:e.tv, z2:a.iz(e)}}}})()""")
+        tjek('Iz: gruppens metode, temperatur og samlet fremføring bruges', r['z1'] == r['k'] and r['z2'] == r['z0'] and r['z1'] < r['z0'], r)
+
         # 4. Opgradering: data uden skema bevares, og der tages backup
         await pg.evaluate("""(()=>{const i=JSON.parse(localStorage.getItem('tavleoversigt.projekter'));delete i.schema;
           const id=i.aktiv;const p=JSON.parse(localStorage.getItem('tavleoversigt.p.'+id));p.projekt.navn='Testprojekt før opgradering';
@@ -129,6 +169,26 @@ async def main():
         await pg.goto(URL); await pg.wait_for_timeout(500)
         r = await pg.evaluate(f"(()=>{{const a={A};return {{navn:a.db.projekt.navn, b:a.backups.length, s:JSON.parse(localStorage.getItem('tavleoversigt.projekter')).schema}}}})()")
         tjek('opgradering bevarer projekt og laver backup', r['navn'] == 'Testprojekt før opgradering' and r['b'] == 1 and r['s'], r)
+
+        # 4b. Opgradering fra skema 9: projekter intakte, backup taget, nye felter med standardværdier
+        r0 = await pg.evaluate("""(()=>{const i=JSON.parse(localStorage.getItem('tavleoversigt.projekter'));i.schema=9;const id=i.aktiv;
+          const p=JSON.parse(localStorage.getItem('tavleoversigt.p.'+id));
+          for (const k of ['metode','temp','jtemp','samlet','lag']) delete p.projekt[k];
+          p.grupper.forEach(g=>{for (const k of ['metode','temp','samlet','lag']) delete g[k];}); p.tavler.forEach(t=>{for (const k of ['tMetode','tTemp','tSamlet','tLag']) delete t[k];});
+          if (p.grupper[0]) { p.grupper[0].metode='X9'; p.grupper[0].temp=33; p.grupper[0].samlet='to'; }
+          p.projekt.navn='Skema 9-projekt';
+          localStorage.setItem('tavleoversigt.p.'+id,JSON.stringify(p));localStorage.setItem('tavleoversigt.projekter',JSON.stringify(i));localStorage.removeItem('tavleoversigt.backups');
+          return {id, enheder:JSON.stringify(p.enheder), daaser:JSON.stringify(p.daaser), ng:p.grupper.length, nt:p.tavler.length}})()""")
+        await pg.goto(URL); await pg.wait_for_timeout(500)
+        r = await pg.evaluate(f"""(()=>{{const a={A};const p=a.db.projekt, g=a.db.grupper, t=a.db.tavler;
+          return {{navn:p.navn, b:a.backups.length, s:JSON.parse(localStorage.getItem('tavleoversigt.projekter')).schema, std:[p.metode,p.temp,p.jtemp,p.samlet,p.lag],
+            g:g.every(x=>x.metode===''&&x.temp===''&&x.samlet===''&&x.lag===''), t:t.every(x=>x.tMetode===''&&x.tTemp===''&&x.tSamlet===''&&x.tLag===''),
+            enheder:JSON.stringify(a.db.enheder), daaser:JSON.stringify(a.db.daaser), ng:g.length, nt:t.length,
+            bak:(JSON.parse(localStorage.getItem('tavleoversigt.backups'))||[]).length}}}})()""")
+        tjek('opgradering fra skema 9: backup, standardforhold og data intakte',
+             r['navn'] == 'Skema 9-projekt' and r['b'] >= 1 and r['s'] == 10 and r['std'] == ['C', 30, 20, 1, 'bundt'] and r['g'] and r['t']
+             and r['ng'] == r0['ng'] and r['nt'] == r0['nt'] and r['enheder'] == r0['enheder'] and r['daaser'] == r0['daaser'],
+             {k: v for k, v in r.items() if k not in ('enheder', 'daaser')} | {'enheder ens': r['enheder'] == r0['enheder'], 'daaser ens': r['daaser'] == r0['daaser']})
 
         # 5. Backupfil kan hentes og indlæses uden at overskrive
         async with pg.expect_download() as dl:

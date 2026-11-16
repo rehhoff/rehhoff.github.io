@@ -61,7 +61,9 @@ Forudsætninger i beregningerne. Alt er vejledende og står også i appen:
 
 - ρ = 0,0225 Ω·mm²/m, cos φ = 1, 230 V og 3 × 400 V.
 - ΔU-grænse 3 % for lys og 5 % for øvrige (DS/HD 60364-5-52, anneks G). ΔU summeres gennem tilgangskabel, samledåser og afgang.
-- I<sub>z</sub>: PVC-isoleret kobber, installationsmetode C, 30 °C, uden korrektionsfaktorer. XLPE bruger endnu samme tabel.
+- I<sub>z</sub> for kobber efter DS/HD 60364-5-52 anneks B: tabelværdi (B.52.2–B.52.5, metode E fra B.52.10/B.52.12) × k<sub>temp</sub> (B.52.14 luft, basis 30 °C; B.52.15 jord, basis 20 °C) × k<sub>samlet</sub> (B.52.17 i luft; B.52.18/B.52.19 i jord, højst 6 kredse). Metoder A1, A2, B1, B2, C, D1, D2 og E; F er udeladt, da den kun gælder enlederkabler. Jord 2,5 K·m/W.
+- Isolationstabel: PVC, PKAJ og PKL → PVC 70 °C. XLPE og Brandkabel → XLPE 90 °C.
+- Projektets standard er metode C, 30 °C (jord 20 °C), 1 kreds, bundtet. Grupper og tilgangskabler kan overskrive den. Dåser følger gruppen.
 - Gruppens last = summen af brugsgenstandenes strøm × gruppens samtidighedsfaktor + rackforbrug.
 - Effektforslag er typiske mærkeeffekter, ikke dimensioneringsværdier.
 

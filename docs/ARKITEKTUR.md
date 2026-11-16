@@ -41,11 +41,11 @@ Faner i `views`: Tavle, Enstregsdiagram, Tændingsdiagram, Samlepunkter & dåser
 
 | Liste | Felter |
 |---|---|
-| `projekt` | `navn, sagsnr, kunde, adresse, installatoer, dato, anlaeg, sidst{kabel, ledere, tv}` |
-| `tavler` | `id, navn, placering, forsikring, hovedafbryder, fra, fraGruppe, tilgang, tKabel, tLedere, tTv, tLaengde` |
+| `projekt` | `navn, sagsnr, kunde, adresse, installatoer, dato, anlaeg, sidst{kabel, ledere, tv}, metode, temp, jtemp, samlet, lag` (skema 10, standard `C, 30, 20, 1, bundt`) |
+| `tavler` | `id, navn, placering, forsikring, hovedafbryder, fra, fraGruppe, tilgang, tKabel, tLedere, tTv, tLaengde, tMetode, tTemp, tSamlet, tLag` (tom = projektets standard) |
 | `rcds` | `id, tavleId, navn, type, In, idn` |
 | `lokaler` | `id, navn, etage` |
-| `grupper` | `id, tavleId, nr, navn, type (lys, kraft, stik, data), kar, In, faser, fase, rcdId, sf, maal{riso, zs, rcd, ok}` |
+| `grupper` | `id, tavleId, nr, navn, type (lys, kraft, stik, data), kar, In, faser, fase, rcdId, sf, maal{riso, zs, rcd, ok}, metode, temp, samlet, lag` (tom = projektets standard) |
 | `enheder` | `id, gruppeId, lokaleId, daaseId, navn, effekt (W), kabel, ledere, tv, laengde, symbol` |
 | `daaser` | `id, navn, type, gruppeId, parentId, lokaleId, kabel, ledere, tv, laengde` |
 | `afbrydere` | `id, navn, art (enpolet, krone, korr, kip, trappe, sensor), gruppeId, lokaleId, steder, tid, a[], b[]` |
@@ -62,7 +62,8 @@ Relationer: gruppe → tavle, gruppe → HPFI, brugsgenstand → gruppe, lokale 
 | Lagring | `save`, `skriv`, `laes`, `skrivIdx`, `lavBackup`, `gendanBackup`, `backupJson`, `importBackup` |
 | Synkronisering | `synkForbind`, `synkNu`, `synkKoer` (fletning), `synkHent`, `synkSletLokalt`, `synkSenere`, `synkAfbryd`, `gh`, `hashD` |
 | Strøm og last | `strom`, `instI`, `egenI`, `gruppeI`, `gruppeFaser`, `subFaser`, `faseInfo`, `autoBalance` |
-| Kabler | `du`, `duLokal`, `duOp`, `tavleDu`, `tilgDu`, `iz`, `izFejl`, `forslag`, `lmax` |
+| Kabler | `du`, `duLokal`, `duOp`, `tavleDu`, `tilgDu`, `iz`, `izFejl`, `forslag`, `lmax`, `daaseIz`, `tilgIz` |
+| I<sub>z</sub> | `forhold` (gruppens eller tilgangskablets forhold med projektets standard), `izTabel`, `izBeregn`, `kTemp`, `kSamlet`, `korrektion`, `forholdTxt`. Tabeller i `js/data.js`: `IZT`, `METODER`, `ISO`, `TEMPS`, `K_TEMP`, `KREDSE`, `LAG`, `K_JORD_SAMLET`. `IZ` er et alias for PVC, metode C |
 | Kontrol | `gruppeFejl`, `warnings`, `mangler`, `linkFejl` |
 | Forslag | `effektForslag`, `sfForslag`, `daaseParse`, `symbolFor` |
 | Diagrammer | `sld` (enstreg), `taendSvg` (tænding), `spor`, `sporTil` |

@@ -8,8 +8,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com/3.4.17"></script>
-<script src="js/tailwind.config.js?v=10.0.0"></script>
-<link rel="stylesheet" href="css/app.css?v=10.0.0">
+<script src="js/tailwind.config.js?v=10.1.0"></script>
+<link rel="stylesheet" href="css/app.css?v=10.1.0">
 </head>
 <body class="min-h-full">
 <p id="fail" hidden style="margin:16px;padding:12px;border:1px solid var(--crit);color:var(--crit)">Appen kunne ikke starte, fordi Alpine.js ikke blev indlæst. Genindlæs siden.</p>
@@ -526,7 +526,20 @@
         <button class="btn" @click="sfAlle()">Anvend foreslåede samtidighedsfaktorer</button>
         <span class="text-xs text-muted">Forslagene er vejledende erfaringstal og afhænger af gruppetype, installationstype og lokale. Faktoren kan rettes pr. gruppe i tabellen.</span>
       </div>
-      <p class="text-xs text-muted mt-2">Vejledende: ρ = 0,0225 Ω·mm²/m, cos φ = 1, 230/400 V, gruppens last ganget med dens samtidighedsfaktor. ΔU-grænser 3 % lys og 5 % øvrige (DS/HD 60364-5-52, anneks G). Strømværdi I<sub>z</sub> for PVC-isoleret kobber, installationsmetode C, 30 °C, uden korrektionsfaktorer. Kontrollér altid mod gældende standard og faktiske forhold.</p>
+      <div class="flex flex-wrap items-end gap-2 mt-3 border-t border-line pt-3">
+        <label class="f" for="b-metode">Installationsmetode
+          <select id="b-metode" class="inp" x-model="db.projekt.metode" @change="save()">
+            <template x-for="(l, k) in METODER" :key="k"><option :value="k" :selected="db.projekt.metode===k" x-text="l"></option></template></select></label>
+        <label class="f" for="b-temp">Lufttemperatur (°C)
+          <select id="b-temp" class="inp num" x-model.number="db.projekt.temp" @change="save()"><template x-for="c in TEMPS" :key="c"><option :value="c" :selected="db.projekt.temp==c" x-text="c"></option></template></select></label>
+        <label class="f" for="b-jtemp">Jordtemperatur (°C)
+          <select id="b-jtemp" class="inp num" x-model.number="db.projekt.jtemp" @change="save()"><template x-for="c in TEMPS" :key="c"><option :value="c" :selected="db.projekt.jtemp==c" x-text="c"></option></template></select></label>
+        <label class="f" for="b-samlet">Samlet fremførte kredse<input id="b-samlet" class="inp num" style="width:6rem" type="number" min="1" max="20" step="1" :value="db.projekt.samlet" @change="setSamlet($event.target.value)"></label>
+        <label class="f" for="b-lag">Fremføringsform (B.52.17)
+          <select id="b-lag" class="inp" x-model="db.projekt.lag" @change="save()"><template x-for="(v, k) in LAG" :key="k"><option :value="k" :selected="db.projekt.lag===k" x-text="v.navn"></option></template></select></label>
+        <span class="text-xs text-muted">Projektets standard for I<sub>z</sub>. Grupper og tilgangskabler kan overskrive den. Ved metode D1 og D2 bruges jordtemperaturen og tabellerne for samlet fremføring i jord.</span>
+      </div>
+      <p class="text-xs text-muted mt-2">Vejledende: ρ = 0,0225 Ω·mm²/m, cos φ = 1, 230/400 V, gruppens last ganget med dens samtidighedsfaktor. ΔU-grænser 3 % lys og 5 % øvrige (DS/HD 60364-5-52, anneks G). Strømværdi I<sub>z</sub> for kobber efter DS/HD 60364-5-52 anneks B: tabelværdi for isolation (PVC 70 °C eller XLPE 90 °C), installationsmetode og antal belastede ledere, ganget med temperaturfaktor (B.52.14 luft, B.52.15 jord) og faktor for samlet fremføring (B.52.17–B.52.19). Jord: 2,5 K·m/W. Kontrollér altid mod gældende standard og faktiske forhold.</p>
     </div>
 
     <template x-for="t in db.tavler" :key="t.id">
@@ -558,7 +571,7 @@
         </div>
         <div class="overflow-x-auto border-t border-line">
           <table class="kt">
-            <thead><tr><th>Gr.</th><th>Betegnelse</th><th>Sikring</th><th>Fase</th><th>HPFI</th><th class="r">Samtidighed</th><th class="r">Last</th><th style="min-width:7rem">Udnyttelse</th><th class="r">Største ΔU</th><th class="r">Mindste I<sub>z</sub></th><th>Status</th></tr></thead>
+            <thead><tr><th>Gr.</th><th>Betegnelse</th><th>Sikring</th><th>Fase</th><th>HPFI</th><th class="r">Samtidighed</th><th class="r">Last</th><th style="min-width:7rem">Udnyttelse</th><th class="r">Største ΔU</th><th class="r">Mindste I<sub>z</sub></th><th>Fremføring</th><th>Status</th></tr></thead>
             <tbody>
               <template x-for="g in grupperFor(t.id)" :key="g.id">
                 <tr class="typed" :class="g.type">
@@ -578,6 +591,7 @@
                   <td><div class="meter" :class="gruppeI(g.id) > g.In && 'over'"><i :style="'width:' + Math.min(100, gruppeI(g.id)/g.In*100) + '%'"></i></div></td>
                   <td class="num r" :class="maxDu(g.id).over && 'warn'" x-text="maxDu(g.id).v == null ? '–' : fmt(maxDu(g.id).v, 2) + ' %'"></td>
                   <td class="num r" :class="minIz(g.id) && minIz(g.id) < g.In && 'warn'" x-text="minIz(g.id) ? fmt(minIz(g.id)) + ' A' : '–'"></td>
+                  <td class="num text-xs" :title="korrektion(g, '', 'PVC').txt" x-text="forholdTxt(g)"></td>
                   <td :class="gruppeFejl(g.id).length && 'warn'" x-text="gruppeFejl(g.id).length ? '⚠ ' + gruppeFejl(g.id).length + ' forhold' : 'OK'"></td>
                 </tr>
               </template>
@@ -701,7 +715,7 @@
               <td class="num r" x-text="r.e.effekt ? fmt(r.I) + ' A' : '–'"></td>
               <td class="num r" :class="r.over && 'warn'" x-text="r.e.effekt ? (r.over ? '⚠ ' : '') + fmt(r.du, 2) + ' %' : '–'"></td>
               <td class="num r" x-text="r.lmax ? fmt(r.lmax, 0) + ' m' : '–'"></td>
-              <td class="num r" :class="r.izFejl && 'warn'" x-text="r.iz ? (r.izFejl ? '⚠ ' : '') + fmt(r.iz) + ' A' : '–'"></td>
+              <td :title="r.t ? korrektion(r.t, 't', r.e.kabel).txt : korrektion(r.g, '', r.e.kabel).txt" class="num r" :class="r.izFejl && 'warn'" x-text="r.iz ? (r.izFejl ? '⚠ ' : '') + fmt(r.iz) + ' A' : '–'"></td>
               <td class="text-right whitespace-nowrap"><button class="btn btn-ghost" x-show="r.g" @click="sporTil(r.t ? 't:' + r.t.id : r.d ? 'd:' + r.d.id : 'e:' + r.e.id)">Spor</button><button class="btn btn-ghost" @click="r.t ? openForm('tavle', r.t) : r.d ? openForm('daase', r.d) : openForm('enhed', r.e)">Rediger</button></td>
             </tr>
           </template>
@@ -989,6 +1003,18 @@
             <label class="f" for="m-ttv">Tværsnit (mm²)
               <select id="m-ttv" class="inp num" x-model.number="form.tTv"><template x-for="a in tvs" :key="a"><option :value="a" :selected="form.tTv==a" x-text="fmt(a)"></option></template></select></label>
             <label class="f" for="m-tlen">Længde (m)<input id="m-tlen" class="inp num" type="number" min="0" step="0.5" x-model.number="form.tLaengde"></label>
+            <div class="sm:col-span-2 border-t border-line pt-2 text-xs font-semibold uppercase tracking-wider text-muted">Fremføring til I<sub>z</sub>. Tom = projektets standard fra Beregning</div>
+            <label class="f" for="m-tmetode">Installationsmetode
+              <select id="m-tmetode" class="inp" x-model="form.tMetode"><option value="" :selected="!form.tMetode" x-text="'Projektets standard (' + db.projekt.metode + ')'"></option>
+                <template x-for="(l, k) in METODER" :key="k"><option :value="k" :selected="form.tMetode===k" x-text="l"></option></template></select></label>
+            <label class="f" for="m-ttemp"><span x-text="forhold(form, 't').jord ? 'Jordtemperatur (°C)' : 'Lufttemperatur (°C)'"></span>
+              <select id="m-ttemp" class="inp num" x-model="form.tTemp"><option value="" :selected="form.tTemp===''">Projektets standard</option>
+                <template x-for="c in TEMPS" :key="c"><option :value="c" :selected="form.tTemp==c" x-text="c"></option></template></select></label>
+            <label class="f" for="m-tsamlet">Samlet fremførte kredse<input id="m-tsamlet" class="inp num" type="number" min="1" max="20" step="1" x-model="form.tSamlet" :placeholder="'Standard ' + db.projekt.samlet"></label>
+            <label class="f" for="m-tlag">Fremføringsform (B.52.17)
+              <select id="m-tlag" class="inp" x-model="form.tLag" :disabled="forhold(form, 't').jord"><option value="" :selected="!form.tLag">Projektets standard</option>
+                <template x-for="(v, k) in LAG" :key="k"><option :value="k" :selected="form.tLag===k" x-text="v.navn"></option></template></select></label>
+            <p class="text-xs text-muted sm:col-span-2" x-text="korrektion(form, 't', form.tKabel).txt + '.'"></p>
             <p class="text-xs text-muted sm:col-span-2">Spændingsfaldet i tilgangskablet lægges til alle brugsgenstande i tavlen, og tværsnittet kontrolleres mod den sikring, der beskytter kablet.</p>
           </div>
         </template>
@@ -1038,6 +1064,18 @@
                 <template x-for="r in rcdsFor(form.tavleId)" :key="r.id"><option :value="r.id" :selected="form.rcdId===r.id" x-text="r.navn"></option></template></select></label>
             <label class="f" for="m-sf">Samtidighedsfaktor (0,1 til 1)<input id="m-sf" class="inp num" type="number" min="0.1" max="1" step="0.05" x-model.number="form.sf"></label>
             <div class="text-xs num self-end pb-2"><button type="button" class="underline text-left" style="color:var(--accent)" @click="form.sf = sfForslag(form).v" x-text="'Brug forslag: ' + fmt(sfForslag(form).v, 2) + ' (' + sfForslag(form).txt + ')'"></button></div>
+            <div class="sm:col-span-2 border-t border-line pt-2 text-xs font-semibold uppercase tracking-wider text-muted">Fremføring til I<sub>z</sub>. Tom = projektets standard fra Beregning</div>
+            <label class="f" for="m-metode">Installationsmetode
+              <select id="m-metode" class="inp" x-model="form.metode"><option value="" :selected="!form.metode" x-text="'Projektets standard (' + db.projekt.metode + ')'"></option>
+                <template x-for="(l, k) in METODER" :key="k"><option :value="k" :selected="form.metode===k" x-text="l"></option></template></select></label>
+            <label class="f" for="m-temp"><span x-text="forhold(form, '').jord ? 'Jordtemperatur (°C)' : 'Lufttemperatur (°C)'"></span>
+              <select id="m-temp" class="inp num" x-model="form.temp"><option value="" :selected="form.temp===''">Projektets standard</option>
+                <template x-for="c in TEMPS" :key="c"><option :value="c" :selected="form.temp==c" x-text="c"></option></template></select></label>
+            <label class="f" for="m-samlet">Samlet fremførte kredse<input id="m-samlet" class="inp num" type="number" min="1" max="20" step="1" x-model="form.samlet" :placeholder="'Standard ' + db.projekt.samlet"></label>
+            <label class="f" for="m-lag">Fremføringsform (B.52.17)
+              <select id="m-lag" class="inp" x-model="form.lag" :disabled="forhold(form, '').jord"><option value="" :selected="!form.lag">Projektets standard</option>
+                <template x-for="(v, k) in LAG" :key="k"><option :value="k" :selected="form.lag===k" x-text="v.navn"></option></template></select></label>
+            <p class="text-xs text-muted sm:col-span-2" x-text="korrektion(form, '', 'PVC').txt + '. Faktorerne gælder PVC; XLPE og brandkabel bruger XLPE-tabellen og dens temperaturfaktorer.'"></p>
           </div>
         </template>
         <template x-if="modal.type==='enhed'">
@@ -1080,7 +1118,8 @@
             <label class="f" for="m-antal" x-show="!mid()">Antal (nummereres automatisk)<input id="m-antal" class="inp num" type="number" min="1" max="20" step="1" x-model.number="form.antal"></label>
             <div class="text-xs num self-end pb-2" x-show="form.gruppeId">
               <div :class="duOver(form) && 'warn'" x-text="'ΔU ' + fmt(du(form), 2) + ' % (grænse ' + duGraense(form) + ' %)'"></div>
-              <div :class="izFejl(form) && 'warn'" x-text="'Iz ' + fmt(iz(form)) + ' A · sikring ' + (gruppe(form.gruppeId) ? gruppe(form.gruppeId).In : '?') + ' A'"></div>
+              <div :title="korrektion(gruppe(form.gruppeId), '', form.kabel).txt" :class="izFejl(form) && 'warn'" x-text="'Iz ' + fmt(iz(form)) + ' A · sikring ' + (gruppe(form.gruppeId) ? gruppe(form.gruppeId).In : '?') + ' A'"></div>
+              <div class="text-muted" x-text="'Iz = ' + fmt(izTabel(form.kabel, form.tv, tre(form), forhold(gruppe(form.gruppeId)).metode)) + ' A × ' + fmt(korrektion(gruppe(form.gruppeId), '', form.kabel).kt, 2) + ' × ' + fmt(korrektion(gruppe(form.gruppeId), '', form.kabel).ks, 2) + ' (' + forholdTxt(gruppe(form.gruppeId)) + ')'"></div>
               <button type="button" class="underline" x-show="forslag(form) && forslag(form) != form.tv" @click="form.tv = forslag(form)" x-text="'Brug foreslået ' + fmt(forslag(form)) + ' mm²'"></button>
             </div>
           </div>
@@ -1273,11 +1312,11 @@
   </div>
 </div>
 
-<script src="js/data.js?v=10.0.0"></script>
-<script src="js/beregning.js?v=10.0.0"></script>
-<script src="js/diagram.js?v=10.0.0"></script>
-<script src="js/lagring.js?v=10.0.0"></script>
-<script src="js/app.js?v=10.0.0"></script>
+<script src="js/data.js?v=10.1.0"></script>
+<script src="js/beregning.js?v=10.1.0"></script>
+<script src="js/diagram.js?v=10.1.0"></script>
+<script src="js/lagring.js?v=10.1.0"></script>
+<script src="js/app.js?v=10.1.0"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.14.1/cdn.min.js"></script>
 </body>
 </html>

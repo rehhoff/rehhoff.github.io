@@ -2,6 +2,17 @@
 
 Nyeste øverst. Versionsnummeret står også i appen som `APP_VERSION`. Hver version siger, hvilken model der lavede den.
 
+## 10.1.0 · 2026-11-16 · Claude Fable
+
+Installationsmetoder, korrektionsfaktorer og egen I<sub>z</sub>-tabel for XLPE. Plan: `docs/planer/2026-11-16-korrektionsfaktorer.md`. `SCHEMA` 9 → 10, så første start tager en backup.
+
+- I<sub>z</sub> = tabelværdi × k<sub>temp</sub> × k<sub>samlet</sub> efter DS/HD 60364-5-52 anneks B. Metoder A1, A2, B1, B2, C, D1, D2 og E. Temperatur 10–60 °C i luft eller jord. 1–20 samlet fremførte kredse og fremføringsform (bundtet, ét lag på væg, under loft, perforeret bakke, kabelstige).
+- XLPE og Brandkabel bruger XLPE-tabellen (90 °C). PVC, PKAJ og PKL bruger PVC-tabellen. Eksisterende XLPE-kabler får derfor højere I<sub>z</sub> end før, fx 3G1,5 fra 19,5 til 24 A.
+- Projektets standard sættes under Beregning. Gruppen og tavlens tilgangskabel kan overskrive den. Samledåser følger gruppen.
+- Faktorerne vises ved brugsgenstanden, som værktøjstip i kabellisten og i en ny kolonne Fremføring under Beregning.
+- Standardværdierne (C, 30 °C, 1 kreds) giver samme I<sub>z</sub> for PVC-kabler, samme ΔU, kabelforslag og advarsler som før.
+- Røgtesten tjekker normværdier, regression på eksempelprojekterne (`tests/regression-skema9.json`) og opgradering fra skema 9.
+
 ## 10.0.0 · 2026-11-16 · Claude Opus
 
 Appen er delt op i filer, så flere modeller kan arbejde samtidig. Ingen ændring for brugeren og ingen ændring af data. Plan: `docs/planer/2026-11-16-moduler.md`.

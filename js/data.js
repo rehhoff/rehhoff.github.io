@@ -1,7 +1,7 @@
 /* Konstanter, lagernøgler, tabeller, norm() og eksempeldata. Indlæses først; alt her er globalt og bruges af de andre filer og markup. */
 const KEY = 'tavleoversigt.v2', OLD = 'tavleoversigt.v1', TKEY = 'tavleoversigt.tema', IDX = 'tavleoversigt.projekter';
 /* Versioner: APP_VERSION følger CHANGELOG.md. SCHEMA hæves kun, når datamodellen ændres, og udløser en automatisk backup før migrering. */
-const APP_VERSION = '10.0.0', SCHEMA = 9, BKEY = 'tavleoversigt.backups', BMAX = 3;
+const APP_VERSION = '10.1.0', SCHEMA = 10, BKEY = 'tavleoversigt.backups', BMAX = 3;
 const PK = id => 'tavleoversigt.p.' + id, MEM = {};
 /* Synkronisering: en hemmelig GitHub Gist med en markørfil og én fil pr. projekt. Se docs/planer/2026-11-15-gist-synk.md. */
 const SKEY = 'tavleoversigt.sync', GFIL = 'tavleoversigt.json', GP = id => 'tavleoversigt-' + id + '.json', GPRE = /^tavleoversigt-([A-Za-z0-9_-]+)\.json$/, GH = 'https://api.github.com';
@@ -24,8 +24,57 @@ const IK = {
 };
 const RHO = 0.0225;
 const TV = [1.5, 2.5, 4, 6, 10, 16, 25, 35, 50, 70, 95, 120];
-/* Iz i A: PVC-isoleret kobber, installationsmetode C, 30 °C. Nøgle = antal belastede ledere. */
-const IZ = { 2:{1.5:19.5, 2.5:27, 4:36, 6:46, 10:63, 16:85, 25:112, 35:138, 50:168, 70:213, 95:258, 120:299}, 3:{1.5:17.5, 2.5:24, 4:32, 6:41, 10:57, 16:76, 25:96, 35:119, 50:144, 70:184, 95:223, 120:259} };
+/* Iz i A for kobber, DS/HD 60364-5-52 (IEC 60364-5-52:2009) anneks B. Luft 30 °C, jord 20 °C og 2,5 K·m/W.
+   IZT[isolation][belastede ledere][metode] = værdier i rækkefølge efter TV (1,5–120 mm²).
+   PVC 70 °C: B.52.2 (2 belastede) og B.52.4 (3). XLPE/EPR 90 °C: B.52.3 og B.52.5. Metode E: B.52.10 (PVC) og B.52.12 (XLPE), flerlederkabel. */
+const IZT = {
+  PVC: {
+    2: { A1:[14.5, 19.5, 26, 34, 46, 61, 80, 99, 119, 151, 182, 210], A2:[14, 18.5, 25, 32, 43, 57, 75, 92, 110, 139, 167, 192],
+         B1:[17.5, 24, 32, 41, 57, 76, 101, 125, 151, 192, 232, 269], B2:[16.5, 23, 30, 38, 52, 69, 90, 111, 133, 168, 201, 232],
+         C:[19.5, 27, 36, 46, 63, 85, 112, 138, 168, 213, 258, 299], D1:[22, 29, 37, 46, 60, 78, 99, 119, 140, 173, 204, 231],
+         D2:[22, 28, 38, 48, 64, 83, 110, 132, 156, 192, 230, 261], E:[22, 30, 40, 51, 70, 94, 119, 148, 180, 232, 282, 328] },
+    3: { A1:[13.5, 18, 24, 31, 42, 56, 73, 89, 108, 136, 164, 188], A2:[13, 17.5, 23, 29, 39, 52, 68, 83, 99, 125, 150, 172],
+         B1:[15.5, 21, 28, 36, 50, 68, 89, 110, 134, 171, 207, 239], B2:[15, 20, 27, 34, 46, 62, 80, 99, 118, 149, 179, 206],
+         C:[17.5, 24, 32, 41, 57, 76, 96, 119, 144, 184, 223, 259], D1:[18, 24, 30, 38, 50, 64, 82, 98, 116, 143, 169, 192],
+         D2:[19, 24, 33, 41, 54, 70, 92, 110, 130, 162, 193, 220], E:[18.5, 25, 34, 43, 60, 80, 101, 126, 153, 196, 238, 276] }
+  },
+  XLPE: {
+    2: { A1:[19, 26, 35, 45, 61, 81, 106, 131, 158, 200, 241, 278], A2:[18.5, 25, 33, 42, 57, 76, 99, 121, 145, 183, 220, 253],
+         B1:[23, 31, 42, 54, 75, 100, 133, 164, 198, 253, 306, 354], B2:[22, 30, 40, 51, 69, 91, 119, 146, 175, 221, 265, 305],
+         C:[24, 33, 45, 58, 80, 107, 138, 171, 209, 269, 328, 382], D1:[25, 33, 43, 53, 71, 91, 116, 139, 164, 203, 239, 271],
+         D2:[27, 35, 46, 58, 77, 100, 129, 155, 183, 225, 270, 306], E:[26, 36, 49, 63, 86, 115, 149, 185, 225, 289, 352, 410] },
+    3: { A1:[17, 23, 31, 40, 54, 73, 95, 117, 141, 179, 216, 249], A2:[16.5, 22, 30, 38, 51, 68, 89, 109, 130, 164, 197, 227],
+         B1:[20, 28, 37, 48, 66, 88, 117, 144, 175, 222, 269, 312], B2:[19.5, 26, 35, 44, 60, 80, 105, 128, 154, 194, 233, 268],
+         C:[22, 30, 40, 52, 71, 96, 119, 147, 179, 229, 278, 322], D1:[21, 28, 36, 44, 58, 75, 96, 115, 135, 167, 197, 223],
+         D2:[23, 30, 39, 49, 65, 84, 107, 129, 153, 188, 226, 257], E:[23, 32, 42, 54, 75, 100, 127, 158, 192, 246, 298, 346] }
+  }
+};
+/* Gammel tabel (PVC, metode C, 30 °C) som opslag pr. tværsnit. Beholdes til kode, der ikke kender metoder. */
+const IZ = { 2:Object.fromEntries(TV.map((a, i) => [a, IZT.PVC[2].C[i]])), 3:Object.fromEntries(TV.map((a, i) => [a, IZT.PVC[3].C[i]])) };
+/* Installationsmetoder (DS/HD 60364-5-52, tabel B.52.1). Metode F er udeladt: den gælder kun enlederkabler. */
+const METODER = { A1:'A1 · isolerede ledere i rør i isoleret væg', A2:'A2 · flerlederkabel i rør i isoleret væg', B1:'B1 · isolerede ledere i rør på væg', B2:'B2 · flerlederkabel i rør på væg',
+  C:'C · flerlederkabel direkte på eller i væg', D1:'D1 · kabel i rør i jord', D2:'D2 · kabel direkte i jord', E:'E · flerlederkabel i fri luft' };
+const JORD = m => m === 'D1' || m === 'D2';
+/* Isolationstabel pr. kabeltype (aftalt med Alexander 2026-11-16) */
+const ISO = k => k === 'XLPE' || k === 'Brandkabel' ? 'XLPE' : 'PVC';
+/* Temperaturfaktorer: B.52.14 (luft, basis 30 °C) og B.52.15 (jord, basis 20 °C). */
+const TEMPS = [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60];
+const K_TEMP = {
+  luft: { PVC:{ 10:1.22, 15:1.17, 20:1.12, 25:1.06, 30:1, 35:0.94, 40:0.87, 45:0.79, 50:0.71, 55:0.61, 60:0.50 },
+          XLPE:{ 10:1.15, 15:1.12, 20:1.08, 25:1.04, 30:1, 35:0.96, 40:0.91, 45:0.87, 50:0.82, 55:0.76, 60:0.71 } },
+  jord: { PVC:{ 10:1.10, 15:1.05, 20:1, 25:0.95, 30:0.89, 35:0.84, 40:0.77, 45:0.71, 50:0.63, 55:0.55, 60:0.45 },
+          XLPE:{ 10:1.07, 15:1.04, 20:1, 25:0.96, 30:0.93, 35:0.89, 40:0.85, 45:0.80, 50:0.76, 55:0.71, 60:0.65 } }
+};
+/* Samlet fremføring: B.52.17 (luft, pr. antal kredse i KREDSE) og for jord B.52.18 (direkte, kabler der rører hinanden) og B.52.19 (flerlederkabler i hvert sit rør, rørene rører hinanden). */
+const KREDSE = [1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 16, 20];
+const LAG = {
+  bundt: { navn:'Bundtet, på overflade, indstøbt eller i rør', k:[1, 0.80, 0.70, 0.65, 0.60, 0.57, 0.54, 0.52, 0.50, 0.45, 0.41, 0.38] },
+  vaeg:  { navn:'Ét lag på væg, gulv eller uperforeret bakke', k:[1, 0.85, 0.79, 0.75, 0.73, 0.72, 0.72, 0.71, 0.70] },
+  loft:  { navn:'Ét lag direkte under loft', k:[0.95, 0.81, 0.72, 0.68, 0.66, 0.64, 0.63, 0.62, 0.61] },
+  bakke: { navn:'Ét lag på perforeret bakke', k:[1, 0.88, 0.82, 0.77, 0.75, 0.73, 0.73, 0.72, 0.72] },
+  stige: { navn:'Ét lag på kabelstige eller bøjler', k:[1, 0.87, 0.82, 0.80, 0.80, 0.79, 0.79, 0.78, 0.78] }
+};
+const K_JORD_SAMLET = { D1:[1, 0.85, 0.75, 0.70, 0.65, 0.60], D2:[1, 0.75, 0.65, 0.60, 0.55, 0.50] };
 const PH = ['L1', 'L2', 'L3'];
 const KABLER = ['Brandkabel', 'XLPE', 'PVC', 'PKAJ', 'PKL'];
 const DAASER = ['Membrandåse', 'Indmuringsdåse', 'Forfradåse', 'Underlag', 'Europadåse', 'PL-dåse'];
@@ -75,16 +124,27 @@ const tal = s => Number(String(s).replace(',', '.')) || 0;
 const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' })[c]);
 const hostTema = document.documentElement.getAttribute('data-theme');
 
-const tom = () => ({ projekt:{ anlaeg:'bolig', navn:'', sagsnr:'', kunde:'', adresse:'', installatoer:'', dato:'' }, tavler:[], rcds:[], lokaler:[], grupper:[], enheder:[], daaser:[], afbrydere:[], racks:[], udstyr:[], links:[] });
+const tom = () => ({ projekt:{ anlaeg:'bolig', navn:'', sagsnr:'', kunde:'', adresse:'', installatoer:'', dato:'', metode:'C', temp:30, jtemp:20, samlet:1, lag:'bundt' }, tavler:[], rcds:[], lokaler:[], grupper:[], enheder:[], daaser:[], afbrydere:[], racks:[], udstyr:[], links:[] });
+/* Gruppens eller tilgangskablets egne forhold: gyldig værdi eller '' (= projektets standard). Præfiks 't' giver tMetode, tTemp, tSamlet, tLag. */
+function forholdNorm(o, p) {
+  const n = k => p ? p + k[0].toUpperCase() + k.slice(1) : k, s = Math.round(Number(o[n('samlet')]));
+  o[n('metode')] = METODER[o[n('metode')]] ? o[n('metode')] : '';
+  o[n('temp')] = o[n('temp')] !== '' && o[n('temp')] != null && TEMPS.includes(Number(o[n('temp')])) ? Number(o[n('temp')]) : '';
+  o[n('samlet')] = s >= 1 && s <= 20 ? s : '';
+  o[n('lag')] = LAG[o[n('lag')]] ? o[n('lag')] : '';
+}
 function norm(d) {
   const o = Object.assign(tom(), d || {});
   o.projekt = Object.assign(tom().projekt, o.projekt || {});
   { const sd = o.projekt.sidst; o.projekt.sidst = sd && KABLER.includes(sd.kabel) && sd.ledere && Number(sd.tv) ? { kabel:sd.kabel, ledere:sd.ledere, tv:Number(sd.tv) } : null; }
+  /* Skema 10: forhold for Iz. Projektets standard, som grupper og tilgangskabler kan overskrive (tom = standard). */
+  { const p = o.projekt; p.metode = METODER[p.metode] ? p.metode : 'C'; p.temp = TEMPS.includes(Number(p.temp)) ? Number(p.temp) : 30; p.jtemp = TEMPS.includes(Number(p.jtemp)) ? Number(p.jtemp) : 20;
+    p.samlet = Math.round(Number(p.samlet)) >= 1 && Math.round(Number(p.samlet)) <= 20 ? Math.round(Number(p.samlet)) : 1; p.lag = LAG[p.lag] ? p.lag : 'bundt'; }
   for (const k of ['tavler', 'rcds', 'lokaler', 'grupper', 'enheder', 'daaser', 'afbrydere', 'racks', 'udstyr', 'links']) if (!Array.isArray(o[k])) o[k] = [];
-  o.tavler.forEach(t => { t.forsikring = Number(t.forsikring) || 35; t.fra = t.fra || ''; t.tilgang = t.tilgang || ''; t.hovedafbryder = Number(t.hovedafbryder) || 0; t.tKabel = KABLER.includes(t.tKabel) ? t.tKabel : 'PVC'; t.tLedere = t.tLedere || '5G'; t.tTv = Number(t.tTv) || 6; t.tLaengde = Number(t.tLaengde) || 0; });
+  o.tavler.forEach(t => { t.forsikring = Number(t.forsikring) || 35; t.fra = t.fra || ''; t.tilgang = t.tilgang || ''; t.hovedafbryder = Number(t.hovedafbryder) || 0; t.tKabel = KABLER.includes(t.tKabel) ? t.tKabel : 'PVC'; t.tLedere = t.tLedere || '5G'; t.tTv = Number(t.tTv) || 6; t.tLaengde = Number(t.tLaengde) || 0; forholdNorm(t, 't'); });
   o.grupper.forEach((g, i) => {
     g.fase = PH.includes(g.fase) ? g.fase : PH[i % 3]; g.rcdId = g.rcdId || ''; g.sf = Number(g.sf) > 0 && Number(g.sf) <= 1 ? Number(g.sf) : 1;
-    g.maal = Object.assign({ riso:'', zs:'', rcd:'', ok:false }, g.maal || {});
+    g.maal = Object.assign({ riso:'', zs:'', rcd:'', ok:false }, g.maal || {}); forholdNorm(g, '');
   });
   o.enheder.forEach(e => { e.gruppeId = e.gruppeId || ''; e.lokaleId = e.lokaleId || ''; e.daaseId = e.daaseId || ''; e.kabel = kabMap(e.kabel); e.symbol = e.symbol || 'auto'; });
   o.daaser.forEach(d => { d.gruppeId = d.gruppeId || ''; d.parentId = d.parentId || ''; d.lokaleId = d.lokaleId || ''; d.kabel = kabMap(d.kabel); d.type = daaMap(d.type); });
