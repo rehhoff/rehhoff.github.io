@@ -8,7 +8,7 @@ function app() {
     db: tom(), hist: [], sel: null, drag: null, over: null,
     projekter: [], pid: '', pf: { navn:'', sagsnr:'', kunde:'', adresse:'' }, sldSel: null, z: { x:8, y:8, k:1 }, pan: null, panMoved: false,
     filter: { q:'', tavle:'', type:'', lokale:'' }, sort: { key:'gruppe', dir:1 },
-    modal: null, form: {}, confirm: null, toast: null, storageOk: true, tema: 'auto', qa: '', io: '',
+    modal: null, form: {}, confirm: null, toasts: [], storageOk: true, tema: 'auto', qa: '', io: '',
     typeLabel: { lys:'Lys', kraft:'Kraft', stik:'Stik', data:'Data og teknik' },
     modalNavn: { afbryder:'afbryder', tavle:'tavle', rcd:'HPFI', lokale:'lokale', gruppe:'gruppe', enhed:'brugsgenstand', daase:'samlepunkt', rack:'rackskab', udstyr:'rackudstyr', link:'forbindelse' },
     udstArt: { patchpanel:'Patchpanel', switch:'Switch', router:'Router', nvr:'NVR (optager)', andet:'Andet udstyr' },
@@ -81,8 +81,15 @@ function app() {
       return base + '-' + (slug || 'projekt') + '.' + ext;
     },
     mutate(fn) { this.hist.push(JSON.stringify(this.db)); if (this.hist.length > 40) this.hist.shift(); fn(); this.syncDaaser(); this.save(); },
-    undo() { if (!this.hist.length) return; this.db = norm(JSON.parse(this.hist.pop())); this.save(); this.say('Fortrudt.'); },
-    say(txt, undo) { const t = { txt, undo: !!undo }; this.toast = t; setTimeout(() => { if (this.toast === t) this.toast = null; }, 4500); },
+    undo() { if (!this.hist.length) return; this.db = norm(JSON.parse(this.hist.pop())); this.save(); this.toasts.filter(t => t.undo).forEach(t => this.lukToast(t.id)); this.say('Fortrudt.'); },
+    /* beskeder i bunden: højst tre ad gangen, tid efter tekstens længde, fejl bliver stående til de lukkes */
+    say(txt, undo, fejl) {
+      this.toasts.filter(x => x.txt === txt).forEach(x => this.lukToast(x.id));
+      while (this.toasts.length >= 3) this.lukToast(this.toasts[0].id);
+      const t = { id:uid(), txt, undo:!!undo, fejl:!!fejl }; this.toasts.push(t);
+      if (!fejl) TIMERS['toast' + t.id] = setTimeout(() => this.lukToast(t.id), Math.min(10000, Math.max(undo ? 6000 : 3500, 2000 + txt.length * 50)));
+    },
+    lukToast(id) { clearTimeout(TIMERS['toast' + id]); delete TIMERS['toast' + id]; this.toasts = this.toasts.filter(t => t.id !== id); },
     go(v) { this.view = v; try { location.hash = v; } catch (e) {} if (v === 'enstreg') this.$nextTick(() => this.tilpas()); },
     skiftTema() { this.tema = { auto:'light', light:'dark', dark:'auto' }[this.tema]; try { localStorage.setItem(TKEY, this.tema); } catch (e) {} this.brugTema(); },
     brugTema() {
