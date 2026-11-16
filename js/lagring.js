@@ -306,7 +306,7 @@ const APP_LAGRING = () => ({
         for (const g of this.grupperFor(t.id)) h += '<tr>' + [g.nr, g.navn, g.maal.riso, g.maal.zs, this.zsMax(g) ? this.fmt(this.zsMax(g), 2) : '–', g.maal.rcd, g.maal.ok ? 'OK' : '', this.maalVurdering(g).txt].map(td).join('') + '</tr>';
         h += '</table><h2>Kortslutning og selektivitet</h2><p class="m">' + esc('Ze ved tavlen: ' + (this.tavleZe(t.id) == null ? 'ikke angivet' : this.fmt(this.tavleZe(t.id), 3) + ' Ω') + ' · Ik,maks: ' + (this.tavleIkMaks(t.id) ? this.fmt(this.tavleIkMaks(t.id)) + ' kA' : 'ikke angivet')) + '</p>' +
           '<table><tr><th>Gr.</th><th>Betegnelse</th><th>Sikring</th><th>Ia (A)</th><th>Ik,min (A)</th><th>Udkobling</th><th>Brydeevne (kA)</th></tr>';
-        for (const g of this.grupperFor(t.id)) { const k = this.ikMin(g); h += '<tr>' + [g.nr, g.navn, g.kar + g.In, this.ia(g) ? this.fmt(this.ia(g), 0) : '–', k ? this.fmt(k.ik, 0) : '–', !k || k.ok == null ? '–' : k.ok ? 'OK' : 'Ik,min under Ia',
+        for (const g of this.grupperFor(t.id)) { const k = this.ikMin(g); h += '<tr>' + [g.nr, g.navn, g.kar + g.In, this.ia(g) ? this.fmt(this.ia(g), 0) : '–', k ? this.ikVis(k) : '–', !k || k.ok == null ? '–' : k.ok ? 'OK' : 'Ik,min under Ia',
           this.fmt(Number(g.brydeevne) || 6) + (this.brydeFejl(t.id).includes(g) ? ' (under Ik,maks)' : '')].map(td).join('') + '</tr>'; }
         h += '</table>';
         for (const w of this.kortslutFejl().concat(this.selektivitet()).filter(w => w.t === t.id)) h += '<p>⚠ ' + esc(w.txt) + '</p>';

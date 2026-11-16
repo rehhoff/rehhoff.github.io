@@ -356,6 +356,7 @@ async def main():
             o.uden=a.ikMin(g)===null&&!w('ik:gk'); t.ze=0.3;
             let k=a.ikMin(g); o.pvc=[rd(k.R),rd(k.ik),k.Ia,k.ok,w('ik:gk')];
             g.kar='C'; g.In=25; k=a.ikMin(g); o.c25=[k.Ia,k.ok,w('ik:gk'),a.gruppeFejl('gk').some(x=>x.startsWith('Ik,min'))]; g.kar='B'; g.In=16;
+            t.ze=0.64905; g.In=32; k=a.ikMin(g); o.afrund=[rd(k.ik),k.ok,a.ikVis(k),a.kortslutFejl().some(x=>x.k==='ik:gk'&&x.txt.includes('Ik,min 159 A er under Ia 160 A')),a.docHtml().includes('<td>159</td>')]; t.ze=0.3; g.In=16;
             e.kabel='XLPE'; k=a.ikMin(g); o.xlpe=[rd(k.R),rd(k.ik)]; e.kabel='PVC';
             d.daaser.push({{id:'dk',navn:'K',type:'Membrandåse',gruppeId:'gk',parentId:'',lokaleId:'',kabel:'PVC',ledere:'3G',tv:2.5,laengde:10}}); e.daaseId='dk';
             k=a.ikMin(g); o.daase=[rd(k.R),rd(k.ik)]; e.daaseId='';
@@ -379,6 +380,7 @@ async def main():
         tjek('kortslutning: Ik,min med kendte tal (PVC, XLPE, dåse, undertavle), Ia, brydeevne',
              r['uden'] and r['pvc'] == [0.72, 214.216, 80, True, False] and r['c25'] == [250, False, True, True] and r['xlpe'] == [0.768, 204.588] and r['daase'] == [0.936, 176.78]
              and r['bryde0'] and r['bryde1'] and r['bryde2'] and r['under'] == [0.39, 10, 0.72] and r['zs'] == [1.917, 80, 160, 320] and r['ryddet'], r)
+        tjek('kortslutning: Ik,min lige under Ia vises rundet ned (159,6 A står som 159 A, ikke 160 A)', r['afrund'] == [159.6, False, '159', True, True], r)
         tjek('selektivitet: forsikring under 1,6 × største sikring, gruppe foran undertavle, HPFI i serie med og uden type S, med i dokumentationen',
              r['sel1'] and r['sel2'] and r['sg1'] and r['sg2'] and r['hpfi1'] and r['hpfi2'] and r['hpfi3'] and r['hpfi4'] and r['doc'], r)
 

@@ -2,6 +2,14 @@
 
 Nyeste øverst. Versionsnummeret står også i appen som `APP_VERSION`. Hver version siger, hvilken model der lavede den.
 
+## 10.12.1 · 2026-11-16 · Claude Fable
+
+Gennemgang af 10.11.0 og 10.12.0 (håndregning og browser).
+
+- I<sub>k,min</sub> vises nu rundet ned. Før kunne fx 159,6 A stå som "I<sub>k,min</sub> 160 A er under I<sub>a</sub> 160 A". Selve beregningen og advarslen er uændret.
+- Røgtesten: tjek af afrundingen.
+- Ingen ændring af datamodellen. `SCHEMA` er uændret 12.
+
 ## 10.12.0 · 2026-11-16 · Claude Fable
 
 Forslag til fasefordeling (forslag 13). Plan: `docs/planer/2026-11-16-fasefordeling.md`.

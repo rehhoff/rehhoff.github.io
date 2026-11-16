@@ -14,8 +14,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=10.12.0">
-<link rel="stylesheet" href="css/tailwind.css?v=10.12.0">
+<link rel="stylesheet" href="css/app.css?v=10.12.1">
+<link rel="stylesheet" href="css/tailwind.css?v=10.12.1">
 </head>
 <body class="min-h-full">
 <p id="fail" hidden style="margin:16px;padding:12px;border:1px solid var(--crit);color:var(--crit)">Appen kunne ikke starte, fordi Alpine.js ikke blev indlæst. Genindlæs siden.</p>
@@ -617,7 +617,7 @@
                   <td><div class="meter" :class="gruppeI(g.id) > g.In && 'over'"><i :style="'width:' + Math.min(100, gruppeI(g.id)/g.In*100) + '%'"></i></div></td>
                   <td class="num r" :class="maxDu(g.id).over && 'warn'" x-text="maxDu(g.id).v == null ? '–' : fmt(maxDu(g.id).v, 2) + ' %'"></td>
                   <td class="num r" :class="minIz(g.id) && minIz(g.id) < g.In && 'warn'" x-text="minIz(g.id) ? fmt(minIz(g.id)) + ' A' : '–'"></td>
-                  <td class="num r" :class="ikMin(g) && ikMin(g).ok === false && 'warn'" :title="ikTxt(g)" x-text="ikMin(g) ? fmt(ikMin(g).ik, 0) + ' A' : '–'"></td>
+                  <td class="num r" :class="ikMin(g) && ikMin(g).ok === false && 'warn'" :title="ikTxt(g)" x-text="ikMin(g) ? ikVis(ikMin(g)) + ' A' : '–'"></td>
                   <td class="num text-xs" :title="korrektion(g, '', 'PVC').txt" x-text="forholdTxt(g)"></td>
                   <td :class="gruppeFejl(g.id).length && 'warn'" x-text="gruppeFejl(g.id).length ? '⚠ ' + gruppeFejl(g.id).length + ' forhold' : 'OK'"></td>
                 </tr>
@@ -1430,12 +1430,12 @@
   </div>
 </div>
 
-<script src="js/data.js?v=10.12.0"></script>
-<script src="js/beregning.js?v=10.12.0"></script>
-<script src="js/diagram.js?v=10.12.0"></script>
-<script src="js/lagring.js?v=10.12.0"></script>
-<script src="js/historik.js?v=10.12.0"></script>
-<script src="js/app.js?v=10.12.0"></script>
+<script src="js/data.js?v=10.12.1"></script>
+<script src="js/beregning.js?v=10.12.1"></script>
+<script src="js/diagram.js?v=10.12.1"></script>
+<script src="js/lagring.js?v=10.12.1"></script>
+<script src="js/historik.js?v=10.12.1"></script>
+<script src="js/app.js?v=10.12.1"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.14.1/cdn.min.js"></script>
 </body>
 </html>
