@@ -1,0 +1,178 @@
+/* Konstanter, lagernøgler, tabeller, norm() og eksempeldata. Indlæses først; alt her er globalt og bruges af de andre filer og markup. */
+const KEY = 'tavleoversigt.v2', OLD = 'tavleoversigt.v1', TKEY = 'tavleoversigt.tema', IDX = 'tavleoversigt.projekter';
+/* Versioner: APP_VERSION følger CHANGELOG.md. SCHEMA hæves kun, når datamodellen ændres, og udløser en automatisk backup før migrering. */
+const APP_VERSION = '10.0.0', SCHEMA = 9, BKEY = 'tavleoversigt.backups', BMAX = 3;
+const PK = id => 'tavleoversigt.p.' + id, MEM = {};
+/* Synkronisering: en hemmelig GitHub Gist med en markørfil og én fil pr. projekt. Se docs/planer/2026-11-15-gist-synk.md. */
+const SKEY = 'tavleoversigt.sync', GFIL = 'tavleoversigt.json', GP = id => 'tavleoversigt-' + id + '.json', GPRE = /^tavleoversigt-([A-Za-z0-9_-]+)\.json$/, GH = 'https://api.github.com';
+let SYNK_T = null;
+const hashTxt = s => {
+  let h1 = 0xdeadbeef, h2 = 0x41c6ce57;
+  for (let i = 0; i < s.length; i++) { const c = s.charCodeAt(i); h1 = Math.imul(h1 ^ c, 2654435761); h2 = Math.imul(h2 ^ c, 1597334677); }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(36);
+};
+const hashD = d => hashTxt(JSON.stringify(norm(JSON.parse(JSON.stringify(d)))));
+let SLDW = 1240;
+const IK = {
+  el:'<svg viewBox="0 0 16 16" class="ik" aria-hidden="true"><path d="M9.5 1 3 9h4l-1 6 6.5-8H8.5z" fill="currentColor"/></svg>',
+  pds:'<svg viewBox="0 0 16 16" class="ik" aria-hidden="true"><path d="M2 4h12v7h-3v2H5v-2H2z" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M5 4v3M7 4v3M9 4v3M11 4v3" stroke="currentColor" stroke-width="1.2"/></svg>',
+  cctv:'<svg viewBox="0 0 16 16" class="ik" aria-hidden="true"><path d="M1 4h10v5H1zM11 5.5 15 4v5l-4-1.5M4 9v4h4" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>',
+  rack:'<svg viewBox="0 0 16 16" class="ik" aria-hidden="true"><path d="M3 1h10v14H3zM3 5.5h10M3 10h10" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M5 3.3h2M5 7.8h2M5 12.4h2" stroke="currentColor" stroke-width="1.4"/></svg>',
+  daase:'<svg viewBox="0 0 16 16" class="ik" aria-hidden="true"><rect x="3" y="3" width="10" height="10" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="8" cy="8" r="2" fill="currentColor"/><path d="M0 8h3M13 8h3M8 13v3" stroke="currentColor" stroke-width="1.4"/></svg>'
+};
+const RHO = 0.0225;
+const TV = [1.5, 2.5, 4, 6, 10, 16, 25, 35, 50, 70, 95, 120];
+/* Iz i A: PVC-isoleret kobber, installationsmetode C, 30 °C. Nøgle = antal belastede ledere. */
+const IZ = { 2:{1.5:19.5, 2.5:27, 4:36, 6:46, 10:63, 16:85, 25:112, 35:138, 50:168, 70:213, 95:258, 120:299}, 3:{1.5:17.5, 2.5:24, 4:32, 6:41, 10:57, 16:76, 25:96, 35:119, 50:144, 70:184, 95:223, 120:259} };
+const PH = ['L1', 'L2', 'L3'];
+const KABLER = ['Brandkabel', 'XLPE', 'PVC', 'PKAJ', 'PKL'];
+const DAASER = ['Membrandåse', 'Indmuringsdåse', 'Forfradåse', 'Underlag', 'Europadåse', 'PL-dåse'];
+const kabMap = k => KABLER.includes(k) ? k : /noik|halogen|xlpe/i.test(k || '') ? 'XLPE' : 'PVC';
+const daaMap = t => DAASER.includes(t) ? t : /underlag|fuga/i.test(t || '') ? 'Underlag' : /membran|ip44|brønd/i.test(t || '') ? 'Membrandåse' : 'PL-dåse';
+const TIMERS = {};
+/* Typiske mærkeeffekter som forslag: [mønster i navnet, W, betegnelse, ganges med antal] */
+const EFFEKT = [
+  [/halogen/, 50, 'Halogenspot 50 W', 1], [/skinne/, 60, 'Skinnespots'], [/downlight|indbygningsspot|spot/, 10, 'Downlight', 1], [/lysstof|\bt8\b|\bt5\b/, 36, 'Lysstofrør 36 W', 1], [/gløde/, 60, 'Glødepære 60 W', 1],
+  [/sparepære/, 11, 'Sparepære 11 W', 1], [/pære/, 7, 'LED-pære 7 W', 1], [/varmelampe|infrarød|ir-lampe/, 250, 'Varmelampe 250 W', 1], [/håndklædetørrer/, 100, 'Håndklædetørrer'],
+  [/radiator|elvarme|panelovn|elpanel/, 1000, 'Elradiator'], [/60\s?x\s?60|led-?panel/, 36, 'LED-panel 60x60', 1], [/led-?bånd|ledstrip|lysbånd/, 30, 'LED-bånd'], [/nødbelys|nødlys/, 8, 'Nødbelysning', 1],
+  [/exit|flugtvej/, 5, 'Flugtvejsskilt', 1], [/highbay|højbay|industriarmatur/, 150, 'Highbay-armatur', 1], [/projektør/, 50, 'LED-projektør', 1], [/parklampe|gadelampe|mastelampe/, 30, 'Parklampe', 1], [/lyskæde/, 20, 'Lyskæde'],
+  [/armatur/, 36, 'Armatur', 1], [/udelampe|udelys|væglampe/, 15, 'Udelampe', 1], [/lampeudtag|loftudtag|lampe|pendel/, 60, 'Lampeudtag', 1],
+  [/vinkøl/, 100, 'Vinkøleskab'], [/kummefryser/, 120, 'Kummefryser'], [/kølerum|frostrum/, 1500, 'Kølerum'], [/køle.?frys/, 200, 'Køle-/fryseskab'], [/frys/, 150, 'Fryser'], [/køl/, 150, 'Køleskab'], [/mikro/, 1200, 'Mikroovn'],
+  [/kogeplade|kogesektion|induktion/, 7200, 'Kogeplade'], [/komfur/, 9000, 'Komfur'], [/sauna/, 6000, 'Saunaovn'], [/ovn/, 3000, 'Ovn'], [/opvask/, 2000, 'Opvaskemaskine'], [/elkedel/, 2000, 'Elkedel'], [/kaffe|espresso/, 1500, 'Kaffemaskine'],
+  [/brødrister|toaster/, 1000, 'Brødrister'], [/airfryer|friture/, 1800, 'Airfryer'], [/køkkenmaskine|røremaskine|blender/, 800, 'Køkkenmaskine'], [/emhætte/, 250, 'Emhætte'],
+  [/vaskemaskine/, 2200, 'Vaskemaskine'], [/hårtørrer|føntørrer/, 2000, 'Hårtørrer'], [/håndtørrer/, 1800, 'Håndtørrer'], [/tumbler|tørreskab/, 2500, 'Tørretumbler'], [/strygejern|strygerulle/, 2400, 'Strygejern'], [/støvsuger/, 900, 'Støvsuger'],
+  [/gennemstrøm/, 11000, 'Gennemstrømningsvandvarmer'], [/vandvarmer|vvb|varmtvandsbeholder/, 3000, 'Vandvarmer'], [/elpatron/, 3000, 'Elpatron'], [/varmepumpe/, 2500, 'Varmepumpe'], [/gulvvarme/, 600, 'Elgulvvarme'],
+  [/varmekabel|frostsikring/, 300, 'Varmekabel'], [/terrassevarmer/, 2000, 'Terrassevarmer'], [/elpejs/, 2000, 'Elpejs'], [/\bspa\b|boblebad/, 3000, 'Spabad'], [/aircondition|klimaanlæg|aircon/, 1500, 'Aircondition'], [/affugter/, 300, 'Affugter'],
+  [/elcykel/, 200, 'Elcykeloplader'], [/lade|elbil/, 11000, 'Ladeboks 11 kW'], [/server/, 500, 'Server'], [/printer|kopimaskine/, 600, 'Printer'], [/projektor/, 300, 'Projektor'], [/\btv\b|fjernsyn|medie/, 150, 'TV og medie'],
+  [/\bpc\b|computer|arbejdsplads/, 300, 'PC-arbejdsplads'], [/router|switch|accesspoint|rack/, 30, 'Router og switch'], [/alarm|porttelefon|dørtelefon|ringeklokke/, 15, 'Alarmcentral'], [/garageport|portåbner|portmotor/, 300, 'Garageport'],
+  [/kompressor/, 2200, 'Kompressor'], [/svejse/, 3500, 'Svejseværk'], [/\bsav\b|rundsav|bordsav|høvl|fræser/, 2000, 'Bordsav'], [/aggregat|genvex/, 150, 'Ventilationsaggregat'], [/ventilat/, 30, 'Ventilator'],
+  [/cirkulationspumpe/, 60, 'Cirkulationspumpe'], [/pumpe/, 800, 'Dykpumpe'], [/hæve.?sænke/, 150, 'Hæve-sænkebord'], [/akvarie|akvarium/, 100, 'Akvarium'], [/stik/, 1000, 'Stikkontakt']
+];
+/* Samtidighedsfaktorer som vejledende forslag pr. installationstype og gruppetype */
+const ANLAEG = { bolig:'Bolig', kontor:'Kontor', butik:'Butik', institution:'Skole og institution', fitness:'Fitness og omklædning', storkoekken:'Storkøkken og restaurant', industri:'Værksted og industri' };
+const SF = { bolig:{ lys:0.7, stik:0.3, kraft:0.8, data:1 }, kontor:{ lys:0.9, stik:0.5, kraft:0.8, data:1 }, butik:{ lys:1, stik:0.5, kraft:0.8, data:1 }, institution:{ lys:0.9, stik:0.4, kraft:0.8, data:1 },
+  fitness:{ lys:1, stik:0.8, kraft:0.9, data:1 }, storkoekken:{ lys:1, stik:0.7, kraft:0.8, data:1 }, industri:{ lys:1, stik:0.6, kraft:0.7, data:1 } };
+/* Lokaleskabeloner: grupper med [navn, W] */
+const SKABELONER = {
+  koekken: { navn:'Køkken', grupper:[ { navn:'Lys', type:'lys', In:10, items:[['Downlight 6 stk.', 60], ['LED-bånd under overskabe', 30]] }, { navn:'Stik', type:'stik', In:13, items:[['Stikkontakter over bord 4 stk.', 1000], ['Køleskab', 150], ['Fryser', 150], ['Emhætte', 250], ['Mikroovn', 1200]] },
+    { navn:'Kogeplade', type:'kraft', In:16, faser:3, items:[['Kogeplade', 7200]] }, { navn:'Ovn', type:'kraft', In:16, items:[['Ovn', 3000]] }, { navn:'Opvaskemaskine', type:'kraft', In:13, items:[['Opvaskemaskine', 2000]] } ] },
+  bad: { navn:'Badeværelse', grupper:[ { navn:'Lys', type:'lys', In:10, items:[['Downlight IP44 4 stk.', 40], ['Spejllys', 18], ['Ventilator', 30]] }, { navn:'Stik', type:'stik', In:13, items:[['Stikkontakt ved vask', 1000], ['Håndklædetørrer', 100]] },
+    { navn:'Gulvvarme', type:'kraft', In:10, items:[['Elgulvvarme', 600]] } ] },
+  stue: { navn:'Stue', grupper:[ { navn:'Lys', type:'lys', In:10, items:[['Lampeudtag 2 stk.', 120], ['Downlight 4 stk.', 40]] }, { navn:'Stik', type:'stik', In:13, items:[['Stikkontakter 8 stk.', 1000], ['TV og medie', 150]] } ] },
+  vaerelse: { navn:'Værelse', grupper:[ { navn:'Lys', type:'lys', In:10, items:[['Lampeudtag', 60]] }, { navn:'Stik', type:'stik', In:13, items:[['Stikkontakter 4 stk.', 1000]] } ] },
+  bryggers: { navn:'Bryggers', grupper:[ { navn:'Lys', type:'lys', In:10, items:[['Armatur', 36]] }, { navn:'Stik', type:'stik', In:13, items:[['Stikkontakter 2 stk.', 1000]] }, { navn:'Vaskemaskine', type:'kraft', In:16, items:[['Vaskemaskine', 2200]] },
+    { navn:'Tørretumbler', type:'kraft', In:16, items:[['Tørretumbler', 2500]] }, { navn:'Vandvarmer', type:'kraft', In:16, items:[['Vandvarmer', 3000]] } ] },
+  kontor: { navn:'Kontor', grupper:[ { navn:'Lys', type:'lys', In:10, items:[['LED-panel 60x60 4 stk.', 144]] }, { navn:'Stik', type:'stik', In:13, items:[['Stikkontakter arbejdsplads 6 stk.', 1000], ['PC-arbejdsplads 2 stk.', 600]] } ] },
+  omklaedning: { navn:'Omklædning', grupper:[ { navn:'Lys', type:'lys', In:10, items:[['Armatur IP44 6 stk.', 216], ['Ventilationsaggregat', 150]] }, { navn:'Stik hårtørrer', type:'stik', In:16, items:[['Hårtørrer 1', 2000], ['Hårtørrer 2', 2000], ['Hårtørrer 3', 2000]] },
+    { navn:'Håndtørrer', type:'kraft', In:16, items:[['Håndtørrer 1', 1800], ['Håndtørrer 2', 1800]] } ] }
+};
+const EFFEKT_SYM = { lys:[60, 'lampe'], stik:[1000, 'stikkontakt'], koel:[150, 'køleskab'], frys:[150, 'fryser'], ovn:[3000, 'ovn'], koge:[7200, 'kogeplade'], mikro:[1200, 'mikroovn'], opvask:[2000, 'opvaskemaskine'], vask:[2200, 'vaskemaskine'],
+  toerre:[2500, 'tørretumbler'], emhaette:[250, 'emhætte'], vvb:[3000, 'vandvarmer'], varme:[1000, 'elvarme'], vp:[2500, 'varmepumpe'], motor:[1500, 'motor'], ev:[11000, 'ladeboks'], it:[30, 'IT-udstyr'] };
+const uid = () => Math.random().toString(36).slice(2, 10);
+const tal = s => Number(String(s).replace(',', '.')) || 0;
+const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' })[c]);
+const hostTema = document.documentElement.getAttribute('data-theme');
+
+const tom = () => ({ projekt:{ anlaeg:'bolig', navn:'', sagsnr:'', kunde:'', adresse:'', installatoer:'', dato:'' }, tavler:[], rcds:[], lokaler:[], grupper:[], enheder:[], daaser:[], afbrydere:[], racks:[], udstyr:[], links:[] });
+function norm(d) {
+  const o = Object.assign(tom(), d || {});
+  o.projekt = Object.assign(tom().projekt, o.projekt || {});
+  { const sd = o.projekt.sidst; o.projekt.sidst = sd && KABLER.includes(sd.kabel) && sd.ledere && Number(sd.tv) ? { kabel:sd.kabel, ledere:sd.ledere, tv:Number(sd.tv) } : null; }
+  for (const k of ['tavler', 'rcds', 'lokaler', 'grupper', 'enheder', 'daaser', 'afbrydere', 'racks', 'udstyr', 'links']) if (!Array.isArray(o[k])) o[k] = [];
+  o.tavler.forEach(t => { t.forsikring = Number(t.forsikring) || 35; t.fra = t.fra || ''; t.tilgang = t.tilgang || ''; t.hovedafbryder = Number(t.hovedafbryder) || 0; t.tKabel = KABLER.includes(t.tKabel) ? t.tKabel : 'PVC'; t.tLedere = t.tLedere || '5G'; t.tTv = Number(t.tTv) || 6; t.tLaengde = Number(t.tLaengde) || 0; });
+  o.grupper.forEach((g, i) => {
+    g.fase = PH.includes(g.fase) ? g.fase : PH[i % 3]; g.rcdId = g.rcdId || ''; g.sf = Number(g.sf) > 0 && Number(g.sf) <= 1 ? Number(g.sf) : 1;
+    g.maal = Object.assign({ riso:'', zs:'', rcd:'', ok:false }, g.maal || {});
+  });
+  o.enheder.forEach(e => { e.gruppeId = e.gruppeId || ''; e.lokaleId = e.lokaleId || ''; e.daaseId = e.daaseId || ''; e.kabel = kabMap(e.kabel); e.symbol = e.symbol || 'auto'; });
+  o.daaser.forEach(d => { d.gruppeId = d.gruppeId || ''; d.parentId = d.parentId || ''; d.lokaleId = d.lokaleId || ''; d.kabel = kabMap(d.kabel); d.type = daaMap(d.type); });
+  const eid = new Set(o.enheder.map(e => e.id));
+  o.afbrydere.forEach(a => { a.art = a.art || 'enpolet'; a.gruppeId = a.gruppeId || ''; a.lokaleId = a.lokaleId || ''; a.steder = Number(a.steder) || 1; a.tid = Number(a.tid) || 3;
+    a.a = (Array.isArray(a.a) ? a.a : []).filter(x => eid.has(x)); a.b = (Array.isArray(a.b) ? a.b : []).filter(x => eid.has(x)); });
+  o.tavler.forEach(t => { const g = o.grupper.find(x => x.id === t.fraGruppe); if (g && g.tavleId !== t.id) t.fra = g.tavleId; else t.fraGruppe = ''; });
+  return o;
+}
+function seed() {
+  const G = (id, tavleId, nr, navn, type, In, faser, fase, rcdId) => ({ id, tavleId, nr, navn, type, kar:'B', In, faser, fase, rcdId });
+  const E = (id, gruppeId, lokaleId, navn, effekt, kabel, ledere, tv, laengde, daaseId) => ({ id, gruppeId, lokaleId, navn, effekt, kabel, ledere, tv, laengde, daaseId: daaseId || '' });
+  const X = (id, art, navn, lokaleId, laengde, port, poeW, kamType, oploesning) => ({ id, art, navn, lokaleId, kabel:'Cat6A', laengde, panelId:'u1', panelPort:port, switchId:'u2', switchPort:port, patch:0.5, poeW, kamType: kamType || 'Dome', oploesning: oploesning || '4 MP', nvrId: art === 'cctv' ? 'u4' : '' });
+  return norm({
+    projekt: { navn:'Parcelhus, renovering', sagsnr:'2026-104', kunde:'Familien Eksempel', adresse:'Eksempelvej 12, 5000 Odense C', installatoer:'', dato:new Date().toISOString().slice(0, 10) },
+    tavler: [ { id:'t1', navn:'HT', placering:'Hovedtavle, bryggers', forsikring:50, hovedafbryder:63 }, { id:'t2', navn:'UT1', placering:'Undertavle, garage', forsikring:25, fra:'t1', fraGruppe:'g13', tilgang:'5G6 PVIKJ, 14 m', tKabel:'PVC', tLedere:'5G', tTv:6, tLaengde:14 } ],
+    rcds: [ { id:'r1', tavleId:'t1', navn:'HPFI 1', type:'A', In:40, idn:30 }, { id:'r2', tavleId:'t1', navn:'HPFI 2', type:'A', In:40, idn:30 },
+            { id:'r3', tavleId:'t2', navn:'HPFI 1', type:'A', In:40, idn:30 } ],
+    lokaler: [ { id:'l1', navn:'Køkken', etage:'Stue' }, { id:'l2', navn:'Stue', etage:'Stue' }, { id:'l3', navn:'Bryggers', etage:'Stue' },
+      { id:'l4', navn:'Badeværelse', etage:'Stue' }, { id:'l5', navn:'Soveværelse', etage:'1. sal' }, { id:'l6', navn:'Garage', etage:'Stue' }, { id:'l7', navn:'Terrasse', etage:'Ude' } ],
+    grupper: [
+      G('g1', 't1', 1, 'Lys køkken og stue', 'lys', 10, 1, 'L1', 'r1'), G('g2', 't1', 2, 'Lys bad og soveværelse', 'lys', 10, 1, 'L1', 'r1'),
+      G('g3', 't1', 3, 'Stik stue og soveværelse', 'stik', 13, 1, 'L1', 'r1'), G('g4', 't1', 4, 'Stik køkkenbord', 'stik', 13, 1, 'L2', 'r1'),
+      G('g5', 't1', 5, 'Komfur', 'kraft', 16, 3, 'L1', 'r2'), G('g6', 't1', 6, 'Opvaskemaskine', 'kraft', 13, 1, 'L1', 'r1'),
+      G('g7', 't1', 7, 'Vask og tørretumbler', 'kraft', 16, 1, 'L1', 'r2'), G('g12', 't1', 8, 'Terrassevarmer', 'kraft', 13, 1, 'L2', 'r2'),
+      G('g11', 't1', 9, 'Netværk og teknik', 'data', 10, 1, 'L3', 'r2'), G('g13', 't1', 10, 'Undertavle garage', 'kraft', 25, 3, 'L1', ''),
+      G('g8', 't2', 1, 'Lys garage', 'lys', 10, 1, 'L1', 'r3'), G('g9', 't2', 2, 'Stik garage', 'stik', 13, 1, 'L2', 'r3'),
+      G('g10', 't2', 3, 'Ladeboks', 'kraft', 16, 3, 'L1', '')
+    ],
+    enheder: [
+      E('e1', 'g1', 'l1', 'Spots i loft, 8 stk.', 56, 'XLPE', '3G', 1.5, 4, 'd1'), E('e2', 'g1', 'l1', 'LED-bånd under overskabe', 30, 'XLPE', '3G', 1.5, 5, 'd1'),
+      E('e3', 'g1', 'l2', 'Lampeudtag over spisebord', 60, 'XLPE', '3G', 1.5, 3.5, 'd2'), E('e4', 'g1', 'l2', 'Lampeudtag ved sofa', 40, 'XLPE', '3G', 1.5, 8, 'd2'),
+      E('e5', 'g2', 'l4', 'Loftarmatur IP44', 24, 'XLPE', '3G', 1.5, 8), E('e6', 'g2', 'l4', 'Spejllys', 18, 'XLPE', '3G', 1.5, 9.5),
+      E('e7', 'g2', 'l5', 'Lampeudtag i loft', 40, 'XLPE', '3G', 1.5, 19), E('e8', 'g3', 'l2', 'Stikkontakter, 6 stk.', 0, 'PVC', '3G', 1.5, 32),
+      E('e9', 'g3', 'l5', 'Stikkontakter, 4 stk.', 0, 'PVC', '3G', 1.5, 24), E('e10', 'g4', 'l1', 'Stikkontakter over bord, 4 stk.', 0, 'PVC', '3G', 2.5, 12),
+      E('e11', 'g4', 'l1', 'Emhætte', 250, 'PVC', '3G', 1.5, 11), E('e12', 'g5', 'l1', 'Induktionskogeplade', 7200, 'PVC', '5G', 2.5, 13), E('e24', 'g5', 'l1', 'Indbygningsovn', 3500, 'PVC', '5G', 2.5, 12),
+      E('e25', 'g4', 'l1', 'Køleskab', 120, 'PVC', '3G', 1.5, 9), E('e26', 'g4', 'l1', 'Fryser', 150, 'PVC', '3G', 1.5, 10),
+      E('e13', 'g6', 'l1', 'Opvaskemaskine', 2000, 'PVC', '3G', 1.5, 10.5), E('e14', 'g7', 'l3', 'Vaskemaskine', 2200, 'PVC', '3G', 2.5, 4),
+      E('e15', 'g7', 'l3', 'Tørretumbler', 2500, 'PVC', '3G', 2.5, 4.5), E('e19', 'g12', 'l7', 'Terrassevarmer', 2000, 'PVC', '3G', 1.5, 48),
+      E('e16', 'g8', 'l6', 'LED-armaturer, 4 stk.', 144, 'PVC', '3G', 1.5, 16), E('e27', 'g8', 'l6', 'Udelampe ved garageport', 12, 'PVC', '3G', 1.5, 11), E('e17', 'g9', 'l6', 'Stikkontakter ved arbejdsbord, 3 stk.', 0, 'PVC', '3G', 1.5, 9),
+      E('e18', 'g10', 'l6', 'Ladeboks 11 kW', 11000, 'PVC', '5G', 2.5, 7),
+      E('e21', '', 'l4', 'Gulvvarme, el', 600, 'PVC', '3G', 1.5, 12), E('e22', '', 'l7', 'Udendørs stikkontakt IP44', 0, 'PVC', '3G', 2.5, 18)
+    ],
+    afbrydere: [
+      { id:'a1', navn:'Køkken, loft og bordlys', art:'krone', gruppeId:'g1', lokaleId:'l1', steder:1, tid:3, a:['e1'], b:['e2'] },
+      { id:'a2', navn:'Stue, to døre', art:'korr', gruppeId:'g1', lokaleId:'l2', steder:2, tid:3, a:['e3', 'e4'], b:[] },
+      { id:'a3', navn:'Badeværelse', art:'enpolet', gruppeId:'g2', lokaleId:'l4', steder:1, tid:3, a:['e5', 'e6'], b:[] },
+      { id:'a4', navn:'Soveværelse, dør og seng', art:'kip', gruppeId:'g2', lokaleId:'l5', steder:3, tid:3, a:['e7'], b:[] },
+      { id:'a5', navn:'Garage', art:'trappe', gruppeId:'g8', lokaleId:'l6', steder:2, tid:3, a:['e16'], b:[] },
+      { id:'a6', navn:'Udelys ved garageport', art:'sensor', gruppeId:'g8', lokaleId:'l6', steder:1, tid:5, a:['e27'], b:[] }
+    ],
+    daaser: [
+      { id:'d1', navn:'Loft køkken', type:'PL-dåse', gruppeId:'g1', parentId:'', lokaleId:'l1', kabel:'XLPE', ledere:'3G', tv:1.5, laengde:11 },
+      { id:'d2', navn:'Loft stue', type:'Membrandåse', gruppeId:'g1', parentId:'d1', lokaleId:'l2', kabel:'XLPE', ledere:'3G', tv:1.5, laengde:7 }
+    ],
+    racks: [ { id:'k1', navn:'R1', type:'19" vægskab', he:9, lokaleId:'l3', gruppeId:'g11' } ],
+    udstyr: [
+      { id:'u1', rackId:'k1', navn:'PP1', art:'patchpanel', he:1, pos:1, porte:24, poe:false, poeBudget:0, effekt:0 },
+      { id:'u2', rackId:'k1', navn:'SW1', art:'switch', he:1, pos:2, porte:24, poe:true, poeBudget:65, effekt:30 },
+      { id:'u3', rackId:'k1', navn:'Router', art:'router', he:1, pos:3, porte:4, poe:false, poeBudget:0, effekt:15 },
+      { id:'u4', rackId:'k1', navn:'NVR1', art:'nvr', he:2, pos:4, porte:8, poe:false, poeBudget:0, effekt:25 }
+    ],
+    links: [
+      X('x1', 'data', '1.01', 'l2', 22, 1, 0), X('x2', 'data', '1.02', 'l2', 24, 2, 0), X('x3', 'data', '1.03', 'l1', 18, 3, 0), X('x4', 'data', '1.04', 'l5', 31, 4, 0),
+      X('x5', 'data', 'AP loft stue', 'l2', 20, 5, 15.4), X('x6', 'data', '1.06', 'l6', 38, 6, 0),
+      Object.assign(X('x7', 'data', '1.07', 'l5', 33, 7, 0), { switchId:'', switchPort:0 }),
+      X('c1', 'cctv', 'Kam 1 Indkørsel', 'l6', 41, 9, 12.95, 'Dome', '4 MP'), X('c2', 'cctv', 'Kam 2 Terrasse', 'l7', 28, 10, 12.95, 'Bullet', '8 MP (4K)'),
+      X('c3', 'cctv', 'Kam 3 Hoveddør', 'l3', 12, 11, 12.95, 'Dome', '4 MP'), X('c4', 'cctv', 'Kam 4 Have', 'l7', 35, 12, 12.95, 'Bullet', '4 MP')
+    ]
+  });
+}
+
+function seed2() {
+  const E = (id, gruppeId, lokaleId, navn, effekt, tv, laengde) => ({ id, gruppeId, lokaleId, navn, effekt, kabel:'PVC', ledere:'3G', tv, laengde });
+  return norm({
+    projekt: { navn:'Sommerhus, ny tavle', sagsnr:'2026-097', kunde:'Eksempel Udlejning ApS', adresse:'Strandvejen 3, 5300 Kerteminde', installatoer:'', dato:new Date().toISOString().slice(0, 10) },
+    tavler: [ { id:'t1', navn:'GT', placering:'Gruppetavle, entré', forsikring:25 } ],
+    rcds: [ { id:'r1', tavleId:'t1', navn:'HPFI 1', type:'A', In:40, idn:30 } ],
+    lokaler: [ { id:'l1', navn:'Køkkenalrum', etage:'Stue' }, { id:'l2', navn:'Værelse', etage:'Stue' }, { id:'l3', navn:'Bad', etage:'Stue' } ],
+    grupper: [
+      { id:'g1', tavleId:'t1', nr:1, navn:'Lys', type:'lys', kar:'B', In:10, faser:1, fase:'L1', rcdId:'r1' },
+      { id:'g2', tavleId:'t1', nr:2, navn:'Stik', type:'stik', kar:'B', In:13, faser:1, fase:'L2', rcdId:'r1' },
+      { id:'g3', tavleId:'t1', nr:3, navn:'Vandvarmer', type:'kraft', kar:'B', In:13, faser:1, fase:'L3', rcdId:'r1' }
+    ],
+    enheder: [
+      E('e1', 'g1', 'l1', 'Lampeudtag, 4 stk.', 80, 1.5, 22), E('e2', 'g1', 'l2', 'Lampeudtag', 20, 1.5, 12),
+      E('e3', 'g2', 'l1', 'Stikkontakter, 6 stk.', 0, 1.5, 26), E('e4', 'g2', 'l2', 'Stikkontakter, 3 stk.', 0, 1.5, 14),
+      E('e5', 'g3', 'l3', 'Vandvarmer 60 l', 2000, 1.5, 9)
+    ]
+  });
+}

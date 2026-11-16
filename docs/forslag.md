@@ -9,10 +9,9 @@ Forslag, Alexander ikke har besluttet endnu, eller som venter på at blive lavet
 | 4 | Afbrydere i enstregsdiagrammet, krydsafbryder og tændingsdiagrammer i eksporten | Fable | Enstregsdiagrammet er den sværeste del af koden |
 | 2 | Automatisk vurdering af målinger: Z<sub>s</sub> ≤ U<sub>0</sub>/I<sub>a</sub> efter B/C og I<sub>n</sub>, HPFI-udløsetid ≤ grænsen | Opus | Få formler, men skal passe med 1. Fable gennemgår planen |
 | 8 | Gendan fra Gist-historik: vis og gendan et projekt fra en tidligere dato som kopi | Opus | Bygger på synkroniseringen |
-| M | Opdeling i moduler uden byggetrin: `css/app.css` og `js/` med data, beregning, diagram, lagring og app | Opus | Mekanisk flytning. Gør parallelt arbejde og test af beregninger nemmere. Bør komme før 1 og 4 |
 | 9 | Bygget Tailwind-CSS i stedet for CDN | Opus | Fjerner advarslen i konsollen og CDN-afhængigheden. Kræves for 6 |
 | 6 | Offline-app (PWA) med `sw.js` og `manifest.json` | Opus | Efter 9 |
-| 7 | Mobiltilstand til brugsgenstande og målinger på pladsen | Opus | Hører sammen med 6 |
+| 7 | Mobiltilstand til brugsgenstande og målinger på pladsen. Hovedet bliver presset sammen under ca. 750 px bredde, så projektnavnet næsten forsvinder | Opus | Hører sammen med 6 |
 | 3 | Materialeliste: kabelmeter pr. type og tværsnit, dåser og materiel | Sonnet | Lægger kun eksisterende data sammen |
 | 5 | Dokumentation klar til print som PDF med logo og underskriftsfelt | Sonnet | Ændrer kun eksporten |
 
