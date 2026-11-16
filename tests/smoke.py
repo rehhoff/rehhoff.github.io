@@ -324,6 +324,25 @@ async def main():
         r = await pb.evaluate(f"""async()=>{{const a={A};a.synkAfbryd();return {{s:localStorage.getItem('tavleoversigt.sync'),n:a.projekter.length}}}}""")
         tjek('synk: slå fra fjerner token men ikke projekter', r['s'] is None and r['n'] >= 3, r)
 
+        # Mobil: 390 px bred telefon
+        ctx = await b.new_context(viewport={'width': 390, 'height': 844}, is_mobile=True, has_touch=True)
+        await ctx.route('**/*', route)
+        pm = await ctx.new_page()
+        pm.on('pageerror', lambda e: fejl.append('mobil: ' + str(e)))
+        await pm.goto(URL); await pm.wait_for_timeout(500)
+        r = await pm.evaluate(f"""async()=>{{const a={A};const T=n=>new Promise(f=>setTimeout(f,n));const ud={{}};
+          for (const v of a.views.map(v=>v.id)) {{ a.go(v); await T(120); if (document.documentElement.scrollWidth > innerWidth) ud.bred = (ud.bred||[]).concat(v); }}
+          a.go('dokumentation'); await T(150);
+          const tops = new Set([...document.querySelectorAll('.tab')].map(t=>Math.round(t.getBoundingClientRect().top)));
+          const g = a.db.grupper[0], inp = document.getElementById('kmz-'+g.id);
+          inp.value = '0,5'; inp.dispatchEvent(new Event('input')); inp.dispatchEvent(new Event('change')); await T(80);
+          return {{bred:ud.bred||[], navn:Math.round(document.getElementById('p-navn').getBoundingClientRect().width), faneRaekker:tops.size,
+                  kortSynligt:inp.offsetParent!==null, tabelSkjult:document.getElementById('mz-'+g.id).offsetParent===null, gemt:g.maal.zs,
+                  skrift:parseFloat(getComputedStyle(document.getElementById('gs')).fontSize)}}}}""")
+        tjek('mobil: ingen vandret rulning, fuld bredde til navnet, faner på én række, måleskema som kort, 16 px i felter',
+             not r['bred'] and r['navn'] >= 330 and r['faneRaekker'] == 1 and r['kortSynligt'] and r['tabelSkjult'] and r['gemt'] == '0,5' and r['skrift'] >= 16, r)
+        await ctx.close()
+
         # 7. Offline-app: service worker på localhost (kræver https eller localhost)
         class Stille(http.server.SimpleHTTPRequestHandler):
             def log_message(self, *a): pass

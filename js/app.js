@@ -102,7 +102,7 @@ function app() {
       if (!fejl) TIMERS['toast' + t.id] = setTimeout(() => this.lukToast(t.id), Math.min(10000, Math.max(undo ? 6000 : 3500, 2000 + txt.length * 50)));
     },
     lukToast(id) { clearTimeout(TIMERS['toast' + id]); delete TIMERS['toast' + id]; this.toasts = this.toasts.filter(t => t.id !== id); },
-    go(v) { this.view = v; try { location.hash = v; } catch (e) {} if (v === 'enstreg') this.$nextTick(() => this.tilpas()); },
+    go(v) { this.view = v; try { location.hash = v; } catch (e) {} this.$nextTick(() => { const t = document.querySelector('.tab[aria-selected="true"]'), c = t && t.parentElement; if (c && c.scrollWidth > c.clientWidth) { const tr = t.getBoundingClientRect(), cr = c.getBoundingClientRect(); c.scrollLeft += tr.left - cr.left - (c.clientWidth - tr.width) / 2; } }); if (v === 'enstreg') this.$nextTick(() => this.tilpas()); },
     skiftTema() { this.tema = { auto:'light', light:'dark', dark:'auto' }[this.tema]; try { localStorage.setItem(TKEY, this.tema); } catch (e) {} this.brugTema(); },
     brugTema() {
       const r = document.documentElement, v = this.tema === 'auto' ? hostTema : this.tema;

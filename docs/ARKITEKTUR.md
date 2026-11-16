@@ -25,6 +25,8 @@
 
 Scriptsene er almindelige scripts (ikke ES-moduler) og deler globalt scope. Rækkefølgen er `data.js`, `beregning.js`, `diagram.js`, `lagring.js`, `app.js` og til sidst Alpine (`defer`). `css/app.css` indlæses før `css/tailwind.css`, så Tailwinds klasser vinder som før med CDN'et. `css/` og `js/` hentes med `?v=<APP_VERSION>`, så en ny version aldrig blandes med gamle filer fra cachen. Metodenavne skal være unikke på tværs af filerne.
 
+Under 1024 px står hovedets titel og værktøjer under hinanden, og fanerne er én række, der kan rulles sidelæns (`.faner`, `lg:contents` fra 1024 px). Under 640 px vises måleskemaet som kort (`.mk`) i stedet for tabellen. Desktop-layoutet er uændret.
+
 Faner i `views`: Tavle, Enstregsdiagram, Tændingsdiagram, Samlepunkter & dåser, Svagstrøm, Beregning, Lokaler, Kabler, Dokumentation, Fejlfinder. Tasterne 1 til 9 og 0 skifter fane.
 
 ## Lagring

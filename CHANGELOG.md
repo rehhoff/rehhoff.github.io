@@ -2,6 +2,18 @@
 
 Nyeste øverst. Versionsnummeret står også i appen som `APP_VERSION`. Hver version siger, hvilken model der lavede den.
 
+## 10.7.0 · 2026-11-16 · Claude Opus
+
+Mobiltilstand. Plan: `docs/planer/2026-11-16-mobil.md`.
+
+- Måleskemaet vises på telefonen som ét kort pr. gruppe med store felter, taltastatur, grænse under hvert felt, vurdering og stor afkrydsning for visuel kontrol. Tabellen bruges som før på større skærme og i dokumentationen.
+- Hovedet presses ikke længere sammen på tablets og smalle vinduer. Titel og værktøjer står under hinanden under 1024 px.
+- Fanerne er én række, der kan rulles sidelæns på telefon og tablet, i stedet for op til 5 rækker. Den valgte fane rulles frem. Farveforklaringen skjules på telefonen.
+- Nøgletallene står tre pr. række på telefonen.
+- Felter har 16 px skrift på telefonen, så iPhone ikke zoomer ind, og knapper er mindst 40 px høje på touchskærme.
+- Måleskemaet er altid lyst som papir, også i mørkt tema (afkrydsningsfelterne var mørke).
+- Kontrolleret: desktop (1300 px) er uændret, 105.440 elementer i lyst og mørkt tema uden stilforskelle. Røgtesten kører appen i 390 px bredde.
+
 ## 10.6.0 · 2026-11-16 · Claude Opus
 
 Offline-app. Plan: `docs/planer/2026-11-16-offline.md`.

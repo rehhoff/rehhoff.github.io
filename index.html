@@ -14,8 +14,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=10.6.0">
-<link rel="stylesheet" href="css/tailwind.css?v=10.6.0">
+<link rel="stylesheet" href="css/app.css?v=10.7.0">
+<link rel="stylesheet" href="css/tailwind.css?v=10.7.0">
 </head>
 <body class="min-h-full">
 <p id="fail" hidden style="margin:16px;padding:12px;border:1px solid var(--crit);color:var(--crit)">Appen kunne ikke starte, fordi Alpine.js ikke blev indlæst. Genindlæs siden.</p>
@@ -24,8 +24,8 @@
 
   <datalist id="amp-trin"><option value="25"></option><option value="35"></option><option value="50"></option><option value="63"></option><option value="80"></option><option value="100"></option><option value="125"></option><option value="160"></option><option value="200"></option><option value="250"></option><option value="315"></option><option value="400"></option><option value="630"></option></datalist>
   <!-- Hoved -->
-  <header class="flex flex-wrap items-end justify-between gap-3">
-    <div class="min-w-0 flex-1">
+  <header class="flex flex-col lg:flex-row lg:flex-wrap lg:items-end justify-between gap-3">
+    <div class="min-w-0 lg:flex-1">
       <div class="flex flex-wrap items-center gap-2">
         <span class="hd text-sm text-muted">Tavle- og gruppeoversigt</span>
         <select id="p-skift" class="inp inp-s max-w-[16rem]" aria-label="Skift projekt" @change="skift($event.target.value)">
@@ -39,7 +39,7 @@
     <div class="flex flex-wrap gap-2">
       <div class="relative" @click.outside="soegAaben=false">
         <label class="sr-only" for="gs">Søg i projektet</label>
-        <input id="gs" x-ref="gs" class="inp" style="width:14rem;padding:.33rem .55rem;font-size:.8125rem" type="search" placeholder="Søg i projektet  ( / )" x-model="q" @input="soegAaben=true" @focus="soegAaben=true" autocomplete="off">
+        <input id="gs" x-ref="gs" class="inp soeg" type="search" placeholder="Søg i projektet  ( / )" x-model="q" @input="soegAaben=true" @focus="soegAaben=true" autocomplete="off">
         <div x-show="soegAaben && q.trim().length > 1" class="absolute right-0 z-30 mt-1 w-[23rem] max-w-[92vw] max-h-[26rem] overflow-y-auto panel shadow-xl text-sm" style="background:var(--raised)">
           <p x-show="!soeg().length" class="p-3 text-muted">Ingen træffere. Søgningen dækker tavler, grupper, lokaler, brugsgenstande, samlepunkter, afbrydere og svagstrøm.</p>
           <template x-for="r in soeg()" :key="r.k">
@@ -75,26 +75,28 @@
   </form>
 
   <!-- Resumé -->
-  <section class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2" aria-label="Resumé">
+  <section class="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-7 gap-2" aria-label="Resumé">
     <template x-for="s in stats()" :key="s.l">
       <div class="panel px-3 py-2">
         <div class="text-[.7rem] uppercase tracking-wider text-muted" x-text="s.l"></div>
-        <div class="num text-2xl font-semibold" :class="s.w && 'warn'" x-text="s.v"></div>
+        <div class="num text-xl sm:text-2xl font-semibold" :class="s.w && 'warn'" x-text="s.v"></div>
       </div>
     </template>
   </section>
 
   <!-- Faner -->
-  <nav class="flex flex-wrap items-center border-b border-line" role="tablist">
+  <nav class="flex flex-col lg:flex-row lg:flex-wrap lg:items-center border-b border-line">
+    <div class="faner flex overflow-x-auto lg:contents" role="tablist">
     <template x-for="(v, i) in views" :key="v.id">
       <button class="tab hd" role="tab" :aria-selected="view===v.id" @click="go(v.id)"><kbd x-text="(i+1) % 10"></kbd><span x-text="v.l"></span><span x-show="v.id==='fejlfinder' && mangler().length" class="tag warn num" x-text="mangler().length"></span></button>
     </template>
-    <div class="ml-auto flex flex-wrap items-center gap-1 py-2">
+    </div>
+    <div class="lg:ml-auto flex flex-wrap items-center gap-1 py-2">
       <label class="sr-only" for="lok-filter">Filtrér på lokale</label>
       <select id="lok-filter" class="inp inp-s" x-model="lokF"><option value="">Alle lokaler</option>
         <template x-for="l in db.lokaler" :key="l.id"><option :value="l.id" :selected="lokF===l.id" x-text="l.navn"></option></template></select>
-      <span class="tag"><span class="c-el" x-html="ikon('el')"></span> Stærkstrøm</span><span class="tag"><span class="c-pds" x-html="ikon('pds')"></span> PDS</span><span class="tag"><span class="c-cctv" x-html="ikon('cctv')"></span> CCTV</span>
-      <template x-for="(l, k) in typeLabel" :key="k"><span class="typed chip" :class="k" x-text="l"></span></template>
+      <span class="hidden md:contents"><span class="tag"><span class="c-el" x-html="ikon('el')"></span> Stærkstrøm</span><span class="tag"><span class="c-pds" x-html="ikon('pds')"></span> PDS</span><span class="tag"><span class="c-cctv" x-html="ikon('cctv')"></span> CCTV</span>
+      <template x-for="(l, k) in typeLabel" :key="k"><span class="typed chip" :class="k" x-text="l"></span></template></span>
     </div>
   </nav>
   <div x-show="lokF" class="panel px-3 py-2 text-sm flex flex-wrap items-center gap-3" style="border-color:var(--accent)">
@@ -850,7 +852,23 @@
           </table>
           <h3 class="mt-4">Verifikation · måleskema</h3>
           <p class="kl mt-1">Grænser: Z<sub>s</sub> ≤ 2/3 · U<sub>0</sub>/I<sub>a</sub> (I<sub>a</sub> = 5/10/20 × I<sub>n</sub> for B/C/D), HPFI ≤ 300 ms ved 1 × IΔn, isolationsmodstand ≥ 1 MΩ. Kladde til egenkontrol. Dette er ikke en gyldig installationsattest eller sikkerhedsdokumentation. Verifikation udføres og dokumenteres efter DS/HD 60364-6 af autoriseret virksomhed.</p>
-          <table>
+          <div class="sm:hidden flex flex-col gap-2 mt-2">
+            <template x-for="g in grupperFor(t.id)" :key="'mk' + g.id">
+              <div class="mk" :style="maalVurdering(g).status === 'fejl' && 'border-color:#b3204f'">
+                <div class="flex items-baseline justify-between gap-2"><b x-text="g.nr + ' · ' + g.navn"></b><span class="num text-xs" x-text="g.kar + g.In"></span></div>
+                <div class="grid grid-cols-3 gap-2">
+                  <label><span class="t">Riso (MΩ)</span><input type="text" inputmode="decimal" :id="'kmr-'+g.id" x-model="g.maal.riso" @change="save()" :class="maalVurdering(g).riso === false && 'over'"><span class="h">min. 1</span></label>
+                  <label><span class="t">Z<sub>s</sub> (Ω)</span><input type="text" inputmode="decimal" :id="'kmz-'+g.id" x-model="g.maal.zs" @change="save()" :class="maalVurdering(g).zs === false && 'over'"><span class="h" x-text="zsMax(g) ? 'maks. ' + fmt(zsMax(g), 2) : ''"></span></label>
+                  <label><span class="t">HPFI (ms)</span><input type="text" inputmode="decimal" :id="'kmt-'+g.id" x-model="g.maal.rcd" @change="save()" :class="maalVurdering(g).rcd === false && 'over'" :disabled="!maalVurdering(g).harRcd"><span class="h" x-text="maalVurdering(g).harRcd ? 'maks. 300' : 'ingen HPFI'"></span></label>
+                </div>
+                <div class="flex items-center justify-between gap-2">
+                  <label class="flex items-center gap-2 vk"><input type="checkbox" :id="'kmo-'+g.id" x-model="g.maal.ok" @change="save()"> Visuel kontrol OK</label>
+                  <span class="text-xs text-right" :class="maalVurdering(g).status === 'fejl' && 'font-semibold'" :style="maalVurdering(g).status === 'fejl' ? 'color:#b3204f' : 'color:#555'" x-text="maalVurdering(g).txt"></span>
+                </div>
+              </div>
+            </template>
+          </div>
+          <table class="hidden sm:table">
             <thead><tr><th>Gr.</th><th>Betegnelse</th><th>Isolationsmodstand (MΩ)</th><th>Sløjfeimpedans Z<sub>s</sub> (Ω)</th><th>HPFI udløsetid (ms)</th><th>Visuel kontrol</th><th>Vurdering</th></tr></thead>
             <tbody><template x-for="g in grupperFor(t.id)" :key="g.id">
               <tr><td class="num" x-text="g.nr"></td><td x-text="g.navn"></td>
@@ -1339,11 +1357,11 @@
   </div>
 </div>
 
-<script src="js/data.js?v=10.6.0"></script>
-<script src="js/beregning.js?v=10.6.0"></script>
-<script src="js/diagram.js?v=10.6.0"></script>
-<script src="js/lagring.js?v=10.6.0"></script>
-<script src="js/app.js?v=10.6.0"></script>
+<script src="js/data.js?v=10.7.0"></script>
+<script src="js/beregning.js?v=10.7.0"></script>
+<script src="js/diagram.js?v=10.7.0"></script>
+<script src="js/lagring.js?v=10.7.0"></script>
+<script src="js/app.js?v=10.7.0"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.14.1/cdn.min.js"></script>
 </body>
 </html>
