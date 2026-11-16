@@ -171,6 +171,16 @@ async def main():
              and r['sporE'][-2:] == ['a:' + r['id'], 'e:' + r['lampe']] and r['valgt'] and r['lampeTr'] and r['info'] == ['Afbryder', 'afbryder', True], r)
         tjek('dokumentationen har et tændingsdiagram pr. afbryder', r['afsnit'] and r['diagrammer'] == r['n'] >= 9 and r['navne'] and not r['docKlik'], r)
 
+        # Materialeliste
+        r = await pg.evaluate(f"""(()=>{{const a={A};const m=a.materialer();const g=n=>m.find(x=>x.gruppe===n)||{{linjer:[]}};const sum=n=>g(n).linjer.reduce((s,l)=>s+l.antal,0);
+          const tot=a.sumLen(a.db.enheder.concat(a.db.daaser).map(e=>({{e}})))+a.db.tavler.reduce((s,t)=>s+(Number(t.tLaengde)||0),0);
+          const tsv=a.materialeTsv().split('\\n');const n=m.reduce((s,x)=>s+x.linjer.length,0);
+          return {{kabel:sum('Kabler'),tot,linjer:g('Kabler').linjer.length,sik:sum('Automatsikringer'),gr:a.db.grupper.length,rcd:sum('HPFI'),rc:a.db.rcds.length,
+          datakabel:g('Kabler').linjer.some(l=>/Cat|Fiber/.test(l.tekst)),data:g('Datakabler').linjer.length,tsv:tsv.length,n,hoved:tsv[0],tom:m.some(x=>!x.linjer.length)}}}})()""")
+        tjek('materialeliste: kabellængder, sikringer og HPFI stemmer med projektet, datakabler for sig, TSV har overskrift og én linje pr. materiale',
+             r['kabel'] >= r['tot'] > 0 and r['kabel'] < r['tot'] + r['linjer'] and r['sik'] == r['gr'] and r['rcd'] == r['rc'] and not r['datakabel']
+             and r['data'] >= 1 and r['tsv'] == r['n'] + 1 and r['hoved'] == 'Gruppe\tMateriale\tAntal\tEnhed' and not r['tom'], r)
+
         # 3. Beregning: ændring af tværsnit sænker spændingsfaldet
         r = await pg.evaluate(f"(()=>{{const a={A};const e=a.db.enheder.find(x=>Number(x.effekt)>1000);const f=a.du(e);const g=a.du(e,(e.tv||1.5)*4);return [f,g]}})()")
         tjek('spændingsfald falder med større tværsnit', r[0] > r[1] > 0, r)

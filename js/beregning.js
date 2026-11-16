@@ -215,6 +215,32 @@ const APP_BEREGNING = () => ({
       const m = {}; for (const r of this.rows()) { const k = r.e.kabel + ' ' + this.kabelDim(r.e); m[k] = (m[k] || 0) + (Number(r.e.laengde) || 0); }
       return Object.keys(m).sort().map(k => ({ k, m:m[k] }));
     },
+    /* materialeliste: hele projektet, uafhængigt af filtre */
+    materialer() {
+      const d = this.db, num = v => Number(v) || 0, tael = (liste, nøgle) => { const m = new Map(); for (const x of liste) { const k = nøgle(x); m.set(k, (m.get(k) || 0) + 1); } return [...m].sort((a, b) => a[0].localeCompare(b[0], 'da')).map(([tekst, antal]) => ({ tekst, antal, enhed:'stk' })); };
+      const meter = new Map(), data = new Map();
+      for (const e of d.enheder.concat(d.daaser)) { const k = e.kabel + ' ' + this.kabelDim(e); meter.set(k, (meter.get(k) || 0) + num(e.laengde)); }
+      for (const t of d.tavler) if (num(t.tLaengde) > 0) { const k = t.tKabel + ' ' + t.tLedere + this.fmt(t.tTv) + ' mm²'; meter.set(k, (meter.get(k) || 0) + num(t.tLaengde)); }
+      for (const l of d.links) data.set(l.kabel, (data.get(l.kabel) || 0) + num(l.laengde));
+      const lang = m => [...m].sort((a, b) => a[0].localeCompare(b[0], 'da')).map(([tekst, v]) => ({ tekst, antal:Math.ceil(Math.round(v * 100) / 100), enhed:'m' })).filter(x => x.antal > 0);
+      const afb = new Map(); for (const a of d.afbrydere) { const k = this.afbArt[a.art] || a.art; const o = afb.get(k) || { antal:0, steder:0 }; o.antal++; o.steder += this.afbSteder(a); afb.set(k, o); }
+      const afbL = [...afb].sort((a, b) => a[0].localeCompare(b[0], 'da')).map(([tekst, o]) => ({ tekst:tekst + (['Kroneafbryder', 'Korrespondanceafbryder', 'Krydsafbryder'].includes(tekst) ? ' (' + o.steder + ' betjeningssteder)' : ''), antal:o.antal, enhed:'stk' }));
+      const ud = [
+        { gruppe:'Kabler', linjer:lang(meter) },
+        { gruppe:'Datakabler', linjer:lang(data) },
+        { gruppe:'Samlepunkter', linjer:tael(d.daaser, x => x.type) },
+        { gruppe:'Afbrydere', linjer:afbL },
+        { gruppe:'Automatsikringer', linjer:tael(d.grupper, g => g.kar + g.In + ', ' + (g.faser == 3 ? '3' : '1') + '-polet') },
+        { gruppe:'HPFI', linjer:tael(d.rcds, r => 'Type ' + r.type + ' ' + this.fmt(r.In, 0) + ' A ' + this.fmt(r.idn, 0) + ' mA') },
+        { gruppe:'Brugsgenstande', linjer:tael(d.enheder, e => this.symNavn[this.symbolFor(e)] || this.symbolFor(e)) }
+      ];
+      return ud.filter(g => g.linjer.length);
+    },
+    materialeTsv() {
+      const r = [['Gruppe', 'Materiale', 'Antal', 'Enhed']];
+      for (const g of this.materialer()) for (const l of g.linjer) r.push([g.gruppe, l.tekst, l.antal, l.enhed]);
+      return r.map(x => x.join('\t')).join('\n');
+    },
     goGruppe(gid) { this.sel = gid; this.go('tavle'); },
     filterLokale(lid) { this.filter = { q:'', tavle:'', type:'', lokale:lid }; this.go('kabler'); },
 
