@@ -118,6 +118,52 @@ async def main():
           return {{sld:a.sld(true).length, doc:a.docHtml().length, bak:JSON.parse(a.backupJson()).projekter.length, spor:a.spor('e:'+a.db.enheder[0].id).length}}}}""")
         tjek('diagrammer, dokumentation og backup kan bygges', r['sld'] > 1000 and r['doc'] > 1000 and r['bak'] >= 2 and r['spor'] >= 2, r)
 
+        # 2b. Regression: eksempelprojekternes tændingsdiagrammer er uændrede (optaget i version 10.3.0, før krydsafbryderen)
+        base = json.loads((ROD / 'tests' / 'regression-taending.json').read_text(encoding='utf-8'))
+        ny = await pg.evaluate(f"""(()=>{{const a={A};const out={{}};a.sim={{}};
+          for (const p of a.projekter.slice()) {{ a.skift(p.id); out[a.db.projekt.navn]=Object.fromEntries(a.db.afbrydere.map(x=>[x.id,a.taendSvg(x)])); }}
+          if (a.projekter[0]) a.skift(a.projekter[0].id); return out}})()""")
+        afvig = [(n, i) for n, b0 in base.items() for i, svg in b0.items() if ny.get(n, {}).get(i) != svg]
+        tjek('regression: eksempelprojekternes tændingsdiagrammer er uændrede', not afvig and sum(len(v) for v in base.values()) >= 6 and all(n in ny for n in base), afvig)
+
+        # 2c. Krydsafbryder med 3 og 4 steder: oprettes i formularen, og hvert klik på et betjeningssted skifter lyset
+        r = await pg.evaluate(f"""async()=>{{const a={A};const T=n=>new Promise(f=>setTimeout(f,n));const ud={{}};a.go('taending');
+          const g=a.db.grupper.find(x=>x.type==='lys'&&a.enhederFor(x.id).length), lampe=a.enhederFor(g.id)[0].id;
+          for (const n of [3,4]) {{
+            a.openForm('afbryder',null,{{art:'kryds'}});await T(60);Object.assign(a.form,{{navn:'Kryds '+n,gruppeId:g.id,steder:n,a:[lampe]}});a.saveForm();await T(60);
+            const af=a.db.afbrydere.find(x=>x.navn==='Kryds '+n), svg=a.taendSvg(af), lys=[a.lit(af).a];
+            const klik=i=>a.taendKlik({{target:{{closest:()=>({{getAttribute:()=>af.id+':'+i}})}}}});
+            for (let omgang=0;omgang<2;omgang++) for (let i=0;i<n;i++) {{ klik(i); lys.push(a.lit(af).a); }}
+            for (const i of [n-1,0,1,1,n-2,0]) {{ klik(i); lys.push(a.lit(af).a); }}
+            ud[n]={{art:af.art,steder:af.steder,felter:(svg.match(/data-t="/g)||[]).length,lys,taendt:a.taendSvg(af).includes('lamp on')===a.lit(af).a,
+              statisk:!a.taendSvg(af,true).includes('data-t')&&!a.taendSvg(af,true).includes('lamp on')}};
+          }}
+          a.openForm('afbryder',null,{{art:'kryds'}});await T(60);Object.assign(a.form,{{navn:'Kryds lav',gruppeId:g.id,steder:1,a:[]}});a.saveForm();await T(60);
+          ud.lav=a.db.afbrydere.find(x=>x.navn==='Kryds lav').steder;
+          ud.norm=[norm({{afbrydere:[{{id:'x',art:'kryds',steder:1}}]}}).afbrydere[0].steder,norm({{afbrydere:[{{id:'x',art:'kryds',steder:9}}]}}).afbrydere[0].steder,
+            norm({{afbrydere:[{{id:'x',art:'kip',steder:4}}]}}).afbrydere[0].steder,norm({{afbrydere:[{{id:'x',art:'korr',steder:2}}]}}).afbrydere[0].steder];
+          ud.tekst=!!a.afbArt.kryds&&!!a.afbPrincip.kryds&&a.afbLedere.kryds.length===2&&a.afbIkon('kryds').includes('<path');
+          ud.dom=document.querySelectorAll('.tsv svg').length>=a.db.afbrydere.length;return ud}}""")
+        skifter = lambda l: l[0] is False and all(x != y for x, y in zip(l, l[1:]))
+        tjek('krydsafbryder: 3 og 4 steder, hvert klik skifter lyset, steder holdes på 3–6',
+             all(r[n]['art'] == 'kryds' and r[n]['steder'] == int(n) and r[n]['felter'] == int(n) and skifter(r[n]['lys']) and len(r[n]['lys']) == 2 * int(n) + 7
+                 and r[n]['taendt'] and r[n]['statisk'] for n in ('3', '4')) and r['lav'] == 3 and r['norm'] == [3, 6, 4, 2] and r['tekst'] and r['dom'], r)
+
+        # 2d. Afbrydere i enstregsdiagrammet (også i SVG-eksporten), sporing og et tændingsdiagram pr. afbryder i dokumentationen
+        r = await pg.evaluate(f"""async()=>{{const a={A};const T=n=>new Promise(f=>setTimeout(f,n));const d=a.db, sld=a.sld(true), doc=a.docHtml();
+          const medGruppe=d.afbrydere.filter(x=>a.gruppe(x.gruppeId)), af=d.afbrydere.find(x=>x.a.length&&a.gruppe(x.gruppeId)), los=d.afbrydere.find(x=>x.navn==='Kryds lav');
+          a.sporTil('a:'+af.id);await T(250);const el=document.querySelector('.sld [data-k="a:'+af.id+'"]'), info=a.sldInfo();
+          const lampeRk=document.querySelector('.sld [data-k="e:'+af.a[0]+'"]');
+          return {{n:d.afbrydere.length, iSld:medGruppe.filter(x=>sld.includes('data-k="a:'+x.id+'"')).length, medGruppe:medGruppe.length, losRk:sld.includes('ingen lamper valgt'),
+            diagrammer:(doc.match(/<svg[^>]*class="ts"/g)||[]).length, afsnit:doc.includes('<h1>Tændingsdiagrammer</h1>'), docKlik:doc.includes('data-t='),
+            navne:d.afbrydere.every(x=>doc.split('<h1>Tændingsdiagrammer</h1>')[1].includes('<h2>'+x.navn.replace(/&/g,'&amp;')+'</h2>')),
+            sporA:a.spor('a:'+af.id).map(x=>x.key), sporE:a.spor('e:'+af.a[0]).map(x=>x.key), valgt:!!el&&el.classList.contains('on'), lampeTr:!!lampeRk&&lampeRk.classList.contains('tr'),
+            info:info&&[info.art,info.type,info.obj.id===af.id], id:af.id, lampe:af.a[0], gid:af.gruppeId, losId:los.id, losSld:sld.includes('data-k="a:'+los.id+'"')}}}}""")
+        tjek('enstregsdiagram viser afbryderne, og sporing virker for afbrydere',
+             r['iSld'] == r['medGruppe'] >= 8 and r['losRk'] and r['losSld'] and r['sporA'][-1] == 'a:' + r['id'] and 'g:' + r['gid'] in r['sporA']
+             and r['sporE'][-2:] == ['a:' + r['id'], 'e:' + r['lampe']] and r['valgt'] and r['lampeTr'] and r['info'] == ['Afbryder', 'afbryder', True], r)
+        tjek('dokumentationen har et tændingsdiagram pr. afbryder', r['afsnit'] and r['diagrammer'] == r['n'] >= 9 and r['navne'] and not r['docKlik'], r)
+
         # 3. Beregning: ændring af tværsnit sænker spændingsfaldet
         r = await pg.evaluate(f"(()=>{{const a={A};const e=a.db.enheder.find(x=>Number(x.effekt)>1000);const f=a.du(e);const g=a.du(e,(e.tv||1.5)*4);return [f,g]}})()")
         tjek('spændingsfald falder med større tværsnit', r[0] > r[1] > 0, r)
@@ -208,9 +254,22 @@ async def main():
             enheder:JSON.stringify(a.db.enheder), daaser:JSON.stringify(a.db.daaser), ng:g.length, nt:t.length,
             bak:(JSON.parse(localStorage.getItem('tavleoversigt.backups'))||[]).length}}}})()""")
         tjek('opgradering fra skema 9: backup, standardforhold og data intakte',
-             r['navn'] == 'Skema 9-projekt' and r['b'] >= 1 and r['s'] == 10 and r['std'] == ['C', 30, 20, 1, 'bundt'] and r['g'] and r['t']
+             r['navn'] == 'Skema 9-projekt' and r['b'] >= 1 and r['s'] == 11 and r['std'] == ['C', 30, 20, 1, 'bundt'] and r['g'] and r['t']
              and r['ng'] == r0['ng'] and r['nt'] == r0['nt'] and r['enheder'] == r0['enheder'] and r['daaser'] == r0['daaser'],
              {k: v for k, v in r.items() if k not in ('enheder', 'daaser')} | {'enheder ens': r['enheder'] == r0['enheder'], 'daaser ens': r['daaser'] == r0['daaser']})
+
+        # 4c. Opgradering fra skema 10: afbrydere i det gamle format (uden krydsafbryder) er intakte, og der tages backup
+        r0 = await pg.evaluate("""(()=>{const i=JSON.parse(localStorage.getItem('tavleoversigt.projekter'));i.schema=10;const id=i.aktiv;
+          const p=JSON.parse(localStorage.getItem('tavleoversigt.p.'+id));p.afbrydere=p.afbrydere.filter(a=>a.art!=='kryds');p.projekt.navn='Skema 10-projekt';
+          localStorage.setItem('tavleoversigt.p.'+id,JSON.stringify(p));localStorage.setItem('tavleoversigt.projekter',JSON.stringify(i));localStorage.removeItem('tavleoversigt.backups');
+          return {afb:JSON.stringify(p.afbrydere), n:p.afbrydere.length, enheder:JSON.stringify(p.enheder), arter:[...new Set(p.afbrydere.map(a=>a.art))].sort()}})()""")
+        await pg.goto(URL); await pg.wait_for_timeout(500)
+        r = await pg.evaluate(f"""(()=>{{const a={A};return {{navn:a.db.projekt.navn, b:a.backups.length, s:JSON.parse(localStorage.getItem('tavleoversigt.projekter')).schema,
+            afb:JSON.stringify(a.db.afbrydere), enheder:JSON.stringify(a.db.enheder), svg:a.db.afbrydere.every(x=>a.taendSvg(x).length>500&&a.taendSvg(x,true).length>500)}}}})()""")
+        tjek('opgradering fra skema 10: backup taget, afbrydere og brugsgenstande intakte',
+             r['navn'] == 'Skema 10-projekt' and r['b'] >= 1 and r['s'] == 11 and r['afb'] == r0['afb'] and r['enheder'] == r0['enheder'] and r['svg']
+             and r0['n'] >= 6 and r0['arter'] == ['enpolet', 'kip', 'korr', 'krone', 'sensor', 'trappe'],
+             {'navn': r['navn'], 'b': r['b'], 's': r['s'], 'afb ens': r['afb'] == r0['afb'], 'enheder ens': r['enheder'] == r0['enheder'], 'n': r0['n'], 'arter': r0['arter']})
 
         # 5. Backupfil kan hentes og indlæses uden at overskrive
         async with pg.expect_download() as dl:

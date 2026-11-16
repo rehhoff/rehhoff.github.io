@@ -1,7 +1,7 @@
 /* Konstanter, lagernøgler, tabeller, norm() og eksempeldata. Indlæses først; alt her er globalt og bruges af de andre filer og markup. */
 const KEY = 'tavleoversigt.v2', OLD = 'tavleoversigt.v1', TKEY = 'tavleoversigt.tema', IDX = 'tavleoversigt.projekter';
 /* Versioner: APP_VERSION følger CHANGELOG.md. SCHEMA hæves kun, når datamodellen ændres, og udløser en automatisk backup før migrering. */
-const APP_VERSION = '10.3.0', SCHEMA = 10, BKEY = 'tavleoversigt.backups', BMAX = 3;
+const APP_VERSION = '10.4.0', SCHEMA = 11, BKEY = 'tavleoversigt.backups', BMAX = 3;
 const PK = id => 'tavleoversigt.p.' + id, MEM = {};
 /* Synkronisering: en hemmelig GitHub Gist med en markørfil og én fil pr. projekt. Se docs/planer/2026-11-15-gist-synk.md. */
 const SKEY = 'tavleoversigt.sync', GFIL = 'tavleoversigt.json', GP = id => 'tavleoversigt-' + id + '.json', GPRE = /^tavleoversigt-([A-Za-z0-9_-]+)\.json$/, GH = 'https://api.github.com';
@@ -149,7 +149,7 @@ function norm(d) {
   o.enheder.forEach(e => { e.gruppeId = e.gruppeId || ''; e.lokaleId = e.lokaleId || ''; e.daaseId = e.daaseId || ''; e.kabel = kabMap(e.kabel); e.symbol = e.symbol || 'auto'; });
   o.daaser.forEach(d => { d.gruppeId = d.gruppeId || ''; d.parentId = d.parentId || ''; d.lokaleId = d.lokaleId || ''; d.kabel = kabMap(d.kabel); d.type = daaMap(d.type); });
   const eid = new Set(o.enheder.map(e => e.id));
-  o.afbrydere.forEach(a => { a.art = a.art || 'enpolet'; a.gruppeId = a.gruppeId || ''; a.lokaleId = a.lokaleId || ''; a.steder = Number(a.steder) || 1; a.tid = Number(a.tid) || 3;
+  o.afbrydere.forEach(a => { a.art = a.art || 'enpolet'; a.gruppeId = a.gruppeId || ''; a.lokaleId = a.lokaleId || ''; a.steder = Number(a.steder) || 1; if (a.art === 'kryds') a.steder = Math.min(6, Math.max(3, Math.round(a.steder))); /* skema 11: krydsafbryder med 3 til 6 betjeningssteder */ a.tid = Number(a.tid) || 3;
     a.a = (Array.isArray(a.a) ? a.a : []).filter(x => eid.has(x)); a.b = (Array.isArray(a.b) ? a.b : []).filter(x => eid.has(x)); });
   o.tavler.forEach(t => { const g = o.grupper.find(x => x.id === t.fraGruppe); if (g && g.tavleId !== t.id) t.fra = g.tavleId; else t.fraGruppe = ''; });
   return o;

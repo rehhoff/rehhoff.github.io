@@ -43,3 +43,17 @@ Ingen anden session kører lige nu. Hvis Opus starter en opgave imens, holder de
 ## Udgivelse
 
 Minor-version. Versionen sættes ved merge ud fra den aktuelle `main`, efter `CLAUDE.md` afsnit 2 og 3.
+
+## Afklaring og ændringer (Claude Fable, 2026-11-16)
+
+Alexanders svar: krydsafbryderen er en ny type `kryds`, og afbrydere vises altid i enstregsdiagrammet.
+
+Ændringer i planen under implementeringen:
+
+- **`SCHEMA` hævet til 11**, selv om ingen felter er ændret. Begrundelse: version 10.3.0 og ældre slår `afbLedere[af.art]` op uden at kende `kryds` og fejler på fanen Tændingsdiagram, hvis et projekt med en krydsafbryder synkroniseres ned til en enhed med gammel kode i cachen. Den ville også sætte `steder` til 1 ved redigering. Med skema 11 afviser gamle versioner synkroniseringen, til siden er genindlæst, og første start tager en backup. Røgtesten har et tjek med data fra skema 10.
+- **Placering i enstregsdiagrammet:** afbryderen tegnes på lederen foran hver lampe, den styrer, i stedet for som et selvstændigt led mellem gruppen og lamperne. Begrundelse: lamperne på én afbryder kan sidde under forskellige samlepunkter, og træet følger kablerne. En afbryder uden lamper får sin egen række under gruppen. Bredden er øget med 40 px for at give plads.
+- **Sporing:** en lampes spor går gennem afbryderen (`… → gruppe → samlepunkt → afbryder → lampe`). Vælges en afbryder, fremhæves dens lamper.
+- Styres en lampe af flere afbrydere, vises kun den første i enstregsdiagrammet.
+- Tilføjet uden for planens liste, men inden for opgaven: "Spor" på afbryderkortet og i søgningen, og `tests/regression-taending.json` som grundlag for regressionen (optaget fra 10.3.0 før ændringerne).
+
+Udført af Claude Fable i version 10.4.0.
