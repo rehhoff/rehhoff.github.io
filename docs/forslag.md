@@ -5,7 +5,6 @@ Forslag, Alexander ikke har besluttet endnu, eller som venter på at blive lavet
 | # | Forslag | Udfører | Begrundelse |
 |---|---|---|---|
 | 8 | Gendan fra Gist-historik: vis og gendan et projekt fra en tidligere dato som kopi | Opus | Bygger på synkroniseringen |
-| 9 | Bygget Tailwind-CSS i stedet for CDN | Opus | Fjerner advarslen i konsollen og CDN-afhængigheden. Kræves for 6 |
 | 6 | Offline-app (PWA) med `sw.js` og `manifest.json` | Opus | Efter 9 |
 | 7 | Mobiltilstand til brugsgenstande og målinger på pladsen. Hovedet bliver presset sammen under ca. 750 px bredde, så projektnavnet næsten forsvinder | Opus | Hører sammen med 6 |
 | 3 | Materialeliste: kabelmeter pr. type og tværsnit, dåser og materiel | Sonnet | Lægger kun eksisterende data sammen |

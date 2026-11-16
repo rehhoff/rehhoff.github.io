@@ -3,9 +3,9 @@
 Webapp til elektrikerarbejde: tavler, grupper, lokaler, kabler, samlepunkter, afbrydere og svagstrøm, med beregninger (ΔU, I<sub>z</sub>, fasebalance), diagrammer og dokumentation. Ejer: Alexander. Brugerfladen er på dansk.
 
 - Live: https://rehhoff.github.io/ (GitHub Pages fra `main`, mappe `/`). Repoet er offentligt: skriv ingen personlige oplysninger i filer eller commits.
-- Intet byggetrin. Alpine.js 3.14.1 fra cdnjs og Tailwind fra CDN. Almindelige scripts, der deler globalt scope, indlæst i denne rækkefølge:
+- Ét lille byggetrin: Tailwind-CSS'en bygges med `python tools/byg_css.py` (Tailwinds officielle program v3.4.17, hentes automatisk til `~/.cache/el-oversigt/`). Alpine.js 3.14.1 fra cdnjs. Almindelige scripts, der deler globalt scope, indlæst i denne rækkefølge:
   - `index.html`: markup med Alpine-direktiver.
-  - `css/app.css`: farvetokens, lyst og mørkt tema, egne klasser. `js/tailwind.config.js`: Tailwind-opsætning.
+  - `css/app.css`: farvetokens, lyst og mørkt tema, egne klasser. `css/tailwind.css`: bygget fra `tailwind.config.js` og `css/tailwind.input.css`. Ret den aldrig i hånden.
   - `js/data.js`: konstanter, `APP_VERSION`, `SCHEMA`, lagernøgler, tabeller (`IZ`, `EFFEKT`, `SF` …), `norm()` og eksempeldata.
   - `js/beregning.js` (`APP_BEREGNING`), `js/diagram.js` (`APP_DIAGRAM`), `js/lagring.js` (`APP_LAGRING`): metoder, der samles i `app()`.
   - `js/app.js`: `app()` med tilstand, `init()` og resten af brugerfladen. `bland()` lægger metoderne fra de andre filer på.
@@ -25,7 +25,7 @@ Projekterne ligger i browserens localStorage på `rehhoff.github.io` og kan synk
 ## 2. Arbejdsgang
 
 1. Lav en branch fra `main`.
-2. Ret koden. Hold samme design (farvetokens i `:root`, lyst og mørkt tema) og samme kodestil.
+2. Ret koden. Hold samme design (farvetokens i `:root`, lyst og mørkt tema) og samme kodestil. Bruger du en Tailwind-klasse, der ikke findes i forvejen, så kør `python tools/byg_css.py`. Klassenavne skal stå hele i koden (ikke `'text-' + farve`), ellers kommer de ikke med i CSS'en.
 3. Hæv versionen tre steder ved merge (se afsnit 3): `APP_VERSION` i `js/data.js`, alle `?v=` i `index.html` og `version` i `package.json` (ny funktion = minor, rettelse = patch, større omlægning = major). `?v=` sikrer, at browseren ikke blander en ny `index.html` med gamle filer fra cachen. Røgtesten fejler, hvis de ikke passer sammen.
 4. Tilføj et afsnit øverst i `CHANGELOG.md` med dato, version, model og ændringer. Opdater `docs/ARKITEKTUR.md`, hvis nøgler, felter, faner eller funktioner ændres.
 5. Kør røgtesten. Den skal slutte med `OK`. På Alexanders Windows-PC (ingen npm, Python hedder `python`):
@@ -33,6 +33,7 @@ Projekterne ligger i browserens localStorage på `rehhoff.github.io` og kan synk
    pip install playwright
    python -m playwright install chromium
    mkdir -p node_modules/alpinejs/dist && curl -sfL https://unpkg.com/alpinejs@3.14.1/dist/cdn.min.js -o node_modules/alpinejs/dist/cdn.min.js
+   python tools/byg_css.py
    python tests/smoke.py
    ```
    Med npm: `npm install` og `python3 tests/smoke.py`. Sæt `PYTHONIOENCODING=utf-8`, hvis æ, ø og å giver fejl i konsollen.
