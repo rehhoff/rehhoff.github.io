@@ -2,6 +2,15 @@
 
 Nyeste øverst. Versionsnummeret står også i appen som `APP_VERSION`. Hver version siger, hvilken model der lavede den.
 
+## 10.12.0 · 2026-11-16 · Claude Fable
+
+Forslag til fasefordeling (forslag 13). Plan: `docs/planer/2026-11-16-fasefordeling.md`.
+
+- Knappen "Foreslå fasefordeling" på hver tavle i Beregning viser et forslag: lasten pr. fase nu og med forslaget, og hvilke grupper der flyttes. Intet ændres, før man vælger "Anvend forslag". Bagefter kan det fortrydes.
+- Knappen erstatter "Balancér faser automatisk", som ændrede faserne med det samme. Linket i advarslerne åbner også forslaget.
+- Giver forslaget ikke en bedre balance end den nuværende, siger appen det og foreslår ingenting.
+- Ingen ændring af datamodellen. `SCHEMA` er uændret 12.
+
 ## 10.11.0 · 2026-11-16 · Claude Fable
 
 Kortslutningsstrøm og selektivitet (forslag 12 og 14). Plan: `docs/planer/2026-11-16-kortslutning-selektivitet.md`.

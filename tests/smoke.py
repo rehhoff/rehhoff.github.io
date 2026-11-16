@@ -382,6 +382,19 @@ async def main():
         tjek('selektivitet: forsikring under 1,6 × største sikring, gruppe foran undertavle, HPFI i serie med og uden type S, med i dokumentationen',
              r['sel1'] and r['sel2'] and r['sg1'] and r['sg2'] and r['hpfi1'] and r['hpfi2'] and r['hpfi3'] and r['hpfi4'] and r['doc'], r)
 
+        # 4f. Forslag til fasefordeling: vises først, ændrer intet før Anvend, og giver bedre balance
+        r = await pg.evaluate(f"""(async()=>{{const a={A};const T=n=>new Promise(f=>setTimeout(f,n));const d=a.db, tid=d.tavler[0].id, gs=a.grupperFor(tid).filter(g=>g.faser!=3), gem=gs.map(g=>g.fase), o={{}};
+          gs.forEach(g=>{{g.fase='L1';}}); const skaev=gs.map(g=>g.fase).join(), d0=a.faseInfo(tid).diff;
+          a.go('beregning'); a.faseForesla(tid); await T(150);
+          o.vist=!!a.faseFs&&a.faseFs.tid===tid&&a.faseFs.rows.length>0&&!!document.getElementById('fase-forslag'); o.uroert=gs.map(g=>g.fase).join()===skaev;
+          o.tal=!!a.faseFs&&Math.abs(a.faseFs.diffFoer-d0)<1e-9&&a.faseFs.diff<d0;
+          const d1=a.faseFs?a.faseFs.diff:-1; document.getElementById('fase-anvend').click(); await T(150);
+          o.anvendt=a.faseFs===null&&Math.abs(a.faseInfo(tid).diff-d1)<1e-6&&!document.getElementById('fase-forslag');
+          a.faseForesla(tid); o.ingen=a.faseFs===null;
+          gs.forEach((g,i)=>{{g.fase=gem[i];}}); a.save(); return o}})()""")
+        tjek('fasefordeling: forslag vises uden at ændre noget, Anvend flytter grupperne, intet forslag når balancen ikke bliver bedre',
+             r['vist'] and r['uroert'] and r['tal'] and r['anvendt'] and r['ingen'], r)
+
         # 5. Backupfil kan hentes og indlæses uden at overskrive
         async with pg.expect_download() as dl:
             await pg.evaluate(f"{A}.hentBackup()")
