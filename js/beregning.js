@@ -106,6 +106,21 @@ const APP_BEREGNING = () => ({
       }
       return out;
     },
+    /* vurdering af målinger (aftalt 2026-11-16): Zs ≤ 2/3 · U0/Ia med Ia = 5/10/20 × In for B/C/D, HPFI ≤ 300 ms ved 1 × IΔn, Riso ≥ 1 MΩ */
+    maalTal(s) { const t = String(s == null ? '' : s).trim(); if (!t) return null; const n = parseFloat(t.replace(',', '.').replace(/^[^\d.]+/, '')); return isNaN(n) ? NaN : n; },
+    zsMax(g) { const f = { B:5, C:10, D:20 }[g.kar], In = Number(g.In) || 0; return f && In ? 2 / 3 * 230 / (f * In) : 0; },
+    maalVurdering(g) {
+      const m = g.maal || {}, riso = this.maalTal(m.riso), zs = this.maalTal(m.zs), t = this.maalTal(m.rcd), zmax = this.zsMax(g), harRcd = !!this.rcd(g);
+      const vurd = (x, ok) => x == null ? null : isNaN(x) ? false : ok(x);
+      const r = { riso:vurd(riso, x => x >= 1), zs:zmax ? vurd(zs, x => x <= zmax) : null, rcd:harRcd ? vurd(t, x => x <= 300) : null, zmax, harRcd, fejl:[] };
+      if (r.riso === false) r.fejl.push(isNaN(riso) ? 'isolationsmodstand kan ikke læses' : 'isolationsmodstand ' + this.fmt(riso, 2) + ' MΩ under 1 MΩ');
+      if (r.zs === false) r.fejl.push(isNaN(zs) ? 'Zs kan ikke læses' : 'Zs ' + this.fmt(zs, 2) + ' Ω over ' + this.fmt(zmax, 2) + ' Ω');
+      if (r.rcd === false) r.fejl.push(isNaN(t) ? 'udløsetid kan ikke læses' : 'HPFI-udløsetid ' + this.fmt(t, 0) + ' ms over 300 ms');
+      const mangler = r.riso === null || (zmax && r.zs === null) || (harRcd && r.rcd === null) || !m.ok;
+      r.status = r.fejl.length ? 'fejl' : mangler ? 'mangler' : 'ok';
+      r.txt = r.status === 'fejl' ? 'Fejl: ' + r.fejl.join(', ') : r.status === 'ok' ? 'OK' : 'Mangler måling';
+      return r;
+    },
     warnings() {
       const out = [];
       for (const t of this.db.tavler) {
@@ -125,6 +140,7 @@ const APP_BEREGNING = () => ({
         }
       }
       for (const d of this.db.daaser) if (this.daaseIzFejl(d)) out.push({ k:'z' + d.id, g:d.gruppeId, txt:`${this.daaseTxt(d.id)}: tilgangskabel ${this.kabelDim(d)} har Iz ${this.fmt(this.daaseIz(d))} A, under gruppens sikring.` });
+      for (const g of this.sorteredeGrupper()) { const v = this.maalVurdering(g); if (v.status === 'fejl') out.push({ k:'m' + g.id, g:g.id, txt:`${this.tavleNavn(g.tavleId)} · gruppe ${g.nr} ${g.navn}: måling over grænsen (${v.fejl.join(', ')}).` }); }
       for (const r of this.db.racks) if (this.rackHe(r.id) > r.he) out.push({ k:'kh' + r.id, sv:true, txt:`Rack ${r.navn}: udstyr fylder ${this.rackHe(r.id)} HE i et skab på ${r.he} HE.` });
       for (const u of this.db.udstyr) {
         if (u.art === 'switch' && u.poe && this.poeBrug(u.id) > u.poeBudget) out.push({ k:'up' + u.id, sv:true, txt:`${u.navn}: PoE-forbrug ${this.fmt(this.poeBrug(u.id))} W overstiger budgettet på ${u.poeBudget} W.` });

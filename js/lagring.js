@@ -258,9 +258,9 @@ const APP_LAGRING = () => ({
         for (const g of this.grupperFor(t.id)) for (const e of this.enhederFor(g.id)) h += '<tr>' + [g.nr, e.navn + (e.daaseId ? ' (via ' + this.daaseTxt(e.daaseId) + ')' : ''), this.lokaleNavn(e.lokaleId), e.kabel + ' ' + this.kabelDim(e), this.fmt(e.laengde) + ' m',
           e.effekt ? e.effekt + ' W' : '–', e.effekt ? this.fmt(this.du(e), 2) + ' %' : '–'].map(td).join('') + '</tr>';
         h += '</table><h2>Verifikation · måleskema</h2><p class="k">Kladde til egenkontrol. Ikke en gyldig installationsattest eller sikkerhedsdokumentation.</p>' +
-          '<table><tr><th>Gr.</th><th>Betegnelse</th><th>Isolationsmodstand (MΩ)</th><th>Zs (Ω)</th><th>HPFI udløsetid (ms)</th><th>Visuel kontrol</th></tr>';
-        for (const g of this.grupperFor(t.id)) h += '<tr>' + [g.nr, g.navn, g.maal.riso, g.maal.zs, g.maal.rcd, g.maal.ok ? 'OK' : ''].map(td).join('') + '</tr>';
-        h += '</table><p class="m">Beregninger er vejledende: ρ = 0,0225 Ω·mm²/m, cos φ = 1, med gruppens samtidighedsfaktor.</p></section>';
+          '<table><tr><th>Gr.</th><th>Betegnelse</th><th>Isolationsmodstand (MΩ)</th><th>Zs (Ω)</th><th>Maks. Zs (Ω)</th><th>HPFI udløsetid (ms)</th><th>Visuel kontrol</th><th>Vurdering</th></tr>';
+        for (const g of this.grupperFor(t.id)) h += '<tr>' + [g.nr, g.navn, g.maal.riso, g.maal.zs, this.zsMax(g) ? this.fmt(this.zsMax(g), 2) : '–', g.maal.rcd, g.maal.ok ? 'OK' : '', this.maalVurdering(g).txt].map(td).join('') + '</tr>';
+        h += '</table><p class="m">Beregninger er vejledende: ρ = 0,0225 Ω·mm²/m, cos φ = 1, med gruppens samtidighedsfaktor. Grænser for målinger: Zs ≤ 2/3 · U0/Ia (Ia = 5/10/20 × In for B/C/D), HPFI ≤ 300 ms ved 1 × IΔn, isolationsmodstand ≥ 1 MΩ.</p></section>';
       });
       if (this.db.racks.length || this.db.links.length) {
         h += '<section><h1>Svagstrøm · PDS og CCTV</h1>';

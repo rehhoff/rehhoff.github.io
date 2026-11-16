@@ -2,6 +2,16 @@
 
 Nyeste øverst. Versionsnummeret står også i appen som `APP_VERSION`. Hver version siger, hvilken model der lavede den.
 
+## 10.3.0 · 2026-11-16 · Claude Opus
+
+Automatisk vurdering af målinger. Plan: `docs/planer/2026-11-16-maalinger.md`.
+
+- Måleskemaet vurderer hver gruppe: Z<sub>s</sub> ≤ 2/3 · U<sub>0</sub>/I<sub>a</sub> (I<sub>a</sub> = 5/10/20 × I<sub>n</sub> for B/C/D), HPFI-udløsetid ≤ 300 ms ved 1 × IΔn og isolationsmodstand ≥ 1 MΩ. Grænserne er aftalt med Alexander.
+- Værdier over grænsen markeres med rødt. Z<sub>s</sub>-grænsen vises under hvert felt, og en ny kolonne viser OK, fejl eller manglende måling.
+- Målinger over grænsen kommer med under "Kræver kontrol".
+- "> 999" og komma som decimaltegn accepteres.
+- Dokumentationen viser maks. Z<sub>s</sub> og vurderingen pr. gruppe.
+
 ## 10.2.0 · 2026-11-16 · Claude Opus
 
 Beskeder i bunden. Plan: `docs/planer/2026-11-16-beskeder.md`.
