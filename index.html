@@ -8,8 +8,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com/3.4.17"></script>
-<script src="js/tailwind.config.js?v=10.1.0"></script>
-<link rel="stylesheet" href="css/app.css?v=10.1.0">
+<script src="js/tailwind.config.js?v=10.2.0"></script>
+<link rel="stylesheet" href="css/app.css?v=10.2.0">
 </head>
 <body class="min-h-full">
 <p id="fail" hidden style="margin:16px;padding:12px;border:1px solid var(--crit);color:var(--crit)">Appen kunne ikke starte, fordi Alpine.js ikke blev indlæst. Genindlæs siden.</p>
@@ -28,7 +28,7 @@
       </div>
       <input id="p-navn" class="hd text-3xl font-bold bg-transparent w-full min-w-0 border-b border-transparent hover:border-line focus:border-accent" x-model="db.projekt.navn" @change="save()" aria-label="Projektnavn" placeholder="Projektnavn">
       <p class="text-sm text-muted" x-show="stamTxt()" x-text="stamTxt()"></p>
-      <p class="text-xs mt-1" :class="storageOk ? 'text-muted' : 'warn'" x-text="(storageOk ? 'Gemmes automatisk i browseren' : 'Browseren tillader ikke lokal lagring. Hent en backup under Dokumentation.') + (synk ? (synkFejl ? ' · synkronisering fejlede, se Dokumentation' : synkKoerer ? ' · synkroniserer …' : ' · synkroniseres via GitHub') : '') + ' · version ' + appVersion"></p>
+      <p class="text-xs mt-1" :class="storageOk ? 'text-muted' : 'warn'" x-text="(storageOk ? 'Gemmes automatisk i browseren' : 'Browseren tillader ikke lokal lagring. Hent en backup under Dokumentation.') + synkTxt() + ' · version ' + appVersion"></p>
     </div>
     <div class="flex flex-wrap gap-2">
       <div class="relative" @click.outside="soegAaben=false">
@@ -890,9 +890,14 @@
   </section>
 
   <!-- Toast -->
-  <div x-show="toast" class="fixed bottom-4 left-1/2 z-40 -translate-x-1/2 panel bg-raised shadow-lg px-4 py-2 text-sm flex items-center gap-3 max-w-[92vw]" role="status">
-    <span x-text="toast ? toast.txt : ''"></span>
-    <button x-show="toast && toast.undo" class="underline font-semibold" @click="undo()">Fortryd</button>
+  <div class="fixed bottom-4 left-1/2 z-40 -translate-x-1/2 flex flex-col items-center gap-2 w-max max-w-[92vw]" aria-live="polite">
+    <template x-for="t in toasts" :key="t.id">
+      <div class="panel bg-raised shadow-lg pl-4 pr-1 py-1.5 text-sm flex items-center gap-3" :style="t.fejl && 'border-color:var(--crit)'" :role="t.fejl ? 'alert' : 'status'">
+        <span :class="t.fejl && 'warn'" x-text="t.txt"></span>
+        <button x-show="t.undo" class="underline font-semibold" @click="undo()">Fortryd</button>
+        <button class="btn btn-ghost px-2" @click="lukToast(t.id)" aria-label="Luk besked" title="Luk">×</button>
+      </div>
+    </template>
   </div>
 
   <!-- ============ DIALOG ============ -->
@@ -1312,11 +1317,11 @@
   </div>
 </div>
 
-<script src="js/data.js?v=10.1.0"></script>
-<script src="js/beregning.js?v=10.1.0"></script>
-<script src="js/diagram.js?v=10.1.0"></script>
-<script src="js/lagring.js?v=10.1.0"></script>
-<script src="js/app.js?v=10.1.0"></script>
+<script src="js/data.js?v=10.2.0"></script>
+<script src="js/beregning.js?v=10.2.0"></script>
+<script src="js/diagram.js?v=10.2.0"></script>
+<script src="js/lagring.js?v=10.2.0"></script>
+<script src="js/app.js?v=10.2.0"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.14.1/cdn.min.js"></script>
 </body>
 </html>

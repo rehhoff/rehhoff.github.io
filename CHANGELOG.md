@@ -2,6 +2,15 @@
 
 Nyeste øverst. Versionsnummeret står også i appen som `APP_VERSION`. Hver version siger, hvilken model der lavede den.
 
+## 10.2.0 · 2026-11-16 · Claude Opus
+
+Beskeder i bunden. Plan: `docs/planer/2026-11-16-beskeder.md`.
+
+- Almindelig synkronisering viser ikke længere en besked. Hovedet viser i stedet "synkroniseret kl. HH:MM". Konflikter vises stadig.
+- Beskeder står i 3,5–10 sekunder efter tekstens længde (mindst 6 sekunder med Fortryd) og kan lukkes med ×.
+- Fejl bliver stående med rød kant, indtil de lukkes.
+- Op til tre beskeder vises over hinanden, og samme tekst vises kun én gang. Fortryd lukker beskeden, den hører til.
+
 ## 10.1.0 · 2026-11-16 · Claude Fable
 
 Installationsmetoder, korrektionsfaktorer og egen I<sub>z</sub>-tabel for XLPE. Plan: `docs/planer/2026-11-16-korrektionsfaktorer.md`. `SCHEMA` 9 → 10, så første start tager en backup.

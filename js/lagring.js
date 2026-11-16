@@ -17,7 +17,7 @@ const APP_LAGRING = () => ({
     aktiver(id, d) { this.pid = id; this.db = d; this.hist = []; this.lokF = ''; this.q = ''; this.sldSel = null; this.sel = (this.sorteredeGrupper()[0] || {}).id || null; this.save(); },
     skift(id) {
       if (id === this.pid) return; this.save();
-      const d = this.laes(id); if (!d) { this.say('Projektet kunne ikke læses fra browserens lager.'); return; }
+      const d = this.laes(id); if (!d) { this.say('Projektet kunne ikke læses fra browserens lager.', false, true); return; }
       this.aktiver(id, d); this.say('Skiftet til ' + (d.projekt.navn || 'projekt') + '.');
     },
     aabnProjekter() { this.confirm = null; this.pf = { navn:'', sagsnr:'', kunde:'', adresse:'' }; this.modal = { type:'projekter' }; },
@@ -27,7 +27,7 @@ const APP_LAGRING = () => ({
       this.aktiver(uid(), d); this.modal = null; this.go('tavle'); this.say('Projekt ' + navn + ' oprettet.');
     },
     dupliker(id) {
-      this.save(); const d = this.laes(id); if (!d) { this.say('Projektet kunne ikke læses.'); return; }
+      this.save(); const d = this.laes(id); if (!d) { this.say('Projektet kunne ikke læses.', false, true); return; }
       d.projekt.navn = (d.projekt.navn || 'Projekt') + ' (kopi)'; d.projekt.sagsnr = '';
       d.grupper.forEach(g => { g.maal = { riso:'', zs:'', rcd:'', ok:false }; });
       this.aktiver(uid(), d); this.say('Kopi oprettet og åbnet. Sagsnummer og måleværdier er nulstillet.');
@@ -120,6 +120,12 @@ const APP_LAGRING = () => ({
       clearTimeout(SYNK_T); this.synk = null; this.synkGem(); this.synkFejl = '';
       this.say('Synkronisering slået fra på denne enhed. Projekterne her og Gist\'en på GitHub er urørte.');
     },
+    synkTxt() {
+      if (!this.synk) return '';
+      if (this.synkFejl) return ' · synkronisering fejlede, se Dokumentation';
+      if (this.synkKoerer) return ' · synkroniserer …';
+      return this.synk.sidst ? ' · synkroniseret kl. ' + new Date(this.synk.sidst).toLocaleTimeString('da-DK', { hour:'2-digit', minute:'2-digit' }) : ' · synkroniseres via GitHub';
+    },
     synkSenere() { if (!this.synk || this.iSynk) return; clearTimeout(SYNK_T); SYNK_T = setTimeout(() => this.synkNu(), 4000); },
     async synkNu() {
       if (this.synkKoerer) { this.synkIgen = true; return; }
@@ -181,7 +187,6 @@ const APP_LAGRING = () => ({
       }
       this.synk.base = nyBase;
       if (n.konflikt) this.say(n.konflikt + ' projekt' + (n.konflikt > 1 ? 'er' : '') + ' var ændret på to enheder. Begge udgaver er beholdt, og den anden hedder "fra anden enhed".');
-      else if (n.hentet || n.slettet) this.say('Synkroniseret: ' + [n.hentet && n.hentet + ' hentet', n.slettet && n.slettet + ' slettet'].filter(Boolean).join(', ') + '.');
     },
     synkHent(id, d) {
       this.skriv(id, d); const m = this.meta(id, d), i = this.projekter.findIndex(p => p.id === id);
@@ -198,16 +203,16 @@ const APP_LAGRING = () => ({
       }
     },
     importJson(txt, somNyt) {
-      let d; try { d = JSON.parse(txt); } catch (e) { this.say('Kunne ikke læse JSON. Kontrollér at hele teksten er med.'); return; }
+      let d; try { d = JSON.parse(txt); } catch (e) { this.say('Kunne ikke læse JSON. Kontrollér at hele teksten er med.', false, true); return; }
       if (d && d.format === 'tavleoversigt-backup') { this.importBackup(d); return; }
-      if (!d || !Array.isArray(d.tavler) || !Array.isArray(d.grupper) || !Array.isArray(d.enheder)) { this.say('Filen mangler tavler, grupper eller enheder og blev ikke indlæst.'); return; }
+      if (!d || !Array.isArray(d.tavler) || !Array.isArray(d.grupper) || !Array.isArray(d.enheder)) { this.say('Filen mangler tavler, grupper eller enheder og blev ikke indlæst.', false, true); return; }
       if (somNyt) { this.save(); this.aktiver(uid(), norm(d)); } else { this.mutate(() => { this.db = norm(d); }); this.sel = (this.sorteredeGrupper()[0] || {}).id || null; }
       this.io = '';
       this.say((somNyt ? 'Indlæst som nyt projekt: ' : 'Aktivt projekt erstattet: ') + this.db.grupper.length + ' grupper, ' + this.db.enheder.length + ' brugsgenstande.', !somNyt);
     },
     importFil(ev) {
       const f = ev.target.files && ev.target.files[0]; if (!f) return;
-      const r = new FileReader(); r.onload = () => this.importJson(String(r.result), true); r.onerror = () => this.say('Filen kunne ikke læses.'); r.readAsText(f); ev.target.value = '';
+      const r = new FileReader(); r.onload = () => this.importJson(String(r.result), true); r.onerror = () => this.say('Filen kunne ikke læses.', false, true); r.readAsText(f); ev.target.value = '';
     },
     async hent(filename, data) {
       try {

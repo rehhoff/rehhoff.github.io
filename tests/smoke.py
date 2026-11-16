@@ -162,6 +162,15 @@ async def main():
           const s=a.forslag(e); [g.metode,g.temp,g.samlet,g.lag]=gem; return {{z0, z1, k:Math.round(forv*0.79*0.57*10)/10, s, tv:e.tv, z2:a.iz(e)}}}})()""")
         tjek('Iz: gruppens metode, temperatur og samlet fremføring bruges', r['z1'] == r['k'] and r['z2'] == r['z0'] and r['z1'] < r['z0'], r)
 
+        # Beskeder i bunden
+        r = await pg.evaluate(f"""async()=>{{const a={A};const T=n=>new Promise(f=>setTimeout(f,n));a.toasts.slice().forEach(t=>a.lukToast(t.id));
+          ['en','to','tre','fire','fire'].forEach(t=>a.say(t));const tre=a.toasts.map(t=>t.txt);
+          a.toasts.slice().forEach(t=>a.lukToast(t.id));a.say('Kort');a.say('Fejl',false,true);const foer=a.toasts.length;
+          await T(3800);const efter=a.toasts.map(t=>t.txt);a.lukToast(a.toasts[0].id);
+          return {{tre,foer,efter,tom:a.toasts.length,dom:document.querySelectorAll('[role=alert],[role=status]').length}}}}""")
+        tjek('beskeder: højst tre, ingen dubletter, fejl bliver stående, × lukker',
+             r['tre'] == ['to', 'tre', 'fire'] and r['foer'] == 2 and r['efter'] == ['Fejl'] and r['tom'] == 0, r)
+
         # 4. Opgradering: data uden skema bevares, og der tages backup
         await pg.evaluate("""(()=>{const i=JSON.parse(localStorage.getItem('tavleoversigt.projekter'));delete i.schema;
           const id=i.aktiv;const p=JSON.parse(localStorage.getItem('tavleoversigt.p.'+id));p.projekt.navn='Testprojekt før opgradering';
@@ -209,6 +218,8 @@ async def main():
         tjek('synk: nyt projekt sendes, eksempler gør ikke', projekter_i_gist() == ['Synkprojekt'], projekter_i_gist())
         await pb.evaluate(f"""async()=>{{const a={A};a.synkTokenInput='test-token';await a.synkForbind();}}""")
         tjek('synk: anden enhed henter projektet', 'Synkprojekt' in await navne(pb), await navne(pb))
+        r = await pb.evaluate(f"(()=>{{const a={A};return {{t:a.toasts.map(t=>t.txt),h:a.synkTxt()}}}})()")
+        tjek('synk: ingen rutinebesked, tid vises i hovedet', not any('Synkroniseret:' in t for t in r['t']) and 'synkroniseret kl.' in r['h'], r)
         await pb.evaluate(f"""async()=>{{const a={A};a.skift(a.projekter.find(p=>p.navn==='Synkprojekt').id);a.mutate(()=>{{a.db.projekt.kunde='Rettet på B'}});await a.synkNu();}}""")
         r = await pa.evaluate(f"""async()=>{{const a={A};await a.synkNu();return a.db.projekt.kunde}}""")
         tjek('synk: ændring på B når frem til A (aktivt projekt genindlæst)', r == 'Rettet på B', r)
