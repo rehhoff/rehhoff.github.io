@@ -31,8 +31,8 @@ Projekterne ligger i browserens localStorage på `rehhoff.github.io` og kan synk
    ```
    Med npm: `npm install` og `python3 tests/smoke.py`. Sæt `PYTHONIOENCODING=utf-8`, hvis æ, ø og å giver fejl i konsollen.
 6. Commit med en beskrivelse på dansk, og nævn planen, hvis der er en. Push branchen.
-7. `gh` er ikke logget ind: giv Alexander linket `https://github.com/rehhoff/rehhoff.github.io/pull/new/<branch>`. Han opretter og merger pull requesten.
-8. Efter merge: hent `main`, slet branchen lokalt, så `main` er den eneste branch, og kontrollér at `APP_VERSION` på https://rehhoff.github.io/ er den nye. Pages er 1–10 minutter om at opdatere.
+7. Claude merger selv (aftalt med Alexander 2026-11-16), når røgtesten giver `OK`: `git checkout main && git pull && git merge --no-ff <branch>` og `git push origin main`. `gh` er ikke logget ind, så der bruges ingen pull request.
+8. Efter merge: slet branchen lokalt og på GitHub (`git push origin --delete <branch>`), så `main` er den eneste branch, og kontrollér at `APP_VERSION` på https://rehhoff.github.io/ er den nye. Pages er 1–10 minutter om at opdatere. Fortæl Alexander, hvad der er udgivet.
 
 ## 3. Faglige regler
 
