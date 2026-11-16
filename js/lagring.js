@@ -122,6 +122,7 @@ const APP_LAGRING = () => ({
     },
     synkTxt() {
       if (!this.synk) return '';
+      if (!this.online) return ' · offline, synkroniserer når der er net';
       if (this.synkFejl) return ' · synkronisering fejlede, se Dokumentation';
       if (this.synkKoerer) return ' · synkroniserer …';
       return this.synk.sidst ? ' · synkroniseret kl. ' + new Date(this.synk.sidst).toLocaleTimeString('da-DK', { hour:'2-digit', minute:'2-digit' }) : ' · synkroniseres via GitHub';
@@ -130,6 +131,7 @@ const APP_LAGRING = () => ({
     async synkNu() {
       if (this.synkKoerer) { this.synkIgen = true; return; }
       const s = this.synkLaes(); this.synk = s; if (!s || !s.gistId) return;
+      if (navigator.onLine === false) { this.online = false; return; }  /* uden net: vent på online-hændelsen */
       clearTimeout(SYNK_T); this.synkKoerer = true; this.synkFejl = '';
       try { await this.synkKoer(); this.synk.sidst = new Date().toISOString(); this.synkGem(); }
       catch (e) { this.synkFejl = e.message || 'Synkroniseringen mislykkedes.'; }

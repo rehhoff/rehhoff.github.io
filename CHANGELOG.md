@@ -2,6 +2,16 @@
 
 Nyeste øverst. Versionsnummeret står også i appen som `APP_VERSION`. Hver version siger, hvilken model der lavede den.
 
+## 10.6.0 · 2026-11-16 · Claude Opus
+
+Offline-app. Plan: `docs/planer/2026-11-16-offline.md`.
+
+- Appen kan installeres på hjemmeskærmen (Android, iPhone, Chrome og Edge på computeren) og åbner som en app uden adresselinje. Nyt panel "App på telefon og computer" under Dokumentation med installér-knap og vejledning til iPhone.
+- Appen virker uden net, når den har været åbnet én gang med net. En service worker (`sw.js`) gemmer app-filerne. Online hentes altid nyeste version.
+- Synkronisering venter uden fejl, når der ikke er net, og kører, så snart der er net igen. Hovedet viser "offline, synkroniserer når der er net".
+- Ikon med appens lyn på accentfarven.
+- Røgtesten starter appen på localhost, går offline og genindlæser, og kontrollerer at `VERSION` i `sw.js` passer, og at alle app-filer gemmes.
+
 ## 10.5.0 · 2026-11-16 · Claude Opus
 
 Tailwind bygges nu som en almindelig CSS-fil i stedet for at køre fra CDN. Ingen ændring af udseende eller data.

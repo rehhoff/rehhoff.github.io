@@ -6,7 +6,7 @@ Kræver Python-pakken playwright. Chrome findes via miljøvariablen CHROME,
 ellers bruges playwrights egen Chromium (python3 -m playwright install chromium).
 css/tailwind.css skal være bygget efter seneste ændring (tools/byg_css.py --tjek).
 """
-import asyncio, json, os, re, subprocess, sys
+import asyncio, functools, http.server, json, os, re, subprocess, sys, threading
 from pathlib import Path
 from playwright.async_api import async_playwright
 
@@ -109,6 +109,11 @@ async def main():
         html = (ROD / 'index.html').read_text(encoding='utf-8')
         forkerte = sorted(set(re.findall(r'\?v=([0-9.]+)', html)) - {r['v']})
         tjek('alle ?v= i index.html svarer til APP_VERSION', not forkerte and '?v=' + r['v'] in html, (r['v'], forkerte))
+        sw = (ROD / 'sw.js').read_text(encoding='utf-8')
+        sw_v = re.search(r"const VERSION = '([0-9.]+)'", sw).group(1)
+        filer = sorted(set(re.findall(r'(?:href|src)="((?:css|js)/[^"?]+)\?v=', html)))
+        mangler = [f for f in filer if "'" + f + "' + V" not in sw]
+        tjek('sw.js: VERSION = APP_VERSION, og alle app-filer gemmes til brug offline', sw_v == r['v'] and filer and not mangler, (sw_v, mangler))
 
         # 2. Alle faner og formularer
         for k in '1234567890':
@@ -313,8 +318,38 @@ async def main():
         uroert = {k: v for k, v in GIST.items() if k != 'tavleoversigt.json'} == {k: v for k, v in foer.items() if k != 'tavleoversigt.json'}
         tjek('synk: ældre version rører ikke Gist med nyere skema', 'nyere version' in r['f'] and uroert and r['n0'] == r['n1'], (r, uroert))
         GIST['tavleoversigt.json'] = foer['tavleoversigt.json']
+        r = await pb.evaluate(f"""async()=>{{const a={A};Object.defineProperty(navigator,'onLine',{{configurable:true,get:()=>false}});
+          a.synkFejl='';await a.synkNu();const r={{f:a.synkFejl,t:a.synkTxt()}};delete navigator.onLine;a.online=true;return r}}""")
+        tjek('synk: uden net ingen fejl, status viser offline', r['f'] == '' and 'offline' in r['t'], r)
         r = await pb.evaluate(f"""async()=>{{const a={A};a.synkAfbryd();return {{s:localStorage.getItem('tavleoversigt.sync'),n:a.projekter.length}}}}""")
         tjek('synk: slå fra fjerner token men ikke projekter', r['s'] is None and r['n'] >= 3, r)
+
+        # 7. Offline-app: service worker på localhost (kræver https eller localhost)
+        class Stille(http.server.SimpleHTTPRequestHandler):
+            def log_message(self, *a): pass
+        srv = http.server.ThreadingHTTPServer(('127.0.0.1', 0), functools.partial(Stille, directory=str(ROD)))
+        threading.Thread(target=srv.serve_forever, daemon=True).start()
+        lok = 'http://127.0.0.1:%d/' % srv.server_address[1]
+        async def lok_route(r):
+            u = r.request.url
+            if 'alpinejs' in u: await r.fulfill(body=ALPINE.read_text(encoding='utf-8'), content_type='application/javascript', headers={'access-control-allow-origin': '*'})
+            elif u.startswith(lok): await r.continue_()
+            else: await r.abort()
+        ctx = await b.new_context(viewport={'width': 1300, 'height': 1000}, service_workers='allow')
+        await ctx.route('**/*', lok_route)
+        pg = await ctx.new_page()
+        pg.on('pageerror', lambda e: fejl.append('offline: ' + str(e)))
+        await pg.goto(lok); await pg.wait_for_timeout(500)
+        klar = await pg.evaluate("navigator.serviceWorker.ready.then(()=>new Promise(f=>setTimeout(()=>f(!!navigator.serviceWorker.controller),300)))")
+        if not klar:
+            await pg.reload(); await pg.wait_for_timeout(500)
+            klar = await pg.evaluate("!!navigator.serviceWorker.controller")
+        foer = await pg.evaluate(f"(()=>{{const a={A};return [a.appVersion, a.projekter.length, a.swOk]}})()")
+        await ctx.set_offline(True)
+        await pg.reload(); await pg.wait_for_timeout(800)
+        efter = await pg.evaluate(f"(()=>{{const a={A};return [a.appVersion, a.projekter.length, a.online, a.db.grupper.length > 0, getComputedStyle(document.querySelector('header')).display]}})()")
+        tjek('offline: appen starter uden net med samme version, projekter og styling', klar and foer[2] and efter[:2] == foer[:2] and efter[2] is False and efter[3] and efter[4] == 'flex', (klar, foer, efter))
+        await ctx.set_offline(False); await ctx.close(); srv.shutdown()
 
         await b.close()
 

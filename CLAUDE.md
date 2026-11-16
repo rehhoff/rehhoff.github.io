@@ -9,6 +9,7 @@ Webapp til elektrikerarbejde: tavler, grupper, lokaler, kabler, samlepunkter, af
   - `js/data.js`: konstanter, `APP_VERSION`, `SCHEMA`, lagernøgler, tabeller (`IZ`, `EFFEKT`, `SF` …), `norm()` og eksempeldata.
   - `js/beregning.js` (`APP_BEREGNING`), `js/diagram.js` (`APP_DIAGRAM`), `js/lagring.js` (`APP_LAGRING`): metoder, der samles i `app()`.
   - `js/app.js`: `app()` med tilstand, `init()` og resten af brugerfladen. `bland()` lægger metoderne fra de andre filer på.
+  - `sw.js`, `manifest.webmanifest`, `ikoner/`: offline-app. `sw.js` gemmer app-filerne til brug uden net. En ny fil i `css/` eller `js/` skal også stå i listen `SKAL` i `sw.js`.
 - Ny metode lægges i den fil, hvis emne den hører til. Navne skal være unikke på tværs af filerne, fordi de samles i ét objekt.
 - Opbygning og datamodel: `docs/ARKITEKTUR.md`. Historik: `CHANGELOG.md`. Forslag og prioritering: `docs/forslag.md`. Planer: `docs/planer/`.
 
@@ -26,7 +27,7 @@ Projekterne ligger i browserens localStorage på `rehhoff.github.io` og kan synk
 
 1. Lav en branch fra `main`.
 2. Ret koden. Hold samme design (farvetokens i `:root`, lyst og mørkt tema) og samme kodestil. Bruger du en Tailwind-klasse, der ikke findes i forvejen, så kør `python tools/byg_css.py`. Klassenavne skal stå hele i koden (ikke `'text-' + farve`), ellers kommer de ikke med i CSS'en.
-3. Hæv versionen tre steder ved merge (se afsnit 3): `APP_VERSION` i `js/data.js`, alle `?v=` i `index.html` og `version` i `package.json` (ny funktion = minor, rettelse = patch, større omlægning = major). `?v=` sikrer, at browseren ikke blander en ny `index.html` med gamle filer fra cachen. Røgtesten fejler, hvis de ikke passer sammen.
+3. Hæv versionen fire steder ved merge (se afsnit 3): `APP_VERSION` i `js/data.js`, alle `?v=` i `index.html`, `VERSION` i `sw.js` og `version` i `package.json` (ny funktion = minor, rettelse = patch, større omlægning = major). `?v=` sikrer, at browseren ikke blander en ny `index.html` med gamle filer fra cachen. Uden ny `VERSION` i `sw.js` får installerede apps ikke den nye version. Røgtesten fejler, hvis de ikke passer sammen.
 4. Tilføj et afsnit øverst i `CHANGELOG.md` med dato, version, model og ændringer. Opdater `docs/ARKITEKTUR.md`, hvis nøgler, felter, faner eller funktioner ændres.
 5. Kør røgtesten. Den skal slutte med `OK`. På Alexanders Windows-PC (ingen npm, Python hedder `python`):
    ```

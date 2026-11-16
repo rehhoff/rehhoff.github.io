@@ -17,6 +17,7 @@ function app() {
     datakabler: ['Cat6', 'Cat6A', 'Cat7', 'Fiber OM4', 'Fiber OS2'],
     ampTrin: [25, 35, 50, 63, 80, 100, 125, 160, 200, 250, 315, 400, 630], svFilter: '',
     kabeltyper: KABLER,
+    online: navigator.onLine !== false, installPrompt: null, installeret: false, swOk: false,
     synk: null, synkTokenInput: '', synkKoerer: false, synkIgen: false, synkFejl: '', iSynk: false,
     tvs: TV, appVersion: APP_VERSION, backups: [], sidstBackup: '', persistent: false, lokF: '', q: '', soegAaben: false, sk: { key:'koekken', navn:'Køkken', tavleId:'' }, skabeloner: SKABELONER, anlaegNavn: ANLAEG,
     enhNavne: [...new Set(EFFEKT.map(x => x[2]))].sort((a, b) => a.localeCompare(b, 'da')), sim: {}, hurtig: { aaben:false, type:'lokale', felt:'', f:{} }, eAuto: true, belEnhSidst: 'W', dragL: null, overL: null, mFilter: '', dAuto: { type:true, lok:true },
@@ -63,6 +64,13 @@ function app() {
       const route = () => { const h = location.hash.slice(1); if (this.views.some(v => v.id === h)) { this.view = h; if (h === 'enstreg') this.$nextTick(() => this.tilpas()); } };
       route(); window.addEventListener('hashchange', route);
       this.backups = this.hentBackups();
+      /* offline-app: service worker (kun over https eller localhost) og installering */
+      try { if ('serviceWorker' in navigator && window.isSecureContext) navigator.serviceWorker.register('sw.js').then(() => { this.swOk = true; }).catch(() => {}); } catch (e) {}
+      this.installeret = !!(window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
+      window.addEventListener('beforeinstallprompt', ev => { ev.preventDefault(); this.installPrompt = ev; });
+      window.addEventListener('appinstalled', () => { this.installPrompt = null; this.installeret = true; this.say('Appen er installeret.'); });
+      window.addEventListener('online', () => { this.online = true; if (this.synk) this.synkNu(); });
+      window.addEventListener('offline', () => { this.online = false; });
       try { if (navigator.storage && navigator.storage.persist) navigator.storage.persisted().then(p => p || navigator.storage.persist()).then(p => { this.persistent = !!p; }).catch(() => {}); } catch (e) {}
       window.addEventListener('storage', ev => {
         if (ev.key === PK(this.pid) && ev.newValue) {
@@ -85,6 +93,8 @@ function app() {
     mutate(fn) { this.hist.push(JSON.stringify(this.db)); if (this.hist.length > 40) this.hist.shift(); fn(); this.syncDaaser(); this.save(); },
     undo() { if (!this.hist.length) return; this.db = norm(JSON.parse(this.hist.pop())); this.save(); this.toasts.filter(t => t.undo).forEach(t => this.lukToast(t.id)); this.say('Fortrudt.'); },
     /* beskeder i bunden: højst tre ad gangen, tid efter tekstens længde, fejl bliver stående til de lukkes */
+    async installer() { const p = this.installPrompt; if (!p) return; this.installPrompt = null; p.prompt(); try { await p.userChoice; } catch (e) {} },
+    erIos() { return /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); },
     say(txt, undo, fejl) {
       this.toasts.filter(x => x.txt === txt).forEach(x => this.lukToast(x.id));
       while (this.toasts.length >= 3) this.lukToast(this.toasts[0].id);

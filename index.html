@@ -4,11 +4,18 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Tavle- og gruppeoversigt</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0d6b63">
+<link rel="icon" href="ikoner/ikon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="ikoner/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="El-oversigt">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=10.5.0">
-<link rel="stylesheet" href="css/tailwind.css?v=10.5.0">
+<link rel="stylesheet" href="css/app.css?v=10.6.0">
+<link rel="stylesheet" href="css/tailwind.css?v=10.6.0">
 </head>
 <body class="min-h-full">
 <p id="fail" hidden style="margin:16px;padding:12px;border:1px solid var(--crit);color:var(--crit)">Appen kunne ikke starte, fordi Alpine.js ikke blev indlæst. Genindlæs siden.</p>
@@ -765,6 +772,19 @@
         </template>
       </div>
       <div class="panel p-3 flex flex-col gap-2">
+        <h2 class="hd text-lg">App på telefon og computer</h2>
+        <p class="text-xs text-muted" x-show="installeret">Appen kører som installeret app. Den virker også uden net, og projekterne gemmes i appen som før.</p>
+        <template x-if="!installeret">
+          <div class="flex flex-col gap-2">
+            <p class="text-xs text-muted">Appen kan installeres på hjemmeskærmen og virker derefter også uden net. Projekterne ligger i browseren som før, og synkroniseringen kører, når der er net igen.</p>
+            <button class="btn justify-center btn-primary" x-show="installPrompt" @click="installer()">Installér appen</button>
+            <p class="text-xs" x-show="!installPrompt && erIos()">På iPhone og iPad: tryk på Del-knappen i Safari og vælg <b>Føj til hjemmeskærm</b>.</p>
+            <p class="text-xs" x-show="!installPrompt && !erIos()">Installér fra browserens menu: <b>Installér app</b> eller <b>Føj til startskærm</b>. I Chrome og Edge på computeren står den også i adresselinjen.</p>
+          </div>
+        </template>
+        <p class="text-xs num" :class="online ? 'text-muted' : 'warn'" x-text="(online ? 'Online' : 'Offline: ændringer gemmes i browseren') + (swOk ? ' · klar til brug uden net' : '')"></p>
+      </div>
+      <div class="panel p-3 flex flex-col gap-2">
         <h2 class="hd text-lg">Synkronisering mellem enheder</h2>
         <template x-if="!synk">
           <div class="flex flex-col gap-2">
@@ -1319,11 +1339,11 @@
   </div>
 </div>
 
-<script src="js/data.js?v=10.5.0"></script>
-<script src="js/beregning.js?v=10.5.0"></script>
-<script src="js/diagram.js?v=10.5.0"></script>
-<script src="js/lagring.js?v=10.5.0"></script>
-<script src="js/app.js?v=10.5.0"></script>
+<script src="js/data.js?v=10.6.0"></script>
+<script src="js/beregning.js?v=10.6.0"></script>
+<script src="js/diagram.js?v=10.6.0"></script>
+<script src="js/lagring.js?v=10.6.0"></script>
+<script src="js/app.js?v=10.6.0"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.14.1/cdn.min.js"></script>
 </body>
 </html>
