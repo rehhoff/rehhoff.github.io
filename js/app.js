@@ -19,6 +19,7 @@ function app() {
     kabeltyper: KABLER,
     online: navigator.onLine !== false, installPrompt: null, installeret: false, swOk: false,
     firma: { navn:'', cvr:'', adresse:'', telefon:'', logo:'' },
+    historik: { liste:[], commits:null, i:0, henter:false, fejl:'', pid:'' },
     synk: null, synkTokenInput: '', synkKoerer: false, synkIgen: false, synkFejl: '', iSynk: false,
     tvs: TV, appVersion: APP_VERSION, backups: [], sidstBackup: '', persistent: false, lokF: '', q: '', soegAaben: false, sk: { key:'koekken', navn:'Køkken', tavleId:'' }, skabeloner: SKABELONER, anlaegNavn: ANLAEG,
     enhNavne: [...new Set(EFFEKT.map(x => x[2]))].sort((a, b) => a.localeCompare(b, 'da')), sim: {}, hurtig: { aaben:false, type:'lokale', felt:'', f:{} }, eAuto: true, belEnhSidst: 'W', dragL: null, overL: null, mFilter: '', dAuto: { type:true, lok:true },
@@ -590,5 +591,5 @@ function app() {
       return out;
     },
 
-  }, APP_BEREGNING(), APP_DIAGRAM(), APP_LAGRING());
+  }, APP_BEREGNING(), APP_DIAGRAM(), APP_LAGRING(), APP_HISTORIK());
 }

@@ -4,6 +4,5 @@ Forslag, Alexander ikke har besluttet endnu, eller som venter på at blive lavet
 
 | # | Forslag | Udfører | Begrundelse |
 |---|---|---|---|
-| 8 | Gendan fra Gist-historik: vis og gendan et projekt fra en tidligere dato som kopi | Opus | Bygger på synkroniseringen |
 
-Foreslået rækkefølge: 1, 2, 3, 4, 6, 7, 5, 9 og A er lavet (10.1.0–10.9.0). Tilbage er 8 efter behov.
+Alle forslag til og med 9 og A er lavet (10.1.0–10.10.0). Der er ingen åbne forslag lige nu.

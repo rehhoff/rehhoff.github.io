@@ -1,7 +1,7 @@
 /* Konstanter, lagernøgler, tabeller, norm() og eksempeldata. Indlæses først; alt her er globalt og bruges af de andre filer og markup. */
 const KEY = 'tavleoversigt.v2', OLD = 'tavleoversigt.v1', TKEY = 'tavleoversigt.tema', IDX = 'tavleoversigt.projekter';
 /* Versioner: APP_VERSION følger CHANGELOG.md. SCHEMA hæves kun, når datamodellen ændres, og udløser en automatisk backup før migrering. */
-const APP_VERSION = '10.9.0', SCHEMA = 11, BKEY = 'tavleoversigt.backups', BMAX = 3;
+const APP_VERSION = '10.10.0', SCHEMA = 11, BKEY = 'tavleoversigt.backups', BMAX = 3;
 const PK = id => 'tavleoversigt.p.' + id, MEM = {};
 /* Synkronisering: en hemmelig GitHub Gist med en markørfil og én fil pr. projekt. Se docs/planer/2026-11-15-gist-synk.md. */
 const SKEY = 'tavleoversigt.sync', GFIL = 'tavleoversigt.json', GP = id => 'tavleoversigt-' + id + '.json', GPRE = /^tavleoversigt-([A-Za-z0-9_-]+)\.json$/, GH = 'https://api.github.com';
