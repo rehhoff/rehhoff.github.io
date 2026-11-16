@@ -99,7 +99,7 @@ const APP_BEREGNING = () => ({
       const out = [], I = this.gruppeI(gid);
       if (I > g.In) out.push('Overbelastet: ' + this.fmt(I) + ' A på ' + g.kar + g.In + '.');
       if (!this.rcd(g) && !this.underTavler(g.id).length) out.push('Ingen HPFI tilknyttet.');
-      { const k = this.ikMin(g); if (k && k.ok === false) out.push('Ik,min ' + this.fmt(k.ik, 0) + ' A under Ia ' + this.fmt(k.Ia, 0) + ' A.'); if (this.brydeFejl(g.tavleId).includes(g)) out.push('Ik,maks ' + this.fmt(this.tavleIkMaks(g.tavleId)) + ' kA over brydeevnen på ' + this.fmt(Number(g.brydeevne) || 6) + ' kA.'); }
+      { const k = this.ikMin(g); if (k && k.ok === false) out.push('Ik,min ' + this.ikVis(k) + ' A under Ia ' + this.fmt(k.Ia, 0) + ' A.'); if (this.brydeFejl(g.tavleId).includes(g)) out.push('Ik,maks ' + this.fmt(this.tavleIkMaks(g.tavleId)) + ' kA over brydeevnen på ' + this.fmt(Number(g.brydeevne) || 6) + ' kA.'); }
       for (const d of this.daaserFor(gid)) if (this.daaseIzFejl(d)) out.push(this.daaseTxt(d.id) + ': tilgang ' + this.fmt(d.tv) + ' mm² har Iz ' + this.fmt(this.daaseIz(d)) + ' A, under sikringen på ' + g.In + ' A.');
       for (const e of this.enhederFor(gid)) {
         if (this.duOver(e)) out.push(e.navn + ': ΔU ' + this.fmt(this.du(e), 2) + ' % over ' + this.duGraense(e) + ' %.');
@@ -129,6 +129,8 @@ const APP_BEREGNING = () => ({
       const R = Math.max(...rs), Ia = this.ia(g), ik = 0.95 * 230 / (ze + R);
       return { ze, R, ik, Ia, ok: Ia ? ik >= Ia : null };
     },
+    /* Ik,min vises rundet ned, så en værdi lige under Ia ikke står som lig med Ia */
+    ikVis(k) { return this.fmt(Math.floor(k.ik), 0); },
     ikTxt(g) { const k = this.ikMin(g); return k ? 'Ze ' + this.fmt(k.ze, 3) + ' Ω + R ' + this.fmt(k.R, 3) + ' Ω (fase og PE). Ia = ' + this.fmt(k.Ia, 0) + ' A. Brydeevne ' + this.fmt(Number(g.brydeevne) || 6) + ' kA.' : 'Angiv Ze på tavlen for at få Ik,min. En undertavle uden egen Ze regnes fra den forsynende tavle gennem tilgangskablet.'; },
     brydeFejl(tid) { const ik = this.tavleIkMaks(tid); return ik ? this.grupperFor(tid).filter(g => ik > (Number(g.brydeevne) || 6)) : []; },
     kortslutFejl() {
@@ -136,7 +138,7 @@ const APP_BEREGNING = () => ({
       for (const t of this.db.tavler) {
         const gs = this.brydeFejl(t.id);
         if (gs.length) out.push({ k:'kb:' + t.id, t:t.id, g:gs[0].id, txt:`${t.navn}: Ik,maks ${this.fmt(this.tavleIkMaks(t.id))} kA er større end brydeevnen for gruppe ${gs.map(g => g.nr + ' (' + this.fmt(Number(g.brydeevne) || 6) + ' kA)').join(', ')}.` });
-        for (const g of this.grupperFor(t.id)) { const k = this.ikMin(g); if (k && k.ok === false) out.push({ k:'ik:' + g.id, t:t.id, g:g.id, txt:`${t.navn} · gruppe ${g.nr} ${g.navn}: Ik,min ${this.fmt(k.ik, 0)} A er under Ia ${this.fmt(k.Ia, 0)} A for ${g.kar}${g.In}.` + (this.rcd(g) ? ' Udkobling ved jordfejl afhænger af HPFI.' : '') }); }
+        for (const g of this.grupperFor(t.id)) { const k = this.ikMin(g); if (k && k.ok === false) out.push({ k:'ik:' + g.id, t:t.id, g:g.id, txt:`${t.navn} · gruppe ${g.nr} ${g.navn}: Ik,min ${this.ikVis(k)} A er under Ia ${this.fmt(k.Ia, 0)} A for ${g.kar}${g.In}.` + (this.rcd(g) ? ' Udkobling ved jordfejl afhænger af HPFI.' : '') }); }
       }
       return out;
     },
