@@ -17,7 +17,7 @@ Webapp til elektrikerarbejde: tavler, grupper, lokaler, kabler, samlepunkter, af
 
 Projekterne ligger i browserens localStorage på `rehhoff.github.io` og kan synkroniseres til en hemmelig GitHub Gist.
 
-1. Omdøb eller fjern aldrig disse nøgler: `tavleoversigt.projekter`, `tavleoversigt.p.<id>`, `tavleoversigt.backups`, `tavleoversigt.tema`, `tavleoversigt.sync`, samt de gamle `tavleoversigt.v1` og `.v2`, som stadig migreres.
+1. Omdøb eller fjern aldrig disse nøgler: `tavleoversigt.projekter`, `tavleoversigt.p.<id>`, `tavleoversigt.backups`, `tavleoversigt.tema`, `tavleoversigt.firma`, `tavleoversigt.sync`, samt de gamle `tavleoversigt.v1` og `.v2`, som stadig migreres.
 2. Ændres datamodellen: udvid `norm()` med standardværdier og migrering af gamle felter, og hæv `SCHEMA`. Første start efter en hævning tager automatisk en backup (`lavBackup`).
 3. Slet aldrig et felt med brugerdata uden at flytte dataene først.
 4. Synkronisering: en app med lavere `SCHEMA` end Gist'ens markørfil (`tavleoversigt.json`) må hverken læse eller skrive. Formatet i Gist'en (markør plus `tavleoversigt-<id>.json` pr. projekt) må kun udvides, aldrig omdøbes.

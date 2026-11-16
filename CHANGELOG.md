@@ -2,6 +2,23 @@
 
 Nyeste øverst. Versionsnummeret står også i appen som `APP_VERSION`. Hver version siger, hvilken model der lavede den.
 
+## 10.9.0 · 2026-11-16 · Claude Sonnet
+
+Print og PDF. Plan: `docs/planer/2026-11-16-print-pdf.md`.
+
+- Knappen "Udskriv / gem som PDF" under Dokumentation → Eksport åbner dokumentationen i et nyt vindue og starter udskrivning. HTML-filen kan stadig hentes.
+- Firmanavn, CVR, adresse, telefon og logo står øverst på dokumentationen. Oplysningerne gemmes én gang i browseren (ny nøgle `tavleoversigt.firma`), gælder alle projekter og synkroniseres ikke. Logoet skaleres til højst 400 px i bredden.
+- Underskriftsfelt sidst i dokumentationen: montør og KLS-ansvarlig, hver med navn, dato og underskrift (aftalt med Alexander).
+- Layout til A4 (`@page`, 15 mm margen), rækker og diagrammer deles ikke på tværs af sider, og overskrifter står ikke alene nederst på en side.
+- Ingen ændring af datamodellen. `SCHEMA` er uændret 11.
+
+## 10.8.0 · 2026-11-16 · Claude Sonnet
+
+Materialeliste. Plan: `docs/planer/2026-11-16-materialeliste.md`.
+
+- Nyt panel øverst i fanen Kabler, som samler hele projektet til en bestillingsliste: kabler (meter pr. type, ledere og tværsnit, rundet op), datakabler for sig, samlepunkter, afbrydere (med betjeningssteder for korrespondance og kryds), automatsikringer, HPFI og brugsgenstande. Tomme grupper vises ikke, og lokalefilteret gælder ikke.
+- Knappen "Kopiér materialeliste til regneark" kopierer listen som tabulatorsepareret tekst (Gruppe, Materiale, Antal, Enhed). Panelet kan foldes sammen og ud.
+
 ## 10.7.0 · 2026-11-16 · Claude Opus
 
 Mobiltilstand. Plan: `docs/planer/2026-11-16-mobil.md`.

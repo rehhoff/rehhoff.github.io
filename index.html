@@ -14,8 +14,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=10.7.0">
-<link rel="stylesheet" href="css/tailwind.css?v=10.7.0">
+<link rel="stylesheet" href="css/app.css?v=10.9.0">
+<link rel="stylesheet" href="css/tailwind.css?v=10.9.0">
 </head>
 <body class="min-h-full">
 <p id="fail" hidden style="margin:16px;padding:12px;border:1px solid var(--crit);color:var(--crit)">Appen kunne ikke starte, fordi Alpine.js ikke blev indlæst. Genindlæs siden.</p>
@@ -680,7 +680,26 @@
   </section>
 
   <!-- ============ KABLER ============ -->
-  <section x-show="view==='kabler'" class="flex flex-col gap-3">
+  <section x-show="view==='kabler'" class="flex flex-col gap-3" x-data="{ matOpen:false }">
+    <div class="panel p-3">
+      <div class="flex flex-wrap items-center gap-2">
+        <h2 class="hd text-lg mr-auto">Materialeliste</h2>
+        <button class="btn" @click="kopier(materialeTsv())">Kopiér materialeliste til regneark</button>
+        <button class="btn" :aria-expanded="matOpen" @click="matOpen=!matOpen" x-text="matOpen ? 'Fold sammen' : 'Fold ud'"></button>
+      </div>
+      <div x-show="matOpen" x-cloak class="mt-2 grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+        <template x-for="g in (matOpen ? materialer() : [])" :key="g.gruppe">
+          <div class="border border-line bg-raised rounded p-2">
+            <h3 class="font-semibold text-sm" x-text="g.gruppe"></h3>
+            <table class="kt mt-1"><tbody>
+              <template x-for="l in g.linjer" :key="l.tekst">
+                <tr><td x-text="l.tekst"></td><td class="r num" x-text="fmt(l.antal, 0) + ' ' + l.enhed"></td></tr>
+              </template>
+            </tbody></table>
+          </div>
+        </template>
+      </div>
+    </div>
     <div class="panel p-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-5 items-end">
       <label class="f" for="f-q">Søg <span class="sr-only">i kabeltabel</span><input id="f-q" x-ref="fq" class="inp" type="search" placeholder="Navn eller kabeltype  ( / )" x-model="filter.q"></label>
       <label class="f" for="f-tavle">Tavle
@@ -1368,11 +1387,11 @@
   </div>
 </div>
 
-<script src="js/data.js?v=10.7.0"></script>
-<script src="js/beregning.js?v=10.7.0"></script>
-<script src="js/diagram.js?v=10.7.0"></script>
-<script src="js/lagring.js?v=10.7.0"></script>
-<script src="js/app.js?v=10.7.0"></script>
+<script src="js/data.js?v=10.9.0"></script>
+<script src="js/beregning.js?v=10.9.0"></script>
+<script src="js/diagram.js?v=10.9.0"></script>
+<script src="js/lagring.js?v=10.9.0"></script>
+<script src="js/app.js?v=10.9.0"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.14.1/cdn.min.js"></script>
 </body>
 </html>

@@ -36,6 +36,7 @@ Faner i `views`: Tavle, Enstregsdiagram, Tændingsdiagram, Samlepunkter & dåser
 | `tavleoversigt.projekter` | `{ aktiv, liste:[meta], schema, app, sidstBackup }` |
 | `tavleoversigt.p.<id>` | Ét projekt som JSON |
 | `tavleoversigt.backups` | Op til tre automatiske backups `{ tid, grund, app, schema, idx, raw:{id:json} }` |
+| `tavleoversigt.firma` | Firmaoplysninger til dokumentationen: `{ navn, cvr, adresse, telefon, logo }` (logo som data-URL, højst 400 px bred). Gælder alle projekter og synkroniseres ikke |
 | `tavleoversigt.tema` | `auto`, `light` eller `dark` |
 | `tavleoversigt.sync` | Synkronisering: `{ token, gistId, login, base:{ id: hash }, sidst }`. Findes kun, når synkronisering er slået til |
 | `tavleoversigt.v1`, `.v2` | Gamle formater, migreres ved første start |
@@ -68,12 +69,12 @@ Relationer: gruppe → tavle, gruppe → HPFI, brugsgenstand → gruppe, lokale 
 | Beskeder | `say(txt, undo, fejl)`, `lukToast` (i `js/app.js`) |
 | Synkronisering | `synkForbind`, `synkNu`, `synkKoer` (fletning), `synkTxt`, `synkHent`, `synkSletLokalt`, `synkSenere`, `synkAfbryd`, `gh`, `hashD` |
 | Strøm og last | `strom`, `instI`, `egenI`, `gruppeI`, `gruppeFaser`, `subFaser`, `faseInfo`, `autoBalance` |
-| Kabler | `du`, `duLokal`, `duOp`, `tavleDu`, `tilgDu`, `iz`, `izFejl`, `forslag`, `lmax`, `daaseIz`, `tilgIz` |
+| Kabler | `materialer`, `materialeTsv` (materialeliste), `du`, `duLokal`, `duOp`, `tavleDu`, `tilgDu`, `iz`, `izFejl`, `forslag`, `lmax`, `daaseIz`, `tilgIz` |
 | I<sub>z</sub> | `forhold` (gruppens eller tilgangskablets forhold med projektets standard), `izTabel`, `izBeregn`, `kTemp`, `kSamlet`, `korrektion`, `forholdTxt`. Tabeller i `js/data.js`: `IZT`, `METODER`, `ISO`, `TEMPS`, `K_TEMP`, `KREDSE`, `LAG`, `K_JORD_SAMLET`. `IZ` er et alias for PVC, metode C |
 | Kontrol | `gruppeFejl`, `warnings`, `mangler`, `linkFejl`, `maalVurdering`, `zsMax`, `maalTal` |
 | Forslag | `effektForslag`, `sfForslag`, `daaseParse`, `symbolFor` |
 | Diagrammer | `sld` (enstreg, viser også afbrydere med nøglen `a:<id>`), `taendSvg(af, print)` (tænding; `print` giver den statiske udgave til dokumentationen), `simStd`, `simFor`, `lit`, `krydsLeder`, `afbSti` (symboler efter DS/EN 60617), `afbFor`, `spor`, `sporTil` |
-| Dokumentation | `docHtml` (inkl. afsnittet Tændingsdiagrammer), `gruppeTsv`, `exportJson`, `hent` |
+| Dokumentation | `docHtml` (inkl. Tændingsdiagrammer, firmahoved og underskriftsfelt), `udskriv`, `firmaLaes`, `firmaGem`, `firmaLogo`, `gruppeTsv`, `exportJson`, `hent` |
 
 ## Test
 
