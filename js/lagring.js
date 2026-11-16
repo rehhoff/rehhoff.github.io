@@ -304,7 +304,14 @@ const APP_LAGRING = () => ({
         h += '</table><h2>Verifikation · måleskema</h2><p class="k">Kladde til egenkontrol. Ikke en gyldig installationsattest eller sikkerhedsdokumentation.</p>' +
           '<table><tr><th>Gr.</th><th>Betegnelse</th><th>Isolationsmodstand (MΩ)</th><th>Zs (Ω)</th><th>Maks. Zs (Ω)</th><th>HPFI udløsetid (ms)</th><th>Visuel kontrol</th><th>Vurdering</th></tr>';
         for (const g of this.grupperFor(t.id)) h += '<tr>' + [g.nr, g.navn, g.maal.riso, g.maal.zs, this.zsMax(g) ? this.fmt(this.zsMax(g), 2) : '–', g.maal.rcd, g.maal.ok ? 'OK' : '', this.maalVurdering(g).txt].map(td).join('') + '</tr>';
-        h += '</table><p class="m">Beregninger er vejledende: ρ = 0,0225 Ω·mm²/m, cos φ = 1, med gruppens samtidighedsfaktor. Grænser for målinger: Zs ≤ 2/3 · U0/Ia (Ia = 5/10/20 × In for B/C/D), HPFI ≤ 300 ms ved 1 × IΔn, isolationsmodstand ≥ 1 MΩ.</p></section>';
+        h += '</table><h2>Kortslutning og selektivitet</h2><p class="m">' + esc('Ze ved tavlen: ' + (this.tavleZe(t.id) == null ? 'ikke angivet' : this.fmt(this.tavleZe(t.id), 3) + ' Ω') + ' · Ik,maks: ' + (this.tavleIkMaks(t.id) ? this.fmt(this.tavleIkMaks(t.id)) + ' kA' : 'ikke angivet')) + '</p>' +
+          '<table><tr><th>Gr.</th><th>Betegnelse</th><th>Sikring</th><th>Ia (A)</th><th>Ik,min (A)</th><th>Udkobling</th><th>Brydeevne (kA)</th></tr>';
+        for (const g of this.grupperFor(t.id)) { const k = this.ikMin(g); h += '<tr>' + [g.nr, g.navn, g.kar + g.In, this.ia(g) ? this.fmt(this.ia(g), 0) : '–', k ? this.fmt(k.ik, 0) : '–', !k || k.ok == null ? '–' : k.ok ? 'OK' : 'Ik,min under Ia',
+          this.fmt(Number(g.brydeevne) || 6) + (this.brydeFejl(t.id).includes(g) ? ' (under Ik,maks)' : '')].map(td).join('') + '</tr>'; }
+        h += '</table>';
+        for (const w of this.kortslutFejl().concat(this.selektivitet()).filter(w => w.t === t.id)) h += '<p>⚠ ' + esc(w.txt) + '</p>';
+        h += '<p class="m">Kortslutning og selektivitet er vejledende: Ik,min = 0,95 · 230 V / (Ze + R fase + R PE) i gruppens yderste punkt, ledermodstand × 1,2 (PVC) eller 1,28 (XLPE og brandkabel), PE som faseleder. Udkobling er OK, når Ik,min ≥ Ia. Selektivitet: forsikring ≥ 1,6 × største efterfølgende sikring; HPFI i serie kræver type S forrest og IΔn ≥ 3 × den bageste.</p>';
+        h += '<p class="m">Beregninger er vejledende: ρ = 0,0225 Ω·mm²/m, cos φ = 1, med gruppens samtidighedsfaktor. Grænser for målinger: Zs ≤ 2/3 · U0/Ia (Ia = 5/10/20 × In for B/C/D), HPFI ≤ 300 ms ved 1 × IΔn, isolationsmodstand ≥ 1 MΩ.</p></section>';
       });
       if (this.db.racks.length || this.db.links.length) {
         h += '<section><h1>Svagstrøm · PDS og CCTV</h1>';
