@@ -2,6 +2,15 @@
 
 Nyeste øverst. Versionsnummeret står også i appen som `APP_VERSION`. Hver version siger, hvilken model der lavede den.
 
+## 10.0.0 · 2026-11-16 · Claude Opus
+
+Appen er delt op i filer, så flere modeller kan arbejde samtidig. Ingen ændring for brugeren og ingen ændring af data. Plan: `docs/planer/2026-11-16-moduler.md`.
+
+- `index.html` indeholder kun markup. CSS ligger i `css/app.css`, og scriptet er delt i `js/data.js`, `js/beregning.js`, `js/diagram.js`, `js/lagring.js` og `js/app.js`. Intet byggetrin.
+- Filerne hentes med `?v=<version>`, så browseren aldrig blander ny og gammel kode.
+- Røgtesten serverer filerne fra disken og kontrollerer, at `?v=` passer med `APP_VERSION`.
+- `CLAUDE.md`: regler for flere modeller samtidig (én branch pr. opgave, versionen sættes ved merge, kun én opgave ad gangen ændrer `SCHEMA`).
+
 ## 9.1.1 · 2026-11-16 · Claude Opus
 
 - Synkronisering: en app med et ældre skema end Gist'en hverken henter eller sender. Ellers kunne en gammel version fra browserens cache fjerne felter, som en nyere version havde gemt. Fejlen vises under Dokumentation med besked om at genindlæse siden.

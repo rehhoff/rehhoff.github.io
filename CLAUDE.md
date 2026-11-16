@@ -3,7 +3,13 @@
 Webapp til elektrikerarbejde: tavler, grupper, lokaler, kabler, samlepunkter, afbrydere og svagstrøm, med beregninger (ΔU, I<sub>z</sub>, fasebalance), diagrammer og dokumentation. Ejer: Alexander. Brugerfladen er på dansk.
 
 - Live: https://rehhoff.github.io/ (GitHub Pages fra `main`, mappe `/`). Repoet er offentligt: skriv ingen personlige oplysninger i filer eller commits.
-- Appen er p.t. én fil, `index.html` (Alpine.js 3.14.1 fra cdnjs, Tailwind fra CDN, intet byggetrin). Opdeling i moduler er foreslået i `docs/forslag.md`.
+- Intet byggetrin. Alpine.js 3.14.1 fra cdnjs og Tailwind fra CDN. Almindelige scripts, der deler globalt scope, indlæst i denne rækkefølge:
+  - `index.html`: markup med Alpine-direktiver.
+  - `css/app.css`: farvetokens, lyst og mørkt tema, egne klasser. `js/tailwind.config.js`: Tailwind-opsætning.
+  - `js/data.js`: konstanter, `APP_VERSION`, `SCHEMA`, lagernøgler, tabeller (`IZ`, `EFFEKT`, `SF` …), `norm()` og eksempeldata.
+  - `js/beregning.js` (`APP_BEREGNING`), `js/diagram.js` (`APP_DIAGRAM`), `js/lagring.js` (`APP_LAGRING`): metoder, der samles i `app()`.
+  - `js/app.js`: `app()` med tilstand, `init()` og resten af brugerfladen. `bland()` lægger metoderne fra de andre filer på.
+- Ny metode lægges i den fil, hvis emne den hører til. Navne skal være unikke på tværs af filerne, fordi de samles i ét objekt.
 - Opbygning og datamodel: `docs/ARKITEKTUR.md`. Historik: `CHANGELOG.md`. Forslag og prioritering: `docs/forslag.md`. Planer: `docs/planer/`.
 
 ## 1. Data må aldrig gå tabt
@@ -20,7 +26,7 @@ Projekterne ligger i browserens localStorage på `rehhoff.github.io` og kan synk
 
 1. Lav en branch fra `main`.
 2. Ret koden. Hold samme design (farvetokens i `:root`, lyst og mørkt tema) og samme kodestil.
-3. Hæv `APP_VERSION` i `index.html` og `version` i `package.json` (ny funktion = minor, rettelse = patch, større omlægning = major).
+3. Hæv versionen tre steder ved merge (se afsnit 3): `APP_VERSION` i `js/data.js`, alle `?v=` i `index.html` og `version` i `package.json` (ny funktion = minor, rettelse = patch, større omlægning = major). `?v=` sikrer, at browseren ikke blander en ny `index.html` med gamle filer fra cachen. Røgtesten fejler, hvis de ikke passer sammen.
 4. Tilføj et afsnit øverst i `CHANGELOG.md` med dato, version, model og ændringer. Opdater `docs/ARKITEKTUR.md`, hvis nøgler, felter, faner eller funktioner ændres.
 5. Kør røgtesten. Den skal slutte med `OK`. På Alexanders Windows-PC (ingen npm, Python hedder `python`):
    ```
@@ -31,10 +37,19 @@ Projekterne ligger i browserens localStorage på `rehhoff.github.io` og kan synk
    ```
    Med npm: `npm install` og `python3 tests/smoke.py`. Sæt `PYTHONIOENCODING=utf-8`, hvis æ, ø og å giver fejl i konsollen.
 6. Commit med en beskrivelse på dansk, og nævn planen, hvis der er en. Push branchen.
-7. Claude merger selv (aftalt med Alexander 2026-11-16), når røgtesten giver `OK`: `git checkout main && git pull && git merge --no-ff <branch>` og `git push origin main`. `gh` er ikke logget ind, så der bruges ingen pull request.
+7. Claude merger selv (aftalt med Alexander 2026-11-16), når røgtesten giver `OK`. Hent først den nyeste `main` ind i branchen (`git fetch && git merge origin/main`), løs konflikter, sæt versionen ud fra den aktuelle `main`, og kør røgtesten igen. Derefter `git checkout main && git pull && git merge --no-ff <branch>` og `git push origin main`. `gh` er ikke logget ind, så der bruges ingen pull request.
 8. Efter merge: slet branchen lokalt og på GitHub (`git push origin --delete <branch>`), så `main` er den eneste branch, og kontrollér at `APP_VERSION` på https://rehhoff.github.io/ er den nye. Pages er 1–10 minutter om at opdatere. Fortæl Alexander, hvad der er udgivet.
 
-## 3. Faglige regler
+## 3. Flere modeller samtidig
+
+- Én opgave = én plan = én session = én branch, i sin egen worktree. Arbejd aldrig direkte på `main`.
+- Planen siger, hvilke filer opgaven ændrer. To sessioner, der kører samtidig, må ikke have samme fil som hovedfil. Små tilføjelser i fælles filer (`index.html`, `js/app.js`) er tilladt, men hold dem samlet ét sted.
+- Kun én opgave ad gangen må ændre datamodellen eller hæve `SCHEMA`. Det står i planen.
+- Versionen og `CHANGELOG.md` sættes først ved merge, ud fra den aktuelle `main`. Ved konflikt i `CHANGELOG.md` beholdes begge afsnit, nyeste øverst.
+- Én merge ad gangen: den, der merger, henter `main` først og kører røgtesten igen (afsnit 2, punkt 7).
+- Er en anden session i gang med en fil, du skal ændre, så skriv det i planen og aftal rækkefølgen med Alexander.
+
+## 4. Faglige regler
 
 Faste lister, som ikke må ændres uden aftale:
 
@@ -50,7 +65,7 @@ Forudsætninger i beregningerne. Alt er vejledende og står også i appen:
 - Gruppens last = summen af brugsgenstandenes strøm × gruppens samtidighedsfaktor + rackforbrug.
 - Effektforslag er typiske mærkeeffekter, ikke dimensioneringsværdier.
 
-## 4. Roller og planer
+## 5. Roller og planer
 
 - Claude Opus må ændre koden direkte, når kvaliteten holdes: samme design, test før commit og opdateret dokumentation.
 - Claude Opus må planlægge alle opgaver og skriver i planen, om Fable, Opus eller Sonnet skal udføre den, med en kort begrundelse.
@@ -59,7 +74,7 @@ Forudsætninger i beregningerne. Alt er vejledende og står også i appen:
 - Er den valgte model ikke tilgængelig, udfører Opus opgaven og noterer det i planen.
 - Planer gemmes i `docs/planer/ÅÅÅÅ-MM-DD-emne.md` før implementeringen (se `docs/planer/README.md`).
 
-## 5. Kommunikation
+## 6. Kommunikation
 
 - Svar kort, direkte og teknisk præcist, på dansk.
 - Spørg før du tilføjer funktioner, Alexander ikke har bedt om. Foreslå dem i stedet, og skriv dem i `docs/forslag.md`.

@@ -1,16 +1,17 @@
 """Røgtest af index.html i headless Chrome.
 
 Kør fra repoets rod:  npm install  &&  python3 tests/smoke.py
+Filerne (index.html, css/, js/) serveres fra disken under http://app.test/.
 Kræver Python-pakken playwright. Chrome findes via miljøvariablen CHROME,
 ellers bruges playwrights egen Chromium (python3 -m playwright install chromium).
 Tailwind-CDN'et blokeres, så testen dækker logik og Alpine, ikke layout.
 """
-import asyncio, json, os, sys
+import asyncio, json, os, re, sys
 from pathlib import Path
 from playwright.async_api import async_playwright
 
 ROD = Path(__file__).resolve().parent.parent
-APP = (ROD / 'index.html').read_text(encoding='utf-8')
+TYPER = {'.html': 'text/html', '.js': 'application/javascript', '.css': 'text/css', '.json': 'application/json'}
 ALPINE = ROD / 'node_modules' / 'alpinejs' / 'dist' / 'cdn.min.js'
 URL = 'http://app.test/'
 fejl, kontrol = [], []
@@ -25,7 +26,12 @@ async def route(r):
     if 'alpinejs' in u:
         await r.fulfill(body=ALPINE.read_text(encoding='utf-8'), content_type='application/javascript')
     elif u.startswith(URL):
-        await r.fulfill(body=APP, content_type='text/html')
+        sti = u[len(URL):].split('?')[0].split('#')[0] or 'index.html'
+        fil = (ROD / sti).resolve()
+        if ROD in fil.parents and fil.is_file():
+            await r.fulfill(body=fil.read_bytes(), content_type=TYPER.get(fil.suffix, 'application/octet-stream'))
+        else:
+            await r.fulfill(status=404, body='')
     else:
         await r.abort()
 
@@ -98,6 +104,9 @@ async def main():
         await pg.goto(URL); await pg.wait_for_timeout(500)
         r = await pg.evaluate(f"(()=>{{const a={A};return {{n:a.projekter.length, v:a.appVersion, w:a.warnings().length}}}})()")
         tjek('starter med eksempelprojekter', r['n'] >= 2, r)
+        html = (ROD / 'index.html').read_text(encoding='utf-8')
+        forkerte = sorted(set(re.findall(r'\?v=([0-9.]+)', html)) - {r['v']})
+        tjek('alle ?v= i index.html svarer til APP_VERSION', not forkerte and '?v=' + r['v'] in html, (r['v'], forkerte))
 
         # 2. Alle faner og formularer
         for k in '1234567890':
