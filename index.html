@@ -8,8 +8,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com/3.4.17"></script>
-<script src="js/tailwind.config.js?v=10.3.0"></script>
-<link rel="stylesheet" href="css/app.css?v=10.3.0">
+<script src="js/tailwind.config.js?v=10.4.0"></script>
+<link rel="stylesheet" href="css/app.css?v=10.4.0">
 </head>
 <body class="min-h-full">
 <p id="fail" hidden style="margin:16px;padding:12px;border:1px solid var(--crit);color:var(--crit)">Appen kunne ikke starte, fordi Alpine.js ikke blev indlæst. Genindlæs siden.</p>
@@ -298,7 +298,7 @@
       <div x-ref="sldBox" class="sldbox" @pointerdown="panStart($event)" @pointermove.window="panMove($event)" @pointerup.window="pan=null" @wheel="hjul($event)" @click="sldClick($event)" @dblclick="sldDbl($event)">
         <div class="sld" :style="'transform:translate(' + z.x + 'px,' + z.y + 'px) scale(' + z.k + ');transform-origin:0 0'" x-html="view==='enstreg' ? sld(false) : ''"></div>
       </div>
-      <p class="px-3 py-2 text-xs text-muted border-t border-line">Træk for at panorere. Ctrl + musehjul eller knapperne zoomer. Klik viser detaljer, dobbeltklik åbner redigering. Røde streger har en advarsel.</p>
+      <p class="px-3 py-2 text-xs text-muted border-t border-line">Træk for at panorere. Ctrl + musehjul eller knapperne zoomer. Klik viser detaljer, dobbeltklik åbner redigering. Afbrydere er vist på lederen foran de lamper, de styrer. Røde streger har en advarsel.</p>
     </div>
     <aside class="panel p-3 lg:sticky lg:top-3">
       <template x-if="!sldInfo()"><p class="text-sm text-muted">Klik på en komponent i diagrammet for at se detaljer.</p></template>
@@ -348,6 +348,7 @@
             </div>
             <div class="flex items-center gap-2">
               <span class="tag num" :class="(lit(af).a || lit(af).b) && 'warn'" x-text="af.art==='krone' ? 'T1 ' + (lit(af).a ? 'tændt' : 'slukket') + ' · T2 ' + (lit(af).b ? 'tændt' : 'slukket') : (lit(af).a ? 'Tændt' : 'Slukket')"></span>
+              <button class="btn btn-ghost" x-show="gruppe(af.gruppeId)" @click="sporTil('a:' + af.id)">Spor</button>
               <button class="btn btn-ghost" @click="openForm('afbryder', af)">Rediger</button>
             </div>
           </header>
@@ -1134,7 +1135,7 @@
           <div class="contents">
             <label class="f" for="m-navn">Betegnelse<input id="m-navn" class="inp" x-model="form.navn" placeholder="Køkken loft" required></label>
             <label class="f" for="m-aart">Type
-              <select id="m-aart" class="inp" x-model="form.art">
+              <select id="m-aart" class="inp" x-model="form.art" @change="if (form.art==='kryds' && !(form.steder >= 3)) form.steder = 3">
                 <template x-for="(l, k) in afbArt" :key="k"><option :value="k" :selected="form.art===k" x-text="l"></option></template></select></label>
             <label class="f" for="m-agr">Gruppe
               <select id="m-agr" class="inp" x-model="form.gruppeId" @change="form.a=[]; form.b=[]; nyValg($event, 'gruppe', 'gruppeId')"><option value="">Ingen</option><option value="__ny">+ Opret ny gruppe …</option>
@@ -1143,6 +1144,7 @@
               <select id="m-alok" class="inp" x-model="form.lokaleId" @change="nyValg($event, 'lokale', 'lokaleId')"><option value="">Ikke tildelt</option><option value="__ny">+ Opret nyt lokale …</option>
                 <template x-for="l in db.lokaler" :key="l.id"><option :value="l.id" :selected="form.lokaleId===l.id" x-text="l.navn"></option></template></select></label>
             <label class="f" for="m-asted" x-show="form.art==='kip' || form.art==='trappe'">Antal tryk (1 til 6)<input id="m-asted" class="inp num" type="number" min="1" max="6" step="1" x-model.number="form.steder"></label>
+            <label class="f" for="m-akryds" x-show="form.art==='kryds'">Antal betjeningssteder (3 til 6)<input id="m-akryds" class="inp num" type="number" min="3" max="6" step="1" x-model.number="form.steder"></label>
             <label class="f" for="m-atid" x-show="form.art==='trappe' || form.art==='sensor'">Tid / efterløb (min)<input id="m-atid" class="inp num" type="number" min="0.5" step="0.5" x-model.number="form.tid"></label>
             <fieldset class="sm:col-span-2 border border-line rounded p-2">
               <legend class="px-1 text-xs font-semibold uppercase tracking-wider text-muted" x-text="form.art==='krone' ? 'Tænding 1' : 'Lamper på tændingen'"></legend>
@@ -1318,11 +1320,11 @@
   </div>
 </div>
 
-<script src="js/data.js?v=10.3.0"></script>
-<script src="js/beregning.js?v=10.3.0"></script>
-<script src="js/diagram.js?v=10.3.0"></script>
-<script src="js/lagring.js?v=10.3.0"></script>
-<script src="js/app.js?v=10.3.0"></script>
+<script src="js/data.js?v=10.4.0"></script>
+<script src="js/beregning.js?v=10.4.0"></script>
+<script src="js/diagram.js?v=10.4.0"></script>
+<script src="js/lagring.js?v=10.4.0"></script>
+<script src="js/app.js?v=10.4.0"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.14.1/cdn.min.js"></script>
 </body>
 </html>

@@ -2,6 +2,17 @@
 
 Nyeste øverst. Versionsnummeret står også i appen som `APP_VERSION`. Hver version siger, hvilken model der lavede den.
 
+## 10.4.0 · 2026-11-16 · Claude Fable
+
+Afbrydere i enstregsdiagrammet, krydsafbryder og tændingsdiagrammer i dokumentationen. Plan: `docs/planer/2026-11-16-afbrydere-diagrammer.md`.
+
+- Ny afbrydertype **Krydsafbryder** (`kryds`) til lys, der betjenes fra 3 til 6 steder: en korrespondanceafbryder i hver ende og en krydsafbryder for hvert sted imellem. Tændingsdiagrammet kan simuleres som de andre typer: hvert klik på et betjeningssted skifter lyset.
+- Enstregsdiagrammet viser altid afbryderne med installationssymboler efter DS/EN 60617 på lederen foran de lamper, de styrer. En afbryder uden lamper står på sin egen række under gruppen. Klik viser detaljer, dobbeltklik åbner redigering, og sporingen går gennem afbryderen. Vælges en afbryder, fremhæves dens lamper. Afbryderne er også med i SVG-eksporten.
+- Dokumentationen har et nyt afsnit "Tændingsdiagrammer" med ét diagram pr. afbryder i udgangsstilling (lyset slukket) med navn, type, gruppe, lokale og lamper.
+- "Spor" på hver afbryder under Tændingsdiagram og i søgningen.
+- `SCHEMA` er hævet til 11, fordi ældre versioner ikke kan vise en krydsafbryder. Ingen felter er ændret, og eksisterende afbrydere er uændrede. Første start tager en automatisk backup.
+- Røgtest: krydsafbryder med 3 og 4 steder, afbrydere i `sld(true)`, et tændingsdiagram pr. afbryder i `docHtml()`, opgradering fra skema 10 og regression på eksempelprojekternes tændingsdiagrammer (`tests/regression-taending.json`).
+
 ## 10.3.0 · 2026-11-16 · Claude Opus
 
 Automatisk vurdering af målinger. Plan: `docs/planer/2026-11-16-maalinger.md`.

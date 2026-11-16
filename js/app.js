@@ -21,11 +21,12 @@ function app() {
     tvs: TV, appVersion: APP_VERSION, backups: [], sidstBackup: '', persistent: false, lokF: '', q: '', soegAaben: false, sk: { key:'koekken', navn:'Køkken', tavleId:'' }, skabeloner: SKABELONER, anlaegNavn: ANLAEG,
     enhNavne: [...new Set(EFFEKT.map(x => x[2]))].sort((a, b) => a.localeCompare(b, 'da')), sim: {}, hurtig: { aaben:false, type:'lokale', felt:'', f:{} }, eAuto: true, belEnhSidst: 'W', dragL: null, overL: null, mFilter: '', dAuto: { type:true, lok:true },
     manglerKat: { gruppe:'Uden gruppe', tilgang:'Dåse uden tilgang', afgang:'Dåse uden afgang', port:'Mangler port i rack' },
-    afbArt: { enpolet:'Enpolet afbryder', krone:'Kroneafbryder', korr:'Korrespondanceafbryder', kip:'Kiprelæ med tryk', trappe:'Trappeautomat med tryk', sensor:'Sensor (PIR)' },
+    afbArt: { enpolet:'Enpolet afbryder', krone:'Kroneafbryder', korr:'Korrespondanceafbryder', kryds:'Krydsafbryder', kip:'Kiprelæ med tryk', trappe:'Trappeautomat med tryk', sensor:'Sensor (PIR)' },
     afbPrincip: {
       enpolet: 'Afbryderen bryder fasen. Den tændte leder føres til lampestedet, mens nul og jord føres uden om afbryderen.',
       krone: 'To kontakter i samme afbryder deler én fase. Hver kontakt har sin egen tændte leder, så to tændinger kan betjenes hver for sig fra samme sted.',
       korr: 'To skiftekontakter er forbundet med to korrespondanceledere. Fasen går ind på den ene og den tændte leder ud fra den anden, så lyset kan betjenes fra begge steder.',
+      kryds: 'En korrespondanceafbryder i hver ende og en krydsafbryder for hvert betjeningssted imellem. Krydsafbryderen bytter om på de to korrespondanceledere, så lyset kan betjenes fra alle steder.',
       kip: 'Trykkene er sluttekontakter med fjederretur og sidder parallelt. Hver impuls på spolen skifter relæets kontakt, så lyset tændes og slukkes fra alle tryk.',
       sensor: 'Sensoren har fase og nul fast tilsluttet og slutter selv den tændte leder, når den registrerer bevægelse. Lyset slukker, når efterløbstiden er gået. I diagrammet er tiden forkortet til 5 sekunder.',
       trappe: 'Trykkene sidder parallelt og starter tidsrelæet. Kontakten slutter straks og bryder igen, når den indstillede tid er gået. I diagrammet er tiden forkortet til 5 sekunder.'
@@ -33,6 +34,7 @@ function app() {
     afbLedere: {
       enpolet: ['Fase og tændt leder', 'Tændt leder, nul og jord'], krone: ['Fase og to tændte ledere', 'To tændte ledere, nul og jord'],
       korr: ['Fase eller tændt leder samt to korrespondanceledere', 'Tændt leder, nul og jord'],
+      kryds: ['Enderne: fase eller tændt leder samt to korrespondanceledere. Krydsafbryderne: to korrespondanceledere ind og to ud', 'Tændt leder, nul og jord'],
       sensor: ['Fase og nul til sensoren, tændt leder ud', 'Tændt leder, nul og jord'],
       kip: ['Fase og impulsleder til hvert tryk', 'Tændt leder fra relæet, nul og jord'], trappe: ['Fase og impulsleder til hvert tryk', 'Tændt leder fra relæet, nul og jord']
     },
@@ -309,7 +311,7 @@ function app() {
       if (type === 'afbryder') {
         const ok = new Set(rec.gruppeId ? this.enhederFor(rec.gruppeId).map(e => e.id) : []);
         rec.a = (rec.a || []).filter(x => ok.has(x)); rec.b = rec.art === 'krone' ? (rec.b || []).filter(x => ok.has(x) && !rec.a.includes(x)) : [];
-        rec.steder = rec.art === 'korr' ? 2 : (rec.art === 'kip' || rec.art === 'trappe') ? Math.min(6, Math.max(1, Math.round(rec.steder) || 1)) : 1; rec.tid = rec.tid || 3;
+        rec.steder = rec.art === 'korr' ? 2 : rec.art === 'kryds' ? Math.min(6, Math.max(3, Math.round(rec.steder) || 3)) : (rec.art === 'kip' || rec.art === 'trappe') ? Math.min(6, Math.max(1, Math.round(rec.steder) || 1)) : 1; rec.tid = rec.tid || 3;
       }
       this.mutate(() => {
         if (id) { const i = this.db[liste].findIndex(x => x.id === id); if (i > -1) this.db[liste].splice(i, 1, rec); }
@@ -409,7 +411,7 @@ function app() {
       d.lokaler.forEach(l => add('lokale', 'Lokale', l, l.navn, l.etage || 'klik for at filtrere alle faner', ''));
       d.enheder.forEach(e => add('enhed', 'Brugsgenstand', e, e.navn, this.lokaleNavn(e.lokaleId) + ' · ' + (this.gruppe(e.gruppeId) ? this.gruppeTxt(e.gruppeId) : 'uden gruppe') + ' · ' + e.kabel + ' ' + this.kabelDim(e), this.gruppe(e.gruppeId) ? 'e:' + e.id : ''));
       d.daaser.forEach(x => add('daase', 'Samlepunkt', x, x.type + ' ' + x.navn, this.lokaleNavn(x.lokaleId) + ' · ' + (this.gruppe(x.gruppeId) ? this.gruppeTxt(x.gruppeId) : 'uden gruppe'), this.gruppe(x.gruppeId) ? 'd:' + x.id : ''));
-      d.afbrydere.forEach(a => add('afbryder', 'Afbryder', a, a.navn, this.afbArt[a.art] + ' · ' + this.lokaleNavn(a.lokaleId), ''));
+      d.afbrydere.forEach(a => add('afbryder', 'Afbryder', a, a.navn, this.afbArt[a.art] + ' · ' + this.lokaleNavn(a.lokaleId), this.gruppe(a.gruppeId) ? 'a:' + a.id : ''));
       d.racks.forEach(r => add('rack', 'Rackskab', r, r.navn, r.type + ' · ' + this.lokaleNavn(r.lokaleId), 'k:' + r.id));
       d.udstyr.forEach(u => add('udstyr', 'Rackudstyr', u, u.navn, this.udstArt[u.art] + ' · ' + this.rackNavn(u.rackId), 'u:' + u.id));
       d.links.forEach(l => add('link', l.art === 'cctv' ? 'Kamera' : 'PDS-udtag', l, l.navn, this.lokaleNavn(l.lokaleId) + ' · ' + l.kabel, this.udst(l.switchId) || this.udst(l.panelId) ? 'x:' + l.id : ''));

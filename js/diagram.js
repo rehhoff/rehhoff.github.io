@@ -59,7 +59,8 @@ const APP_DIAGRAM = () => ({
       const opGruppe = (gid, n) => { const g = this.gruppe(gid); if (!g) return []; const r = this.rcd(g); return opTavle(g.tavleId, n).concat(r ? [{ key:'r:' + r.id, txt:r.navn }] : [], [{ key:'g:' + g.id, txt:'G' + g.nr + ' ' + g.navn }]); };
       const opDaase = did => { const ks = []; let x = this.daase(did), n = 0; while (x && n++ < 20) { ks.unshift({ key:'d:' + x.id, txt:x.type + ' ' + x.navn }); x = this.daase(x.parentId); } return ks; };
       const opRack = rid => { const r = this.rack(rid); return r ? opGruppe(r.gruppeId).concat([{ key:'k:' + r.id, txt:'Rack ' + r.navn }]) : []; };
-      if (a === 'e' && (o = d.enheder.find(e => e.id === id))) return opGruppe(o.gruppeId).concat(opDaase(o.daaseId), [{ key:sel, txt:o.navn }]);
+      if (a === 'e' && (o = d.enheder.find(e => e.id === id))) { const af = this.afbFor(id); return opGruppe(o.gruppeId).concat(opDaase(o.daaseId), af ? [{ key:'a:' + af.id, txt:af.navn }] : [], [{ key:sel, txt:o.navn }]); }
+      if (a === 'a' && (o = d.afbrydere.find(x => x.id === id))) return opGruppe(o.gruppeId).concat([{ key:sel, txt:o.navn }]);
       if (a === 'd' && (o = this.daase(id))) return opGruppe(o.gruppeId).concat(opDaase(id));
       if (a === 'g') return opGruppe(id);
       if (a === 'r' && (o = d.rcds.find(r => r.id === id))) return opTavle(o.tavleId).concat([{ key:sel, txt:o.navn }]);
@@ -81,11 +82,20 @@ const APP_DIAGRAM = () => ({
     },
 
     /* afbrydere og tændingsdiagram */
-    simFor(af) { return this.sim[af.id] || { s:[false, af.art === 'korr'], on:false, p:-1 }; },
-    lit(af) {
-      const s = this.simFor(af);
+    afbSteder(af) { return af.art === 'kryds' ? Math.min(6, Math.max(3, Math.round(af.steder) || 3)) : af.art === 'korr' ? 2 : Math.min(6, Math.max(1, af.steder || 1)); },
+    /* Udgangsstilling: lyset slukket. Kryds: s[0] og s[n-1] er korrespondanceafbryderne i enderne, s[1..n-2] er krydsafbryderne (true = krydset). */
+    simStd(af) {
+      if (af.art === 'kryds') { const n = this.afbSteder(af); return { s:Array.from({ length:n }, (_, i) => i === n - 1), on:false, p:-1 }; }
+      return { s:[false, af.art === 'korr'], on:false, p:-1 };
+    },
+    simFor(af) { return this.sim[af.id] || this.simStd(af); },
+    /* Kryds: hvilken korrespondanceleder (true = øverste) der er spændingsførende efter hvert led. Sidste værdi er lederen frem til K2. */
+    krydsLeder(af, s) { const n = this.afbSteder(af), ud = [!!s.s[0]]; for (let i = 1; i < n - 1; i++) ud.push(ud[i - 1] !== !!s.s[i]); return ud; },
+    lit(af, st) {
+      const s = st || this.simFor(af);
       if (af.art === 'krone') return { a:s.s[0], b:s.s[1] };
       if (af.art === 'korr') return { a:s.s[0] === s.s[1], b:false };
+      if (af.art === 'kryds') { const n = this.afbSteder(af); return { a:this.krydsLeder(af, s)[n - 2] === !!s.s[n - 1], b:false }; }
       if (af.art === 'kip' || af.art === 'trappe' || af.art === 'sensor') return { a:s.on, b:false };
       return { a:s.s[0], b:false };
     },
@@ -101,24 +111,32 @@ const APP_DIAGRAM = () => ({
       } else st.s[Number(key)] = !st.s[Number(key)];
       this.sim[id] = st;
     },
+    /* Afbryderen, der styrer en brugsgenstand (den første, hvis flere har valgt den). */
+    afbFor(eid) { return this.db.afbrydere.find(a => a.a.includes(eid) || (a.art === 'krone' && a.b.includes(eid))) || null; },
     afbLamper(af, felt) {
       const off = felt === 'b' ? af.a.length : 0;
       return af[felt].map((id, i) => { const e = this.db.enheder.find(x => x.id === id); return e ? (off + i + 1) + ' ' + e.navn : ''; }).filter(Boolean).join(' · ');
     },
-    afbIkon(art) {
-      const p = { enpolet:'<circle cx="5" cy="15" r="2.6"/><path d="M7 13 15 4l3 2.6"/>', krone:'<circle cx="5" cy="15" r="2.6"/><path d="M7 13 15 4l3 2.6M12 7.4l3 2.6"/>',
-        korr:'<circle cx="10" cy="10" r="2.6"/><path d="M12 8 17 3l2.4 2.4M8 12l-5 5-2.4-2.4"/>', kip:'<circle cx="10" cy="10" r="6.5"/><circle cx="10" cy="10" r="1.6"/>',
+    /* Installationssymboler efter DS/EN 60617-11 i et 20 × 20-felt. Bruges både som ikon og i enstregsdiagrammet. */
+    afbSti(art) {
+      return { enpolet:'<circle cx="5" cy="15" r="2.6"/><path d="M7 13 15 4l3 2.6"/>', krone:'<circle cx="5" cy="15" r="2.6"/><path d="M7 13 15 4l3 2.6M12 7.4l3 2.6"/>',
+        korr:'<circle cx="10" cy="10" r="2.6"/><path d="M12 8 17 3l2.4 2.4M8 12l-5 5-2.4-2.4"/>',
+        kryds:'<circle cx="10" cy="10" r="2.6"/><path d="M12 8 17 3l2.4 2.4M8 12l-5 5-2.4-2.4M8 8 3 3l2.4-2.4M12 12l5 5-2.4 2.4"/>', kip:'<circle cx="10" cy="10" r="6.5"/><circle cx="10" cy="10" r="1.6"/>',
         trappe:'<circle cx="10" cy="10" r="6.5"/><path d="M10 6v4l3 2"/>', sensor:'<path d="M3 10 14 4.5M3 10l11 5.5M3 10h12"/><path d="M14.5 4q4.5 6 0 12"/>' }[art] || '';
+    },
+    afbIkon(art) {
+      const p = this.afbSti(art);
       return '<svg class="ik" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + p + '</svg>';
     },
-    taendSvg(af) {
-      const s = this.simFor(af), lit = this.lit(af), g = this.gruppe(af.gruppeId), o = [], yL = 40, NY = 176, H = 200;
+    /* print = statisk udgave til dokumentationen: udgangsstilling (lyset slukket), egne farver og ingen klikfelter. */
+    taendSvg(af, print) {
+      const s = print ? this.simStd(af) : this.simFor(af), lit = this.lit(af, s), g = this.gruppe(af.gruppeId), o = [], yL = 40, NY = 176, H = 200;
       const find = ids => ids.map(id => this.db.enheder.find(e => e.id === id)).filter(Boolean);
       const A = find(af.a), B = af.art === 'krone' ? find(af.b) : [];
       const ln = (x1, y1, x2, y2, c) => `<line class="w ${c || ''}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`;
       const tx = (x, y, t, c, a) => `<text class="${c || 'm'}" x="${x}" y="${y}"${a ? ' text-anchor="' + a + '"' : ''}>${esc(t)}</text>`;
       const dot = (x, y) => `<circle class="dot" cx="${x}" cy="${y}" r="2.4"/>`;
-      const kn = (key, inner, x, y, w, h) => `<g class="tk" data-t="${af.id}:${key}"><rect class="hit" x="${x}" y="${y}" width="${w}" height="${h}" rx="3"/>${inner}</g>`;
+      const kn = (key, inner, x, y, w, h) => print ? inner : `<g class="tk" data-t="${af.id}:${key}"><rect class="hit" x="${x}" y="${y}" width="${w}" height="${h}" rx="3"/>${inner}</g>`;
       const swH = (x, y, on) => dot(x - 12, y) + dot(x + 12, y) + ln(x - 12, y, on ? x + 12 : x + 9, on ? y : y - 11, 'bl');
       let nr = 0, xMax = 0;
       const lampe = (x, yT, on) => { nr++; xMax = Math.max(xMax, x);
@@ -146,6 +164,18 @@ const APP_DIAGRAM = () => ({
           ln(88, up, 212, up, p0 ? 'lv' : '') + ln(88, ned, 212, ned, p0 ? '' : 'lv') + tx(150, ned + 15, 'korrespondanceledere', 'm', 'middle') +
           kn(1, dot(212, up) + dot(212, ned) + dot(242, yL) + ln(242, yL, 212, p1 ? up : ned, 'bl'), 202, yL - 22, 50, 44) + tx(73, yL + 36, 'K1', 'm', 'middle') + tx(227, yL + 36, 'K2', 'm', 'middle'));
         raekke(A, 320, yL, lit.a, 242);
+      } else if (af.art === 'kryds') {
+        const n = this.afbSteder(af), up = yL - 11, ned = yL + 11, led = this.krydsLeder(af, s), xK2 = 150 + (n - 2) * 92, p1 = s.s[n - 1];
+        const par = (x1, x2, oppe) => ln(x1, up, x2, up, oppe ? 'lv' : '') + ln(x1, ned, x2, ned, oppe ? '' : 'lv');
+        o.push(ln(14, yL, 58, yL, 'lv') + kn(0, dot(58, yL) + dot(88, up) + dot(88, ned) + ln(58, yL, 88, s.s[0] ? up : ned, 'bl'), 48, yL - 22, 50, 44) + tx(73, yL + 36, 'K1', 'm', 'middle'));
+        for (let i = 1; i < n - 1; i++) {
+          const x = 150 + (i - 1) * 92, kr = !!s.s[i];
+          o.push(par(x - 62, x, led[i - 1]) + kn(i, dot(x, up) + dot(x, ned) + dot(x + 30, up) + dot(x + 30, ned) + ln(x, up, x + 30, kr ? ned : up, 'bl') + ln(x, ned, x + 30, kr ? up : ned, 'bl'), x - 10, yL - 22, 50, 44) +
+            tx(x + 15, yL + 36, 'X' + i, 'm', 'middle'));
+        }
+        o.push(par(xK2 - 62, xK2, led[n - 2]) + kn(n - 1, dot(xK2, up) + dot(xK2, ned) + dot(xK2 + 30, yL) + ln(xK2 + 30, yL, xK2, p1 ? up : ned, 'bl'), xK2 - 10, yL - 22, 50, 44) +
+          tx(xK2 + 15, yL + 36, 'K2', 'm', 'middle') + tx((73 + xK2 + 15) / 2, yL + 52, 'korrespondanceledere · X = krydsafbryder', 'm', 'middle'));
+        raekke(A, xK2 + 108, yL, lit.a, xK2 + 30);
       } else if (af.art === 'sensor') {
         o.push(ln(14, yL, 92, yL, 'lv') + kn('p0', `<rect class="box" x="92" y="${yL - 16}" width="44" height="32" rx="2"/><path class="ak" fill="none" d="M 100 ${yL} L 124 ${yL - 10} M 100 ${yL} L 124 ${yL + 10} M 100 ${yL} L 127 ${yL} M 124 ${yL - 10} Q 131 ${yL} 124 ${yL + 10}"/>`, 88, yL - 20, 52, 40) +
           ln(114, yL + 16, 114, NY, 'n') + dot(114, NY) + tx(124, yL + 32, 'PIR · efterløb ' + this.fmt(af.tid) + ' min') + tx(150, yL - 8, 'tændt leder'));
@@ -165,20 +195,28 @@ const APP_DIAGRAM = () => ({
       }
       const W = Math.max(520, xMax + 70);
       o.push(ln(14, NY, W - 14, NY, 'n') + tx(14, NY + 16, 'N'));
-      return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">${o.join('')}</svg>`;
+      const css = print ? '<style>.ts .w{stroke:#888;stroke-width:2;fill:none;stroke-linecap:round}.ts .lv{stroke:#d4500a}.ts .n{stroke:#1c6bb0}.ts .bl{stroke:#111;stroke-width:2.6}.ts .x,.ts .ak{stroke:#111;stroke-width:1.3}.ts .dash{stroke-dasharray:3 3}' +
+        '.ts .t{fill:#111;font:bold 11px monospace;stroke:none}.ts .m{fill:#555;font:10px monospace;stroke:none}.ts .dot{fill:#111}.ts .lamp,.ts .box{fill:#fff;stroke:#111;stroke-width:1.4}</style><rect width="' + W + '" height="' + H + '" fill="#fff"/>' : '';
+      return `<svg xmlns="http://www.w3.org/2000/svg"${print ? ' class="ts"' : ''} viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">${css}${o.join('')}</svg>`;
     },
     sld(print) {
       const dyb = Math.min(4, Math.max(0, ...this.db.daaser.map(d => { let n = 0, x = d; while (x && n < 6) { n++; x = this.daase(x.parentId); } return n; })));
-      const ROW = 36, DX = 170, XB = 150, XR = 212, XS = 280, XG = 342, XL = 500, XE = 770 + DX * dyb, W = 1240 + DX * dyb, sel = print ? null : this.sldSel, o = [];
+      const ROW = 36, DX = 170, XB = 150, XR = 212, XS = 280, XG = 342, XL = 500, XE = 810 + DX * dyb, XA = XE - 40, W = 1280 + DX * dyb, sel = print ? null : this.sldSel, o = [];
       SLDW = W;
       const ln = (x1, y1, x2, y2, c) => `<line class="l${c ? ' ' + c : ''}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`;
       const tx = (x, y, s, c, a) => `<text class="${c || 't'}" x="${x}" y="${y}"${a ? ' text-anchor="' + a + '"' : ''}>${esc(s)}</text>`;
       const kort = (s, n) => { s = String(s || ''); return s.length > n ? s.slice(0, n - 1) + '…' : s; };
       const sporSet = new Set(print ? [] : this.spor(this.sldSel).map(x => x.key));
+      /* afbrydere: tegnes i serie med hver lampe, de styrer. En afbryder uden tegnede lamper får sin egen række under gruppen. */
+      const afbAf = new Map(), afbVist = new Set();
+      for (const af of this.db.afbrydere) af.a.concat(af.art === 'krone' ? af.b : []).forEach(id => { if (!afbAf.has(id)) afbAf.set(id, af); });
+      this.db.enheder.forEach(e => { const af = afbAf.get(e.id); if (af && this.gruppe(e.gruppeId)) afbVist.add(af.id); });
+      const valgtAf = !print && String(this.sldSel || '').startsWith('a:') ? this.db.afbrydere.find(x => 'a:' + x.id === this.sldSel) : null;
+      if (valgtAf) valgtAf.a.concat(valgtAf.art === 'krone' ? valgtAf.b : []).forEach(id => this.spor('e:' + id).forEach(x => sporSet.add(x.key)));
       let lokSet = null;
       if (!print && this.lokF) {
         lokSet = new Set(); const med = key => this.spor(key).forEach(x => lokSet.add(x.key)), i = x => x.lokaleId === this.lokF;
-        this.db.enheder.filter(i).forEach(e => med('e:' + e.id)); this.db.daaser.filter(i).forEach(d => med('d:' + d.id)); this.db.links.filter(i).forEach(l => med('x:' + l.id)); this.db.racks.filter(i).forEach(r => med('k:' + r.id));
+        this.db.enheder.filter(i).forEach(e => med('e:' + e.id)); this.db.daaser.filter(i).forEach(d => med('d:' + d.id)); this.db.links.filter(i).forEach(l => med('x:' + l.id)); this.db.racks.filter(i).forEach(r => med('k:' + r.id)); this.db.afbrydere.filter(i).forEach(x => med('a:' + x.id));
       }
       const k = (key, cls, inner, x, y, w) => `<g class="k ${cls}${sel === key ? ' on' : ''}${sporSet.has(key) ? ' tr' : ''}${lokSet && !lokSet.has(key) ? ' dim' : ''}" data-k="${key}"><rect class="hit" x="${x}" y="${y - ROW / 2}" width="${w}" height="${ROW}"/>${inner}</g>`;
       const sw = (x, y) => `<circle class="l" cx="${x - 12}" cy="${y}" r="1.5"/>` + ln(x - 12, y, x + 9, y - 10);
@@ -187,15 +225,28 @@ const APP_DIAGRAM = () => ({
       const fuse = (x, y) => `<rect class="l f" x="${x - 12}" y="${y - 5}" width="24" height="10"/>` + ln(x - 12, y, x + 12, y);
       const ticks = (x, y, n) => Array.from({ length:n }, (_, i) => ln(x + i * 5 - 2, y + 5, x + i * 5 + 2, y - 5)).join('');
       const load = (kind, x, y) => this.sym(kind, x, y);
+      /* afbrydersymbol på lederen. afGab: hvor lederen slutter før og fortsætter efter symbolet. Enpolet og krone har kontaktpunktet på lederen. */
+      const afLav = art => art === 'enpolet' || art === 'krone';
+      const afGab = art => afLav(art) ? [7, -2] : art === 'korr' || art === 'kryds' ? [2.5, 2.5] : [6.5, 6.5];
+      const afSym = (art, x, y) => `<g class="l" stroke-linecap="round" stroke-linejoin="round" transform="translate(${x - 9} ${y - (afLav(art) ? 13.5 : 9)}) scale(.9)">${this.afbSti(art)}</g>`;
+      const afTxt = af => this.afbArt[af.art] + (af.art === 'kryds' || af.art === 'kip' || af.art === 'trappe' ? ' · ' + this.afbSteder(af) + ' steder' : '');
       const drawKids = (gr, did, bx, yy, seen) => {
         const es = this.db.enheder.filter(e => e.gruppeId === gr.id && (did ? e.daaseId === did : !this.daase(e.daaseId)));
         const ds = this.db.daaser.filter(d => d.gruppeId === gr.id && (did ? d.parentId === did : !this.daase(d.parentId)) && !seen.has(d.id));
         let r = yy, last = yy;
         for (const e of es) {
-          last = r; const eb = (this.duOver(e) || this.izFejl(e)) ? 'bad' : '';
-          o.push(k('e:' + e.id, eb, ln(bx, r, XE - 9, r) + load(this.symbolFor(e), XE, r) +
+          last = r; const eb = (this.duOver(e) || this.izFejl(e)) ? 'bad' : '', af = afbAf.get(e.id), gab = af ? afGab(af.art) : null;
+          o.push(k('e:' + e.id, eb, (af ? ln(bx, r, XA - gab[0], r) + ln(XA + gab[1], r, XE - 9, r) : ln(bx, r, XE - 9, r)) + load(this.symbolFor(e), XE, r) +
             tx(bx + 10, r - 6, 'G' + gr.nr + ' | ' + gr.In + 'A | ' + e.ledere + this.fmt(e.tv) + ' ' + kort(e.kabel, 9) + ' | ' + this.fmt(e.laengde) + 'm') +
             tx(XE + 26, r - 1, kort(e.navn, 38)) + tx(XE + 26, r + 12, this.lokaleNavn(e.lokaleId) + ' · ' + (e.effekt ? e.effekt + ' W · ΔU ' + this.fmt(this.du(e), 2) + ' %' : 'ingen fast last'), 'm'), bx + 3, r, W - bx - 10));
+          if (af) o.push(`<g class="k af${sel === 'a:' + af.id ? ' on' : ''}${sporSet.has('a:' + af.id) ? ' tr' : ''}${lokSet && !lokSet.has('a:' + af.id) ? ' dim' : ''}" data-k="a:${af.id}"><title>${esc(af.navn + ' · ' + afTxt(af))}</title>` +
+            `<rect class="hit" x="${XA - 15}" y="${r - ROW / 2 + 2}" width="30" height="${ROW - 4}" rx="3"/>${afSym(af.art, XA, r)}${af.art === 'krone' ? tx(XA, r + 15, af.a.includes(e.id) ? '1' : '2', 'm', 'middle') : ''}</g>`);
+          r += ROW;
+        }
+        for (const af of (did ? [] : this.db.afbrydere.filter(x => x.gruppeId === gr.id && !afbVist.has(x.id)))) {
+          last = r; const gab = afGab(af.art);
+          o.push(k('a:' + af.id, '', ln(bx, r, XA - gab[0], r) + afSym(af.art, XA, r) + tx(bx + 10, r - 6, 'G' + gr.nr + ' | ' + gr.In + 'A | afbryder') +
+            tx(XE + 26, r - 1, kort(af.navn, 38)) + tx(XE + 26, r + 12, this.lokaleNavn(af.lokaleId) + ' · ' + afTxt(af) + ' · ingen lamper valgt', 'm'), bx + 3, r, W - bx - 10));
           r += ROW;
         }
         for (const rk of (did ? [] : this.racksFor(gr.id))) {
@@ -288,6 +339,7 @@ const APP_DIAGRAM = () => ({
         o.push(ln(XB, y0, XB, last, 'b')); y = r - ROW / 2;
       }
       const u = this.enhederFor('').length; if (u) { y += 30; o.push(tx(16, y, u + ' brugsgenstande uden gruppe er ikke vist.', 'm')); }
+      const au = this.db.afbrydere.filter(x => !afbVist.has(x.id) && !this.gruppe(x.gruppeId)).length; if (au) { y += 18; o.push(tx(16, y, au + ' afbrydere uden gruppe og lamper er ikke vist.', 'm')); }
       const lu = this.db.links.filter(l => !this.udst(l.switchId) && !this.udst(l.panelId)).length; if (lu) { y += 18; o.push(tx(16, y, lu + ' svagstrømsforbindelser uden rack er ikke vist.', 'm')); }
       const H = y + 30;
       const css = print ? '<style>.l{stroke:#111;stroke-width:1.3;fill:none}.f{fill:#fff}.b{stroke-width:3}.b2{stroke-width:2}.t{fill:#111;font:11px monospace;stroke:none}.m{fill:#555;font:10px monospace}' +
@@ -303,6 +355,12 @@ const APP_DIAGRAM = () => ({
           fejl: [this.duOver(o) && 'ΔU over grænsen på ' + this.duGraense(o) + ' %.', this.izFejl(o) && 'Iz under sikringens mærkestrøm.'].filter(Boolean),
           rows: [['Gruppe', this.gruppeTxt(o.gruppeId)], ['Lokale', this.lokaleNavn(o.lokaleId)], ['Kabel', o.kabel + ' ' + this.kabelDim(o)], ['Længde', this.fmt(o.laengde) + ' m'], ['Effekt', o.effekt + ' W'],
             ['Strøm', this.fmt(this.strom(o)) + ' A'], ['ΔU', this.fmt(this.du(o), 2) + ' %'], ['Iz', this.fmt(this.iz(o)) + ' A'], ['Sikring', g ? g.kar + g.In : '–']] };
+      }
+      if (a === 'a' && (o = this.db.afbrydere.find(x => x.id === id))) {
+        const andre = o.a.concat(o.b).map(i => this.db.enheder.find(e => e.id === i)).filter(e => e && e.gruppeId !== o.gruppeId);
+        return { art:'Afbryder', titel:o.navn, type:'afbryder', obj:o, gid:o.gruppeId, fejl: andre.length ? [andre.map(e => e.navn).join(', ') + ' ligger på en anden gruppe end afbryderen.'] : [],
+          rows: [['Type', this.afbArt[o.art]], ['Gruppe', this.gruppe(o.gruppeId) ? this.gruppeTxt(o.gruppeId) : '–'], ['Lokale', this.lokaleNavn(o.lokaleId)], ['Betjeningssteder', this.afbSteder(o)]]
+            .concat(o.art === 'trappe' || o.art === 'sensor' ? [['Tid', this.fmt(o.tid) + ' min']] : [], [[o.art === 'krone' ? 'Tænding 1' : 'Lamper', this.afbLamper(o, 'a') || 'Ingen valgt']], o.art === 'krone' ? [['Tænding 2', this.afbLamper(o, 'b') || 'Ingen valgt']] : []) };
       }
       if (a === 'g' && (o = this.gruppe(id))) return { art:'Gruppe', titel:'G' + o.nr + ' ' + o.navn, type:'gruppe', obj:o, gid:o.id, fejl:this.gruppeFejl(id),
         rows: [['Tavle', this.tavleNavn(o.tavleId)], ['Type', this.typeLabel[o.type]], ['Sikring', o.kar + o.In], ['Fase', o.faser == 3 ? 'L1 L2 L3' : o.fase], ['HPFI', this.rcdTxt(o)],

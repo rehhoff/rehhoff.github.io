@@ -48,7 +48,7 @@ Faner i `views`: Tavle, Enstregsdiagram, Tændingsdiagram, Samlepunkter & dåser
 | `grupper` | `id, tavleId, nr, navn, type (lys, kraft, stik, data), kar, In, faser, fase, rcdId, sf, maal{riso, zs, rcd, ok}, metode, temp, samlet, lag` (tom = projektets standard) |
 | `enheder` | `id, gruppeId, lokaleId, daaseId, navn, effekt (W), kabel, ledere, tv, laengde, symbol` |
 | `daaser` | `id, navn, type, gruppeId, parentId, lokaleId, kabel, ledere, tv, laengde` |
-| `afbrydere` | `id, navn, art (enpolet, krone, korr, kip, trappe, sensor), gruppeId, lokaleId, steder, tid, a[], b[]` |
+| `afbrydere` | `id, navn, art (enpolet, krone, korr, kryds, kip, trappe, sensor), gruppeId, lokaleId, steder, tid, a[], b[]`. `kryds` (skema 11): `steder` er antal betjeningssteder, 3 til 6 |
 | `racks` | `id, navn, type, he, lokaleId, gruppeId` |
 | `udstyr` | `id, rackId, navn, art, he, pos, porte, poe, poeBudget, effekt` |
 | `links` | `id, art (data, cctv), navn, lokaleId, kabel, laengde, panelId, panelPort, switchId, switchPort, patch, poeW, kamType, oploesning, nvrId` |
@@ -67,8 +67,8 @@ Relationer: gruppe → tavle, gruppe → HPFI, brugsgenstand → gruppe, lokale 
 | I<sub>z</sub> | `forhold` (gruppens eller tilgangskablets forhold med projektets standard), `izTabel`, `izBeregn`, `kTemp`, `kSamlet`, `korrektion`, `forholdTxt`. Tabeller i `js/data.js`: `IZT`, `METODER`, `ISO`, `TEMPS`, `K_TEMP`, `KREDSE`, `LAG`, `K_JORD_SAMLET`. `IZ` er et alias for PVC, metode C |
 | Kontrol | `gruppeFejl`, `warnings`, `mangler`, `linkFejl`, `maalVurdering`, `zsMax`, `maalTal` |
 | Forslag | `effektForslag`, `sfForslag`, `daaseParse`, `symbolFor` |
-| Diagrammer | `sld` (enstreg), `taendSvg` (tænding), `spor`, `sporTil` |
-| Dokumentation | `docHtml`, `gruppeTsv`, `exportJson`, `hent` |
+| Diagrammer | `sld` (enstreg, viser også afbrydere med nøglen `a:<id>`), `taendSvg(af, print)` (tænding; `print` giver den statiske udgave til dokumentationen), `simStd`, `simFor`, `lit`, `krydsLeder`, `afbSti` (symboler efter DS/EN 60617), `afbFor`, `spor`, `sporTil` |
+| Dokumentation | `docHtml` (inkl. afsnittet Tændingsdiagrammer), `gruppeTsv`, `exportJson`, `hent` |
 
 ## Test
 

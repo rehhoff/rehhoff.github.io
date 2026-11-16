@@ -244,7 +244,7 @@ const APP_LAGRING = () => ({
       let h = '<!DOCTYPE html><html lang="da"><head><meta charset="utf-8"><title>Tavleskema ' + esc(p.navn) + '</title><style>' +
         'body{font:12px/1.4 Arial,sans-serif;color:#111;margin:20mm 15mm}h1{font-size:20px;margin:0}h2{font-size:15px;margin:18px 0 4px}' +
         'table{border-collapse:collapse;width:100%}th,td{border:1px solid #666;padding:3px 5px;text-align:left;vertical-align:top}th{background:#e8eaeb;font-size:10px;text-transform:uppercase}' +
-        '.st th{width:14%}svg{max-width:100%;height:auto;border:1px solid #999}' +
+        '.st th{width:14%}svg{max-width:100%;height:auto;border:1px solid #999}.af{page-break-inside:avoid;margin:0 0 14px}.af h2{margin:10px 0 0}.af p{margin:2px 0 4px}' +
         '.k{border:1px solid #b3204f;color:#b3204f;padding:4px 6px;margin:4px 0;font-weight:bold}.s{page-break-after:always}.m{color:#555}@media print{body{margin:0}}</style></head><body>';
       h += '<section class="s"><h1>' + esc(p.navn || 'Projekt') + '</h1><table class="st"><tr><th>Sagsnr.</th>' + td(p.sagsnr) + '<th>Kunde</th>' + td(p.kunde) + '</tr><tr><th>Adresse</th>' + td(p.adresse) + '<th>Installatør</th>' + td(p.installatoer) + '</tr><tr><th>Dato</th>' + td(p.dato) +
         '<th>Omfang</th>' + td(this.db.tavler.length + ' tavler, ' + this.db.grupper.length + ' grupper, ' + this.db.enheder.length + ' brugsgenstande') + '</tr></table><h2>Enstregsdiagram</h2>' + this.sld(true) + '</section>';
@@ -275,10 +275,13 @@ const APP_LAGRING = () => ({
         h += '</table></section>';
       }
       if (this.db.afbrydere.length) {
-        h += '<section><h1>Afbrydere og tændinger</h1><table><tr><th>Betegnelse</th><th>Type</th><th>Gruppe</th><th>Lokale</th><th>Betjeningssteder</th><th>Tænding 1</th><th>Tænding 2</th></tr>';
-        for (const a of this.db.afbrydere) h += '<tr>' + [a.navn, this.afbArt[a.art], this.gruppe(a.gruppeId) ? this.gruppeTxt(a.gruppeId) : '–', this.lokaleNavn(a.lokaleId), a.steder + (a.art === 'trappe' || a.art === 'sensor' ? ' · ' + this.fmt(a.tid) + ' min' : ''),
+        h += '<section class="s"><h1>Afbrydere og tændinger</h1><table><tr><th>Betegnelse</th><th>Type</th><th>Gruppe</th><th>Lokale</th><th>Betjeningssteder</th><th>Tænding 1</th><th>Tænding 2</th></tr>';
+        for (const a of this.db.afbrydere) h += '<tr>' + [a.navn, this.afbArt[a.art], this.gruppe(a.gruppeId) ? this.gruppeTxt(a.gruppeId) : '–', this.lokaleNavn(a.lokaleId), this.afbSteder(a) + (a.art === 'trappe' || a.art === 'sensor' ? ' · ' + this.fmt(a.tid) + ' min' : ''),
           this.afbLamper(a, 'a') || '–', a.art === 'krone' ? (this.afbLamper(a, 'b') || '–') : '–'].map(td).join('') + '</tr>';
-        h += '</table></section>';
+        h += '</table></section><section><h1>Tændingsdiagrammer</h1><p class="m">Vist i udgangsstilling med slukket lys. Orange ledere er spændingsførende, blå er nul, grå er spændingsløse. Lampenumrene svarer til listen under hvert diagram.</p>';
+        for (const a of this.db.afbrydere) h += '<div class="af"><h2>' + esc(a.navn) + '</h2><p class="m">' + esc([this.afbArt[a.art], this.gruppe(a.gruppeId) ? this.gruppeTxt(a.gruppeId) : 'Ingen gruppe', this.lokaleNavn(a.lokaleId)].join(' · ')) + '</p>' + this.taendSvg(a, true) +
+          '<p>' + esc((a.art === 'krone' ? 'Tænding 1: ' : 'Lamper: ') + (this.afbLamper(a, 'a') || 'ingen valgt') + (a.art === 'krone' ? ' · Tænding 2: ' + (this.afbLamper(a, 'b') || 'ingen valgt') : '')) + '</p></div>';
+        h += '</section>';
       }
       return h + '</body></html>';
     }
