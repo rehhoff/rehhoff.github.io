@@ -2,6 +2,15 @@
 
 Nyeste øverst. Versionsnummeret står også i appen som `APP_VERSION`. Hver version siger, hvilken model der lavede den.
 
+## 10.9.0 · 2026-11-16 · Claude Opus
+
+Gendan fra Gist-historik. Plan: `docs/planer/2026-11-16-gist-historik.md`.
+
+- Knappen "Tidligere versioner af dette projekt" i synkroniseringspanelet viser de versioner af det aktive projekt, som GitHub har gemt i Gist'en, med dato, kunde og antal grupper og brugsgenstande. Samme indhold i flere versioner i træk vises én gang, og den version, der svarer til projektet nu, er markeret.
+- En version gendannes som et nyt projekt med "(fra <dato>)" i navnet. Det aktive projekt overskrives aldrig. Versioner gemt af en nyere version af appen kan ikke gendannes.
+- Versionerne hentes 15 ad gangen med "Hent ældre versioner". Kræver net.
+- Ny fil `js/historik.js`. Røgtesten har en falsk versionshistorik i GitHub-API'et.
+
 ## 10.8.0 · 2026-11-16 · Claude Sonnet
 
 Materialeliste. Plan: `docs/planer/2026-11-16-materialeliste.md`.

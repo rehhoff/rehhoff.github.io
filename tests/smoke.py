@@ -40,13 +40,19 @@ A = "Alpine.$data(document.querySelector('[x-data]'))"
 
 # Falsk GitHub-API til synkroniseringstesten: én hemmelig Gist delt mellem to "enheder".
 GIST = {}
+VERSIONER = []  # [(sha, tid, kopi af GIST)], ældste først, som GitHub gemmer dem
 CORS = {'access-control-allow-origin': '*', 'access-control-allow-headers': 'authorization, content-type, accept',
         'access-control-allow-methods': 'GET, POST, PATCH, OPTIONS'}
 
 
-def gist_json():
+def gist_json(filer=None):
+    filer = GIST if filer is None else filer
     return {'id': 'g1', 'files': {n: {'filename': n, 'content': c, 'truncated': False, 'raw_url': 'https://gist.test/raw/' + n}
-                                  for n, c in GIST.items()}}
+                                  for n, c in filer.items()}}
+
+
+def ny_version():
+    VERSIONER.append(('v%03d' % len(VERSIONER), '2026-11-16T%02d:%02d:00Z' % (8 + len(VERSIONER) // 60, len(VERSIONER) % 60), dict(GIST)))
 
 
 async def github(r):
@@ -63,6 +69,7 @@ async def github(r):
         return await svar([gist_json()] if GIST else [])
     if sti == '/gists' and req.method == 'POST':
         GIST.update({n: f['content'] for n, f in json.loads(req.post_data)['files'].items()})
+        ny_version()
         return await svar(gist_json(), 201)
     if sti == '/gists/g1' and req.method == 'GET':
         return await svar(gist_json())
@@ -70,7 +77,13 @@ async def github(r):
         for n, f in json.loads(req.post_data)['files'].items():
             if f is None: GIST.pop(n, None)
             else: GIST[n] = f['content']
+        ny_version()
         return await svar(gist_json())
+    if sti.startswith('/gists/g1/commits'):
+        return await svar([{'version': v, 'committed_at': t} for v, t, _ in reversed(VERSIONER)])
+    for v, t, filer in VERSIONER:
+        if sti == '/gists/g1/' + v:
+            return await svar(gist_json(filer))
     await svar({'message': 'Not Found'}, 404)
 
 
@@ -328,6 +341,16 @@ async def main():
         uroert = {k: v for k, v in GIST.items() if k != 'tavleoversigt.json'} == {k: v for k, v in foer.items() if k != 'tavleoversigt.json'}
         tjek('synk: ældre version rører ikke Gist med nyere skema', 'nyere version' in r['f'] and uroert and r['n0'] == r['n1'], (r, uroert))
         GIST['tavleoversigt.json'] = foer['tavleoversigt.json']
+        r = await pb.evaluate(f"""async()=>{{const a={A};const pid=a.pid,kunde=a.db.projekt.kunde,n0=a.projekter.length;
+          await a.historikAabn();const L=a.historik.liste.map(v=>v.kunde);const nu=a.historik.liste.filter(v=>a.historikNu(v)).length;
+          const gl=a.historik.liste.length-1;a.historikGendan(gl);const ny=a.projekter[a.projekter.length-1];const d=a.laes(ny.id);
+          const v=a.historik.liste[0];v.schema=999;const n1=a.projekter.length;a.historikGendan(0);
+          a.skriv(pid,norm(JSON.parse(JSON.stringify(a.historik.liste[1].d))));const nuEfter=a.historik.liste.map(v=>a.historikNu(v));
+          return {{nuEfter,L,nu,ny:ny.id!==pid&&/\(fra /.test(ny.navn),gammelKunde:d.projekt.kunde,aktiv:a.pid===pid&&a.db.projekt.kunde===kunde,
+                  antal:[n0,n1,a.projekter.length],fejl:a.toasts.some(t=>t.fejl&&/nyere version/.test(t.txt))}}}}""")
+        tjek('historik: ændrede versioner vises én gang, den nuværende markeres, gendan som kopi, aktivt projekt urørt, nyere skema afvises',
+             len(r['L']) >= 3 and len(set(r['L'])) == len(r['L']) and r['nu'] == 0 and r['nuEfter'] == [False, True] + [False] * (len(r['L']) - 2) and r['ny'] and r['gammelKunde'] == r['L'][-1]
+             and r['aktiv'] and r['antal'][1] == r['antal'][0] + 1 and r['antal'][2] == r['antal'][1] and r['fejl'], r)
         r = await pb.evaluate(f"""async()=>{{const a={A};Object.defineProperty(navigator,'onLine',{{configurable:true,get:()=>false}});
           a.synkFejl='';await a.synkNu();const r={{f:a.synkFejl,t:a.synkTxt()}};delete navigator.onLine;a.online=true;return r}}""")
         tjek('synk: uden net ingen fejl, status viser offline', r['f'] == '' and 'offline' in r['t'], r)

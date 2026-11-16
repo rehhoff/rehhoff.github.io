@@ -14,6 +14,7 @@
 | `js/beregning.js` | `APP_BEREGNING()`: strøm, ΔU, I<sub>z</sub>, fasebalance, kabeltabel, samtidighed, tilgangskabel, effektforslag |
 | `js/diagram.js` | `APP_DIAGRAM()`: enstregsdiagram, sporing, afbrydere og tændingsdiagram |
 | `js/lagring.js` | `APP_LAGRING()`: projekter, eksport, import, backup, synkronisering |
+| `js/historik.js` | `APP_HISTORIK()`: tidligere versioner af det aktive projekt fra Gist'ens versionshistorik (`/gists/{id}/commits`), gendannes som kopi |
 | `js/app.js` | `app()`: tilstand, `init()` og resten af brugerfladen. `bland()` samler metoderne fra de tre filer ovenfor |
 | `CLAUDE.md` | Regler og hukommelse for Claude |
 | `CHANGELOG.md` | Versionshistorik |
