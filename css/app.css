@@ -45,6 +45,11 @@ h1,h2,h3{text-wrap:balance}
 kbd{font-family:"IBM Plex Mono",monospace;font-size:.7rem;border:1px solid var(--line);border-bottom-width:2px;border-radius:3px;padding:0 .3rem;background:var(--raised);color:var(--muted)}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .tab{display:inline-flex;align-items:center;gap:.4rem;padding:.55rem .8rem;border-bottom:3px solid transparent;color:var(--muted);cursor:pointer;font-size:1.05rem}
+.tab{white-space:nowrap;flex-shrink:0}
+.faner{scrollbar-width:thin}
+@media (pointer:coarse){.tab kbd{display:none}.btn{min-height:2.5rem}}
+.inp.soeg{width:14rem;padding:.33rem .55rem;font-size:.8125rem}
+@media (max-width:639px){.inp,.inp-s,.inp.soeg{font-size:16px}}
 .tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
 .typed{--t:var(--muted)}
 .typed.lys{--t:var(--lys)} .typed.kraft{--t:var(--kraft)} .typed.stik{--t:var(--stik)} .typed.data{--t:var(--data)} .typed.cctv{--t:var(--cctv)}
@@ -130,11 +135,18 @@ button.din-item{cursor:pointer}
 .sld .k:hover .hit{fill:color-mix(in srgb,var(--accent) 10%,transparent)}
 .sld .k.on .hit{fill:color-mix(in srgb,var(--accent) 20%,transparent);stroke:var(--accent);stroke-width:1.5}
 /* dokumentark: altid lyst papir */
-.sheet{background:#fff;color:#111;border:1px solid #9aa0a4;padding:1.25rem;font-size:.82rem}
+.sheet{color-scheme:light;background:#fff;color:#111;border:1px solid #9aa0a4;padding:1.25rem;font-size:.82rem}
 .sheet h3{font-family:"Barlow Condensed",sans-serif;font-weight:700;font-size:1.3rem;text-transform:uppercase;letter-spacing:.03em}
 .sheet table{border-collapse:collapse;width:100%;margin-top:.4rem}
 .sheet th,.sheet td{border:1px solid #777;padding:.25rem .4rem;text-align:left;vertical-align:top}
 .sheet th{background:#e8eaeb;font-size:.7rem;text-transform:uppercase;letter-spacing:.04em}
 .sheet input[type=text]{width:5.5rem;border:0;border-bottom:1px dotted #555;background:#fff;color:#111;font:inherit;padding:0 .1rem}
+.sheet .mk{border:1px solid #9aa0a4;border-radius:4px;padding:.6rem;display:flex;flex-direction:column;gap:.5rem}
+.sheet .mk label:not(.vk){display:flex;flex-direction:column;gap:.2rem;font-size:.7rem;font-weight:600;text-transform:uppercase;letter-spacing:.03em;color:#444}
+.sheet .mk label .h{font-weight:400;text-transform:none;letter-spacing:0;color:#666}
+.sheet .mk input[type=text]{width:100%;font-size:16px;border:1px solid #777;border-radius:3px;padding:.45rem .5rem}
+.sheet .mk input[type=text].over{border-color:#b3204f;color:#b3204f}
+.sheet .mk input[type=text]:disabled{background:#eee;color:#888}
+.sheet .mk input[type=checkbox]{width:1.35rem;height:1.35rem}
 .sheet .kl{border:1px solid #b3204f;color:#b3204f;padding:.3rem .5rem;font-weight:600;font-size:.78rem}
 @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
