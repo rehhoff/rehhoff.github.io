@@ -8,7 +8,8 @@
 | `CLAUDE.md` | Regler og hukommelse for Claude |
 | `CHANGELOG.md` | Versionshistorik |
 | `tests/smoke.py` | Røgtest i headless Chrome |
-| `docs/planer/` | Planer, før Sonnet implementerer noget |
+| `docs/planer/` | Planer før implementering |
+| `docs/forslag.md` | Forslag, prioritering og hvem der udfører dem |
 | `.nojekyll` | GitHub Pages serverer filerne uændret |
 
 ## Opbygning af `index.html`
@@ -30,7 +31,7 @@ Faner i `views`: Tavle, Enstregsdiagram, Tændingsdiagram, Samlepunkter & dåser
 | `tavleoversigt.sync` | Synkronisering: `{ token, gistId, login, base:{ id: hash }, sidst }`. Findes kun, når synkronisering er slået til |
 | `tavleoversigt.v1`, `.v2` | Gamle formater, migreres ved første start |
 
-`norm()` lægger standardværdier på og migrerer gamle felter, hver gang et projekt læses. Synkroniseringens Gist indeholder markøren `tavleoversigt.json` og én fil `tavleoversigt-<id>.json` pr. projekt. `base` er hver projekts hash ved seneste synkronisering og bruges til tre-vejs fletning (se `docs/planer/2026-11-15-gist-synk.md`). Backupfilen har formatet `{ format:'tavleoversigt-backup', app, schema, eksporteret, aktiv, projekter:[{ id, data }] }`.
+`norm()` lægger standardværdier på og migrerer gamle felter, hver gang et projekt læses. Synkroniseringens Gist indeholder markøren `tavleoversigt.json` og én fil `tavleoversigt-<id>.json` pr. projekt. Markørens `schema` er det højeste skema, der har skrevet til Gist'en. En app med lavere `SCHEMA` afbryder synkroniseringen uden at læse eller skrive. `base` er hver projekts hash ved seneste synkronisering og bruges til tre-vejs fletning (se `docs/planer/2026-11-15-gist-synk.md`). Backupfilen har formatet `{ format:'tavleoversigt-backup', app, schema, eksporteret, aktiv, projekter:[{ id, data }] }`.
 
 ## Datamodel for et projekt
 
