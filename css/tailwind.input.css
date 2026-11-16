@@ -1,0 +1,4 @@
+/* Kilde til css/tailwind.css. Ret ikke css/tailwind.css i hånden: kør python tools/byg_css.py */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;

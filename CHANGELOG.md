@@ -2,6 +2,16 @@
 
 Nyeste øverst. Versionsnummeret står også i appen som `APP_VERSION`. Hver version siger, hvilken model der lavede den.
 
+## 10.5.0 · 2026-11-16 · Claude Opus
+
+Tailwind bygges nu som en almindelig CSS-fil i stedet for at køre fra CDN. Ingen ændring af udseende eller data.
+
+- `css/tailwind.css` (12 KB) erstatter Tailwind-CDN'et (ca. 300 KB JavaScript, der genererede CSS ved hver indlæsning). Appen indlæses hurtigere, især på telefonen, og advarslen i konsollen er væk.
+- Bygges med `python tools/byg_css.py`, som bruger Tailwinds officielle program v3.4.17. Opsætningen er flyttet fra `js/tailwind.config.js` til `tailwind.config.js`.
+- Kontrolleret mod CDN-versionen: 112.082 elementer på alle faner og formularer, lyst og mørkt tema, 29 stilegenskaber, ingen forskelle.
+- Røgtesten fejler, hvis `css/tailwind.css` ikke er bygget efter seneste ændring.
+- `CLAUDE.md`: regel om at bygge CSS'en og skrive klassenavne helt ud.
+
 ## 10.4.0 · 2026-11-16 · Claude Fable
 
 Afbrydere i enstregsdiagrammet, krydsafbryder og tændingsdiagrammer i dokumentationen. Plan: `docs/planer/2026-11-16-afbrydere-diagrammer.md`.

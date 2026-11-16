@@ -6,7 +6,8 @@
 |---|---|
 | `index.html` | Markup med Alpine-direktiver. Hver fane er en `<section x-show="view==='…'">`, markeret med en `<!-- ===== NAVN ===== -->`-kommentar |
 | `css/app.css` | Farvetokens i `:root`, mørkt tema under `prefers-color-scheme` og `[data-theme="dark"]`, egne klasser |
-| `js/tailwind.config.js` | Tailwind-opsætning til CDN'et |
+| `css/tailwind.css` | Bygget Tailwind-CSS (ret ikke i hånden). Kilde: `tailwind.config.js` og `css/tailwind.input.css` |
+| `tools/byg_css.py` | Bygger `css/tailwind.css`. `--tjek` fejler, hvis den ikke er bygget efter seneste ændring |
 | `js/data.js` | Konstanter, `APP_VERSION`, `SCHEMA`, lagernøgler, tabeller, `norm()`, eksempeldata (`seed`, `seed2`), `hashD` |
 | `js/beregning.js` | `APP_BEREGNING()`: strøm, ΔU, I<sub>z</sub>, fasebalance, kabeltabel, samtidighed, tilgangskabel, effektforslag |
 | `js/diagram.js` | `APP_DIAGRAM()`: enstregsdiagram, sporing, afbrydere og tændingsdiagram |
@@ -20,7 +21,7 @@
 
 ## Indlæsning
 
-Scriptsene er almindelige scripts (ikke ES-moduler) og deler globalt scope. Rækkefølgen er `data.js`, `beregning.js`, `diagram.js`, `lagring.js`, `app.js` og til sidst Alpine (`defer`). `css/` og `js/` hentes med `?v=<APP_VERSION>`, så en ny version aldrig blandes med gamle filer fra cachen. Metodenavne skal være unikke på tværs af filerne.
+Scriptsene er almindelige scripts (ikke ES-moduler) og deler globalt scope. Rækkefølgen er `data.js`, `beregning.js`, `diagram.js`, `lagring.js`, `app.js` og til sidst Alpine (`defer`). `css/app.css` indlæses før `css/tailwind.css`, så Tailwinds klasser vinder som før med CDN'et. `css/` og `js/` hentes med `?v=<APP_VERSION>`, så en ny version aldrig blandes med gamle filer fra cachen. Metodenavne skal være unikke på tværs af filerne.
 
 Faner i `views`: Tavle, Enstregsdiagram, Tændingsdiagram, Samlepunkter & dåser, Svagstrøm, Beregning, Lokaler, Kabler, Dokumentation, Fejlfinder. Tasterne 1 til 9 og 0 skifter fane.
 
@@ -72,4 +73,4 @@ Relationer: gruppe → tavle, gruppe → HPFI, brugsgenstand → gruppe, lokale 
 
 ## Test
 
-`tests/smoke.py` serverer filerne fra disken, åbner appen i headless Chrome med Alpine fra `node_modules`, skifter alle faner, åbner alle formularer, kører beregninger og eksport tjekker en opgradering med bevarede data og synkroniserer mellem to browserkontekster mod en falsk GitHub-API. Tailwind-CDN'et blokeres i testen, så layoutet ikke testes. Kør `npm install` og derefter `python3 tests/smoke.py`.
+`tests/smoke.py` kontrollerer, at `css/tailwind.css` er bygget, serverer filerne fra disken, åbner appen i headless Chrome med Alpine fra `node_modules`, skifter alle faner, åbner alle formularer, kører beregninger og eksport tjekker en opgradering med bevarede data og synkroniserer mellem to browserkontekster mod en falsk GitHub-API. Tailwind-CDN'et blokeres i testen, så layoutet ikke testes. Kør `npm install` og derefter `python3 tests/smoke.py`.

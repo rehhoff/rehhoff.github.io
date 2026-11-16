@@ -4,9 +4,9 @@ Kør fra repoets rod:  npm install  &&  python3 tests/smoke.py
 Filerne (index.html, css/, js/) serveres fra disken under http://app.test/.
 Kræver Python-pakken playwright. Chrome findes via miljøvariablen CHROME,
 ellers bruges playwrights egen Chromium (python3 -m playwright install chromium).
-Tailwind-CDN'et blokeres, så testen dækker logik og Alpine, ikke layout.
+css/tailwind.css skal være bygget efter seneste ændring (tools/byg_css.py --tjek).
 """
-import asyncio, json, os, re, sys
+import asyncio, json, os, re, subprocess, sys
 from pathlib import Path
 from playwright.async_api import async_playwright
 
@@ -91,6 +91,8 @@ def projekter_i_gist():
 async def main():
     if not ALPINE.exists():
         sys.exit('Mangler node_modules/alpinejs. Kør npm install først.')
+    r = subprocess.run([sys.executable, str(ROD / 'tools' / 'byg_css.py'), '--tjek'], capture_output=True, text=True)
+    tjek('css/tailwind.css er bygget efter seneste ændring', r.returncode == 0, (r.stdout + r.stderr).strip())
     async with async_playwright() as p:
         chrome = os.environ.get('CHROME')
         b = await p.chromium.launch(executable_path=chrome, args=['--no-sandbox']) if chrome else await p.chromium.launch()
