@@ -1425,7 +1425,7 @@ button.din-item{cursor:pointer}
 <script>
 const KEY = 'tavleoversigt.v2', OLD = 'tavleoversigt.v1', TKEY = 'tavleoversigt.tema', IDX = 'tavleoversigt.projekter';
 /* Versioner: APP_VERSION følger CHANGELOG.md. SCHEMA hæves kun, når datamodellen ændres, og udløser en automatisk backup før migrering. */
-const APP_VERSION = '9.1.0', SCHEMA = 9, BKEY = 'tavleoversigt.backups', BMAX = 3;
+const APP_VERSION = '9.1.1', SCHEMA = 9, BKEY = 'tavleoversigt.backups', BMAX = 3;
 const PK = id => 'tavleoversigt.p.' + id, MEM = {};
 /* Synkronisering: en hemmelig GitHub Gist med en markørfil og én fil pr. projekt. Se docs/planer/2026-11-15-gist-synk.md. */
 const SKEY = 'tavleoversigt.sync', GFIL = 'tavleoversigt.json', GP = id => 'tavleoversigt-' + id + '.json', GPRE = /^tavleoversigt-([A-Za-z0-9_-]+)\.json$/, GH = 'https://api.github.com';
@@ -2863,6 +2863,9 @@ function app() {
     },
     async synkKoer() {
       const g = await this.gh('/gists/' + this.synk.gistId), fjern = {}, ugyldig = new Set();
+      /* En ældre version må aldrig læse eller skrive data gemt med et nyere skema: dens norm() kender ikke de nye felter og ville fjerne dem ved næste afsendelse. */
+      let mSchema = 0; try { mSchema = Number(JSON.parse(g.files[GFIL].content).schema) || 0; } catch (e) {}
+      if (mSchema > SCHEMA) { const e = new Error('Projekterne på GitHub er gemt af en nyere version af appen (skema ' + mSchema + ', denne har ' + SCHEMA + '). Genindlæs siden med Ctrl+F5 for at hente den nyeste version. Indtil da synkroniseres der ikke fra denne enhed.'); e.status = 'skema'; throw e; }
       for (const [navn, f] of Object.entries(g.files || {})) {
         const m = GPRE.exec(navn); if (!m) continue;
         let txt = f.content;

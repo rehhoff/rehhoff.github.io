@@ -1,66 +1,66 @@
-# Projekthukommelse for Claude: El-oversigtsappen
+# CLAUDE.md: El-oversigtsappen
 
-Denne fil er den faste hukommelse for projektet. Læs den før du ændrer noget. Den gælder i Claude Code og i Claude chat, uanset session.
+Webapp til elektrikerarbejde: tavler, grupper, lokaler, kabler, samlepunkter, afbrydere og svagstrøm, med beregninger (ΔU, I<sub>z</sub>, fasebalance), diagrammer og dokumentation. Ejer: Alexander. Brugerfladen er på dansk.
 
-## Hvad projektet er
+- Live: https://rehhoff.github.io/ (GitHub Pages fra `main`, mappe `/`). Repoet er offentligt: skriv ingen personlige oplysninger i filer eller commits.
+- Appen er p.t. én fil, `index.html` (Alpine.js 3.14.1 fra cdnjs, Tailwind fra CDN, intet byggetrin). Opdeling i moduler er foreslået i `docs/forslag.md`.
+- Opbygning og datamodel: `docs/ARKITEKTUR.md`. Historik: `CHANGELOG.md`. Forslag og prioritering: `docs/forslag.md`. Planer: `docs/planer/`.
 
-En webapp til elektrikerarbejde: overblik over tavler, grupper, lokaler, brugsgenstande, kabler, samlepunkter, afbrydere og svagstrøm (PDS og CCTV) i et elprojekt. Appen regner spændingsfald, fasebalance, overlast og kabelkontrol, tegner enstregs- og tændingsdiagrammer og laver dokumentation til udskrift.
+## 1. Data må aldrig gå tabt
 
-- Ejer: Alexander (elektrikerlærling i Odense, også bioanalytikerstuderende). Brugerfladen er på dansk.
-- Live: https://rehhoff.github.io/ (GitHub Pages fra `main`, mappe `/`).
-- Hele appen er én fil: `index.html` (Tailwind fra CDN, Alpine.js 3.14.1 fra cdnjs, ingen build).
-- Historik: `CHANGELOG.md`. Opbygning og datamodel: `docs/ARKITEKTUR.md`.
+Projekterne ligger i browserens localStorage på `rehhoff.github.io` og kan synkroniseres til en hemmelig GitHub Gist.
 
-## Regler for hvem der ændrer hvad
+1. Omdøb eller fjern aldrig disse nøgler: `tavleoversigt.projekter`, `tavleoversigt.p.<id>`, `tavleoversigt.backups`, `tavleoversigt.tema`, `tavleoversigt.sync`, samt de gamle `tavleoversigt.v1` og `.v2`, som stadig migreres.
+2. Ændres datamodellen: udvid `norm()` med standardværdier og migrering af gamle felter, og hæv `SCHEMA`. Første start efter en hævning tager automatisk en backup (`lavBackup`).
+3. Slet aldrig et felt med brugerdata uden at flytte dataene først.
+4. Synkronisering: en app med lavere `SCHEMA` end Gist'ens markørfil (`tavleoversigt.json`) må hverken læse eller skrive. Formatet i Gist'en (markør plus `tavleoversigt-<id>.json` pr. projekt) må kun udvides, aldrig omdøbes.
+5. Hæves `SCHEMA`: tilføj et tjek i `tests/smoke.py` med data i det gamle format, som skal være intakte efter opgraderingen.
 
-- Appen er bygget af Claude Fable (version 1 til 8).
-- Claude Opus må lave ændringer direkte, når resultatet holder samme kvalitet: samme design, test før commit og opdateret dokumentation.
-- Claude Opus må planlægge alle opgaver, også store og svære (beregningsmotoren, datamodellen, enstregsdiagrammet, nye faner, migreringer).
-  - I planen tager Opus selv stilling til, om opgaven bedst udføres af Fable, Opus eller Sonnet, og skriver det i planen med en kort begrundelse.
-- Claude Fable må gennemgå og ændre enhver plan, hvis den ønsker det, også før eller under implementeringen. Ændringer noteres i planen med dato og begrundelse.
-- Claude Sonnet (og mindre modeller) må kun implementere efter en skriftlig plan fra Opus eller Fable.
-- Planen gemmes i `docs/planer/ÅÅÅÅ-MM-DD-emne.md` før implementeringen og nævnes i commit-beskeden.
-- Er du i tvivl om din rolle, så spørg Alexander, før du ændrer kode.
-
-## Ønsker fra Alexander, der altid gælder
-
-- Svar kort, direkte og teknisk præcist.
-- Spørg før du tilføjer funktioner, han ikke har bedt om. Foreslå dem i stedet.
-- Kabeltyper i appen er kun: Brandkabel, XLPE, PVC, PKAJ, PKL. Feltet "Tilgangskabel" på tavlen er fritekst og skal blive ved med at være det.
-- Samlepunkttyper er kun: Membrandåse, Indmuringsdåse, Forfradåse, Underlag, Europadåse, PL-dåse.
-- Datakabler under svagstrøm (Cat6, Cat6A, Cat7, fiber) er undtaget fra kabellisten.
-
-## Data må aldrig gå tabt
-
-Brugerens projekter ligger i browserens localStorage på `rehhoff.github.io`. En ny version af `index.html` læser de samme nøgler, så data overlever opdateringer, så længe disse regler holdes:
-
-1. Omdøb eller fjern aldrig disse nøgler: `tavleoversigt.projekter`, `tavleoversigt.p.<id>`, `tavleoversigt.backups`, `tavleoversigt.tema`, `tavleoversigt.sync` (samt de gamle `tavleoversigt.v1` og `tavleoversigt.v2`, som stadig migreres).
-2. Ændrer du datamodellen, så udvid `norm()` med standardværdier og migrering af gamle felter, og hæv `SCHEMA`. Første indlæsning efter en hævning tager automatisk en backup i browseren (`lavBackup`), før noget skrives.
-3. Slet aldrig et felt, som brugeren har data i, uden at flytte dataene først.
-4. Test altid en opgradering: opret data i den gamle version, åbn den nye på samme origin, og kontrollér at projekterne er intakte (se `tests/smoke.py`).
-
-## Sådan laves en ændring
+## 2. Arbejdsgang
 
 1. Lav en branch fra `main`.
-2. Ret `index.html`. Hold koden i én fil, medmindre Alexander beder om andet.
-3. Hæv `APP_VERSION` i `index.html` (semver: ny funktion = minor, rettelse = patch, større omlægning = major). Hæv `SCHEMA` kun ved ændret datamodel.
-4. Tilføj et afsnit øverst i `CHANGELOG.md` med dato, version, model og hvad der er ændret.
-5. Opdater `docs/ARKITEKTUR.md`, hvis felter, nøgler, faner eller sektioner ændres.
-6. Kør `npm install` og `python3 tests/smoke.py`. Den skal slutte med `OK`.
-7. Commit, push og åbn en pull request mod `main`. Pages opdateres, når den er merget.
+2. Ret koden. Hold samme design (farvetokens i `:root`, lyst og mørkt tema) og samme kodestil.
+3. Hæv `APP_VERSION` i `index.html` og `version` i `package.json` (ny funktion = minor, rettelse = patch, større omlægning = major).
+4. Tilføj et afsnit øverst i `CHANGELOG.md` med dato, version, model og ændringer. Opdater `docs/ARKITEKTUR.md`, hvis nøgler, felter, faner eller funktioner ændres.
+5. Kør røgtesten. Den skal slutte med `OK`. På Alexanders Windows-PC (ingen npm, Python hedder `python`):
+   ```
+   pip install playwright
+   python -m playwright install chromium
+   mkdir -p node_modules/alpinejs/dist && curl -sfL https://unpkg.com/alpinejs@3.14.1/dist/cdn.min.js -o node_modules/alpinejs/dist/cdn.min.js
+   python tests/smoke.py
+   ```
+   Med npm: `npm install` og `python3 tests/smoke.py`. Sæt `PYTHONIOENCODING=utf-8`, hvis æ, ø og å giver fejl i konsollen.
+6. Commit med en beskrivelse på dansk, og nævn planen, hvis der er en. Push branchen.
+7. Claude merger selv (aftalt med Alexander 2026-11-16), når røgtesten giver `OK`: `git checkout main && git pull && git merge --no-ff <branch>` og `git push origin main`. `gh` er ikke logget ind, så der bruges ingen pull request.
+8. Efter merge: slet branchen lokalt og på GitHub (`git push origin --delete <branch>`), så `main` er den eneste branch, og kontrollér at `APP_VERSION` på https://rehhoff.github.io/ er den nye. Pages er 1–10 minutter om at opdatere. Fortæl Alexander, hvad der er udgivet.
 
-## Faglige forudsætninger i beregningerne
+## 3. Faglige regler
 
-Alt er vejledende og står også i appen:
+Faste lister, som ikke må ændres uden aftale:
+
+- Kabeltyper: Brandkabel, XLPE, PVC, PKAJ, PKL. "Tilgangskabel" på tavlen er fritekst og skal blive ved med at være det.
+- Samlepunkttyper: Membrandåse, Indmuringsdåse, Forfradåse, Underlag, Europadåse, PL-dåse.
+- Datakabler under svagstrøm (Cat6, Cat6A, Cat7, fiber) er undtaget fra kabellisten.
+
+Forudsætninger i beregningerne. Alt er vejledende og står også i appen:
 
 - ρ = 0,0225 Ω·mm²/m, cos φ = 1, 230 V og 3 × 400 V.
 - ΔU-grænse 3 % for lys og 5 % for øvrige (DS/HD 60364-5-52, anneks G). ΔU summeres gennem tilgangskabel, samledåser og afgang.
 - I<sub>z</sub>: PVC-isoleret kobber, installationsmetode C, 30 °C, uden korrektionsfaktorer. XLPE bruger endnu samme tabel.
-- Gruppens last = summen af brugsgenstandenes strøm × gruppens samtidighedsfaktor + rackforbrug. Forslag til faktorer følger installationstype og gruppetype.
+- Gruppens last = summen af brugsgenstandenes strøm × gruppens samtidighedsfaktor + rackforbrug.
 - Effektforslag er typiske mærkeeffekter, ikke dimensioneringsværdier.
 
-## Kendte begrænsninger og åbne forslag
+## 4. Roller og planer
 
-- Data ligger i browseren. Synkronisering mellem enheder kræver, at brugeren forbinder en GitHub Gist med et token (Dokumentation → Synkronisering). Ellers er en backupfil eneste kopi på tværs af enheder.
-- Tailwind kører fra CDN og giver en advarsel i konsollen. En bygget CSS-fil vil fjerne afhængigheden.
-- Forslag Alexander ikke har taget stilling til endnu: egen I<sub>z</sub>-tabel for XLPE, krydsafbryder, afbrydere i enstregsdiagram, tændingsdiagrammer i eksporten.
+- Claude Opus må ændre koden direkte, når kvaliteten holdes: samme design, test før commit og opdateret dokumentation.
+- Claude Opus må planlægge alle opgaver og skriver i planen, om Fable, Opus eller Sonnet skal udføre den, med en kort begrundelse.
+- Claude Fable må gennemgå og ændre enhver plan, også under implementeringen. Ændringer noteres i planen med dato og begrundelse.
+- Claude Sonnet og mindre modeller implementerer kun efter en skriftlig plan.
+- Er den valgte model ikke tilgængelig, udfører Opus opgaven og noterer det i planen.
+- Planer gemmes i `docs/planer/ÅÅÅÅ-MM-DD-emne.md` før implementeringen (se `docs/planer/README.md`).
+
+## 5. Kommunikation
+
+- Svar kort, direkte og teknisk præcist, på dansk.
+- Spørg før du tilføjer funktioner, Alexander ikke har bedt om. Foreslå dem i stedet, og skriv dem i `docs/forslag.md`.
+- Er du i tvivl om din rolle eller om en faglig regel, så spørg, før du ændrer kode.
