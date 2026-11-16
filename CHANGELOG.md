@@ -2,6 +2,19 @@
 
 Nyeste øverst. Versionsnummeret står også i appen som `APP_VERSION`. Hver version siger, hvilken model der lavede den.
 
+## 10.11.0 · 2026-11-16 · Claude Fable
+
+Kortslutningsstrøm og selektivitet (forslag 12 og 14). Plan: `docs/planer/2026-11-16-kortslutning-selektivitet.md`.
+
+- Tavlen har to nye felter: Z<sub>e</sub> (Ω) og prospektiv I<sub>k,maks</sub> (kA). En undertavle uden egen Z<sub>e</sub> regnes fra den forsynende tavle gennem tilgangskablet.
+- Beregning viser I<sub>k,min</sub> i hver gruppes yderste punkt: 0,95 · 230 V / (Z<sub>e</sub> + R<sub>fase</sub> + R<sub>PE</sub>), med ledermodstanden ganget med 1,2 (PVC, PKAJ, PKL) eller 1,28 (XLPE, Brandkabel) og PE som faseleder. Er I<sub>k,min</sub> under I<sub>a</sub> (5/10/20 × I<sub>n</sub> for B/C/D), kommer der en advarsel. Uden Z<sub>e</sub> vises I<sub>k</sub> ikke.
+- Gruppen har feltet Brydeevne (standard 6 kA). Er I<sub>k,maks</sub> ved tavlen større, kommer der én advarsel pr. tavle.
+- Selektivitet: advarsel, når tavlens forsikring er under 1,6 × den største efterfølgende sikring, og når en gruppe, der forsyner en undertavle, er under 1,6 × undertavlens største gruppe.
+- HPFI har afkrydsningen "Selektiv (type S)". To HPFI'er i serie (undertavle forsynet fra en gruppe med HPFI) giver en advarsel, medmindre den forreste er type S med mindst 3 × I<sub>Δn</sub>.
+- Resultaterne står i Beregning, i advarslerne og i dokumentationen under "Kortslutning og selektivitet". Alt er vejledende.
+- Datamodel: `SCHEMA` 12 med `tavler.ze`, `tavler.ikMaks`, `grupper.brydeevne` og `rcds.selektiv`. Ingen felter er fjernet. Første start tager en backup.
+- Røgtesten: opgradering fra skema 11 og kendte tal for I<sub>k,min</sub>, brydeevne og selektivitet.
+
 ## 10.10.0 · 2026-11-16 · Claude Sonnet
 
 Print og PDF. Plan: `docs/planer/2026-11-16-print-pdf.md`.

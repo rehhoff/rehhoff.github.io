@@ -49,10 +49,10 @@ Faner i `views`: Tavle, Enstregsdiagram, Tændingsdiagram, Samlepunkter & dåser
 | Liste | Felter |
 |---|---|
 | `projekt` | `navn, sagsnr, kunde, adresse, installatoer, dato, anlaeg, sidst{kabel, ledere, tv}, metode, temp, jtemp, samlet, lag` (skema 10, standard `C, 30, 20, 1, bundt`) |
-| `tavler` | `id, navn, placering, forsikring, hovedafbryder, fra, fraGruppe, tilgang, tKabel, tLedere, tTv, tLaengde, tMetode, tTemp, tSamlet, tLag` (tom = projektets standard) |
-| `rcds` | `id, tavleId, navn, type, In, idn` |
+| `tavler` | `id, navn, placering, forsikring, hovedafbryder, fra, fraGruppe, tilgang, tKabel, tLedere, tTv, tLaengde, tMetode, tTemp, tSamlet, tLag` (tom = projektets standard), `ze` (Ω), `ikMaks` (kA) (skema 12, 0 = ukendt) |
+| `rcds` | `id, tavleId, navn, type, In, idn, selektiv` (skema 12: type S) |
 | `lokaler` | `id, navn, etage` |
-| `grupper` | `id, tavleId, nr, navn, type (lys, kraft, stik, data), kar, In, faser, fase, rcdId, sf, maal{riso, zs, rcd, ok}, metode, temp, samlet, lag` (tom = projektets standard) |
+| `grupper` | `id, tavleId, nr, navn, type (lys, kraft, stik, data), kar, In, faser, fase, rcdId, sf, maal{riso, zs, rcd, ok}, metode, temp, samlet, lag` (tom = projektets standard), `brydeevne` (kA, skema 12, standard 6) |
 | `enheder` | `id, gruppeId, lokaleId, daaseId, navn, effekt (W), kabel, ledere, tv, laengde, symbol` |
 | `daaser` | `id, navn, type, gruppeId, parentId, lokaleId, kabel, ledere, tv, laengde` |
 | `afbrydere` | `id, navn, art (enpolet, krone, korr, kryds, kip, trappe, sensor), gruppeId, lokaleId, steder, tid, a[], b[]`. `kryds` (skema 11): `steder` er antal betjeningssteder, 3 til 6 |
@@ -73,6 +73,7 @@ Relationer: gruppe → tavle, gruppe → HPFI, brugsgenstand → gruppe, lokale 
 | Kabler | `materialer`, `materialeTsv` (materialeliste), `du`, `duLokal`, `duOp`, `tavleDu`, `tilgDu`, `iz`, `izFejl`, `forslag`, `lmax`, `daaseIz`, `tilgIz` |
 | I<sub>z</sub> | `forhold` (gruppens eller tilgangskablets forhold med projektets standard), `izTabel`, `izBeregn`, `kTemp`, `kSamlet`, `korrektion`, `forholdTxt`. Tabeller i `js/data.js`: `IZT`, `METODER`, `ISO`, `TEMPS`, `K_TEMP`, `KREDSE`, `LAG`, `K_JORD_SAMLET`. `IZ` er et alias for PVC, metode C |
 | Kontrol | `gruppeFejl`, `warnings`, `mangler`, `linkFejl`, `maalVurdering`, `zsMax`, `maalTal` |
+| Kortslutning og selektivitet | `ia` (I<sub>a</sub>), `kLeder`, `rSloejfe`, `tavleOp`, `tavleZe`, `tavleIkMaks`, `enhedR`, `ikMin`, `ikTxt`, `brydeFejl`, `kortslutFejl`, `rcdForan`, `selektivitet`. Advarslernes nøgler begynder med `ik:`, `kb:`, `sf:`, `sg:` og `sr:` |
 | Forslag | `effektForslag`, `sfForslag`, `daaseParse`, `symbolFor` |
 | Diagrammer | `sld` (enstreg, viser også afbrydere med nøglen `a:<id>`), `taendSvg(af, print)` (tænding; `print` giver den statiske udgave til dokumentationen), `simStd`, `simFor`, `lit`, `krydsLeder`, `afbSti` (symboler efter DS/EN 60617), `afbFor`, `spor`, `sporTil` |
 | Dokumentation | `docHtml` (inkl. Tændingsdiagrammer, firmahoved og underskriftsfelt), `udskriv`, `firmaLaes`, `firmaGem`, `firmaLogo`, `gruppeTsv`, `exportJson`, `hent` |

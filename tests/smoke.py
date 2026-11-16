@@ -253,6 +253,7 @@ async def main():
                 for i, (iz, kab) in b0[k].items():
                     iz1, kab1, tab = n0[k][i]
                     if iz1 != (tab if kab in ('XLPE', 'Brandkabel') else iz): afvig.append((navn, k, i, b0[k][i], n0[k][i]))
+            n0['w'] = [w for w in n0['w'] if not re.match(r'(ik|kb|sf|sg|sr):', w)]  # nye advarsler fra skema 12 (kortslutning og selektivitet)
             if n0['w'] != b0['w']: afvig.append((navn, 'advarsler', b0['w'], n0['w']))
         tjek('regression: eksempelprojekter giver samme Iz (PVC), ΔU, forslag og advarsler', not afvig and len(base) >= 2, afvig[:5])
 
@@ -308,7 +309,7 @@ async def main():
             enheder:JSON.stringify(a.db.enheder), daaser:JSON.stringify(a.db.daaser), ng:g.length, nt:t.length,
             bak:(JSON.parse(localStorage.getItem('tavleoversigt.backups'))||[]).length}}}})()""")
         tjek('opgradering fra skema 9: backup, standardforhold og data intakte',
-             r['navn'] == 'Skema 9-projekt' and r['b'] >= 1 and r['s'] == 11 and r['std'] == ['C', 30, 20, 1, 'bundt'] and r['g'] and r['t']
+             r['navn'] == 'Skema 9-projekt' and r['b'] >= 1 and r['s'] == 12 and r['std'] == ['C', 30, 20, 1, 'bundt'] and r['g'] and r['t']
              and r['ng'] == r0['ng'] and r['nt'] == r0['nt'] and r['enheder'] == r0['enheder'] and r['daaser'] == r0['daaser'],
              {k: v for k, v in r.items() if k not in ('enheder', 'daaser')} | {'enheder ens': r['enheder'] == r0['enheder'], 'daaser ens': r['daaser'] == r0['daaser']})
 
@@ -321,9 +322,65 @@ async def main():
         r = await pg.evaluate(f"""(()=>{{const a={A};return {{navn:a.db.projekt.navn, b:a.backups.length, s:JSON.parse(localStorage.getItem('tavleoversigt.projekter')).schema,
             afb:JSON.stringify(a.db.afbrydere), enheder:JSON.stringify(a.db.enheder), svg:a.db.afbrydere.every(x=>a.taendSvg(x).length>500&&a.taendSvg(x,true).length>500)}}}})()""")
         tjek('opgradering fra skema 10: backup taget, afbrydere og brugsgenstande intakte',
-             r['navn'] == 'Skema 10-projekt' and r['b'] >= 1 and r['s'] == 11 and r['afb'] == r0['afb'] and r['enheder'] == r0['enheder'] and r['svg']
+             r['navn'] == 'Skema 10-projekt' and r['b'] >= 1 and r['s'] == 12 and r['afb'] == r0['afb'] and r['enheder'] == r0['enheder'] and r['svg']
              and r0['n'] >= 6 and r0['arter'] == ['enpolet', 'kip', 'korr', 'krone', 'sensor', 'trappe'],
              {'navn': r['navn'], 'b': r['b'], 's': r['s'], 'afb ens': r['afb'] == r0['afb'], 'enheder ens': r['enheder'] == r0['enheder'], 'n': r0['n'], 'arter': r0['arter']})
+
+        # 4d. Opgradering fra skema 11: data intakte, backup taget, nye felter (Ze, Ik,maks, brydeevne, type S) med standardværdier
+        r0 = await pg.evaluate("""(()=>{const i=JSON.parse(localStorage.getItem('tavleoversigt.projekter'));i.schema=11;const id=i.aktiv;
+          const p=JSON.parse(localStorage.getItem('tavleoversigt.p.'+id));p.tavler.forEach(t=>{delete t.ze;delete t.ikMaks;});p.grupper.forEach(g=>{delete g.brydeevne;});p.rcds.forEach(r=>{delete r.selektiv;});
+          p.projekt.navn='Skema 11-projekt';
+          localStorage.setItem('tavleoversigt.p.'+id,JSON.stringify(p));localStorage.setItem('tavleoversigt.projekter',JSON.stringify(i));localStorage.removeItem('tavleoversigt.backups');
+          return {enheder:JSON.stringify(p.enheder), daaser:JSON.stringify(p.daaser), g:JSON.stringify(p.grupper.map(g=>[g.id,g.nr,g.navn,g.kar,g.In,g.rcdId,g.maal])),
+            t:JSON.stringify(p.tavler.map(t=>[t.id,t.navn,t.forsikring,t.fraGruppe,t.tLaengde])), r:JSON.stringify(p.rcds.map(r=>[r.id,r.navn,r.type,r.In,r.idn]))}})()""")
+        await pg.goto(URL); await pg.wait_for_timeout(500)
+        r = await pg.evaluate(f"""(()=>{{const a={A};const d=a.db;return {{navn:d.projekt.navn, b:a.backups.length, s:JSON.parse(localStorage.getItem('tavleoversigt.projekter')).schema,
+            enheder:JSON.stringify(d.enheder), daaser:JSON.stringify(d.daaser), g:JSON.stringify(d.grupper.map(g=>[g.id,g.nr,g.navn,g.kar,g.In,g.rcdId,g.maal])),
+            t:JSON.stringify(d.tavler.map(t=>[t.id,t.navn,t.forsikring,t.fraGruppe,t.tLaengde])), r:JSON.stringify(d.rcds.map(r=>[r.id,r.navn,r.type,r.In,r.idn])),
+            std:d.tavler.length>0&&d.grupper.length>0&&d.rcds.length>0&&d.tavler.every(t=>t.ze===0&&t.ikMaks===0)&&d.grupper.every(g=>g.brydeevne===6)&&d.rcds.every(x=>x.selektiv===false),
+            ik:d.grupper.every(g=>a.ikMin(g)===null), kf:a.kortslutFejl().length}}}})()""")
+        ens = {k: r[k] == r0[k] for k in ('enheder', 'daaser', 'g', 't', 'r')}
+        tjek('opgradering fra skema 11: backup taget, data intakte, nye felter med standardværdier, ingen Ik uden Ze',
+             r['navn'] == 'Skema 11-projekt' and r['b'] >= 1 and r['s'] == 12 and all(ens.values()) and r['std'] and r['ik'] and r['kf'] == 0,
+             {'navn': r['navn'], 'b': r['b'], 's': r['s'], 'std': r['std'], 'ik': r['ik'], 'kf': r['kf']} | ens)
+
+        # 4e. Kortslutningsstrøm og selektivitet med kendte tal (aftalt 2026-11-16). Ændringerne gemmes ikke.
+        r = await pg.evaluate(f"""(()=>{{const a={A};const d=a.db, n={{t:d.tavler.length,g:d.grupper.length,r:d.rcds.length,e:d.enheder.length,d:d.daaser.length}}, o={{}};
+          const w=k=>a.warnings().some(x=>x.k===k), rd=x=>Math.round(x*1000)/1000;
+          try {{
+            d.tavler.push({{id:'tk',navn:'TK',placering:'',forsikring:25,hovedafbryder:0,fra:'',fraGruppe:'',tilgang:'',tKabel:'PVC',tLedere:'5G',tTv:6,tLaengde:0,ze:0,ikMaks:0}});
+            d.rcds.push({{id:'rk',tavleId:'tk',navn:'HPFI K',type:'A',In:40,idn:30,selektiv:false}});
+            d.grupper.push({{id:'gk',tavleId:'tk',nr:1,navn:'K',type:'stik',kar:'B',In:16,faser:1,fase:'L1',rcdId:'rk',sf:1,brydeevne:6,maal:{{riso:'',zs:'',rcd:'',ok:false}},metode:'',temp:'',samlet:'',lag:''}});
+            d.enheder.push({{id:'ek',gruppeId:'gk',lokaleId:'',daaseId:'',navn:'Stik K',effekt:0,kabel:'PVC',ledere:'3G',tv:1.5,laengde:20,symbol:'auto'}});
+            const t=a.tavle('tk'), g=a.gruppe('gk'), e=d.enheder.find(x=>x.id==='ek'), rk=d.rcds.find(x=>x.id==='rk');
+            o.uden=a.ikMin(g)===null&&!w('ik:gk'); t.ze=0.3;
+            let k=a.ikMin(g); o.pvc=[rd(k.R),rd(k.ik),k.Ia,k.ok,w('ik:gk')];
+            g.kar='C'; g.In=25; k=a.ikMin(g); o.c25=[k.Ia,k.ok,w('ik:gk'),a.gruppeFejl('gk').some(x=>x.startsWith('Ik,min'))]; g.kar='B'; g.In=16;
+            e.kabel='XLPE'; k=a.ikMin(g); o.xlpe=[rd(k.R),rd(k.ik)]; e.kabel='PVC';
+            d.daaser.push({{id:'dk',navn:'K',type:'Membrandåse',gruppeId:'gk',parentId:'',lokaleId:'',kabel:'PVC',ledere:'3G',tv:2.5,laengde:10}}); e.daaseId='dk';
+            k=a.ikMin(g); o.daase=[rd(k.R),rd(k.ik)]; e.daaseId='';
+            o.bryde0=!w('kb:tk'); t.ikMaks=10; o.bryde1=w('kb:tk')&&a.brydeFejl('tk').length===1; g.brydeevne=10; o.bryde2=!w('kb:tk'); g.brydeevne=6; t.ikMaks=0;
+            o.sel1=w('sf:tk'); t.forsikring=35; o.sel2=!w('sf:tk');
+            d.tavler.push({{id:'tu',navn:'TU',placering:'',forsikring:16,hovedafbryder:0,fra:'tk',fraGruppe:'gk',tilgang:'',tKabel:'PVC',tLedere:'3G',tTv:6,tLaengde:10,ze:0,ikMaks:0}});
+            d.rcds.push({{id:'ru',tavleId:'tu',navn:'HPFI U',type:'A',In:40,idn:30,selektiv:false}});
+            d.grupper.push({{id:'gu',tavleId:'tu',nr:1,navn:'U',type:'stik',kar:'B',In:10,faser:1,fase:'L1',rcdId:'ru',sf:1,brydeevne:6,maal:{{riso:'',zs:'',rcd:'',ok:false}},metode:'',temp:'',samlet:'',lag:''}});
+            const gu=a.gruppe('gu'); t.ikMaks=10;
+            o.under=[rd(a.tavleZe('tu')),a.tavleIkMaks('tu'),rd(a.ikMin(g).R)]; t.ikMaks=0;
+            o.sg1=!w('sg:gk'); gu.In=13; o.sg2=w('sg:gk'); gu.In=10;
+            o.hpfi1=w('sr:ru'); rk.selektiv=true; o.hpfi2=w('sr:ru'); rk.idn=100; o.hpfi3=!w('sr:ru'); rk.selektiv=false; o.hpfi4=w('sr:ru');
+            t.forsikring=25; const doc=a.docHtml(); o.doc=doc.includes('Kortslutning og selektivitet')&&doc.includes('Selektivitet er ikke sikret')&&doc.includes('Ik,min (A)');
+          }} finally {{
+            d.tavler=d.tavler.filter(x=>!['tk','tu'].includes(x.id)); d.rcds=d.rcds.filter(x=>!['rk','ru'].includes(x.id)); d.grupper=d.grupper.filter(x=>!['gk','gu'].includes(x.id));
+            d.enheder=d.enheder.filter(x=>x.id!=='ek'); d.daaser=d.daaser.filter(x=>x.id!=='dk');
+          }}
+          o.ryddet=d.tavler.length===n.t&&d.grupper.length===n.g&&d.rcds.length===n.r&&d.enheder.length===n.e&&d.daaser.length===n.d;
+          const g0={{kar:'B',In:16}}; o.zs=[rd(a.zsMax(g0)),a.ia(g0),a.ia({{kar:'C',In:16}}),a.ia({{kar:'D',In:16}})];
+          return o}})()""")
+        tjek('kortslutning: Ik,min med kendte tal (PVC, XLPE, dåse, undertavle), Ia, brydeevne',
+             r['uden'] and r['pvc'] == [0.72, 214.216, 80, True, False] and r['c25'] == [250, False, True, True] and r['xlpe'] == [0.768, 204.588] and r['daase'] == [0.936, 176.78]
+             and r['bryde0'] and r['bryde1'] and r['bryde2'] and r['under'] == [0.39, 10, 0.72] and r['zs'] == [1.917, 80, 160, 320] and r['ryddet'], r)
+        tjek('selektivitet: forsikring under 1,6 × største sikring, gruppe foran undertavle, HPFI i serie med og uden type S, med i dokumentationen',
+             r['sel1'] and r['sel2'] and r['sg1'] and r['sg2'] and r['hpfi1'] and r['hpfi2'] and r['hpfi3'] and r['hpfi4'] and r['doc'], r)
 
         # 5. Backupfil kan hentes og indlæses uden at overskrive
         async with pg.expect_download() as dl:

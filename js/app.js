@@ -124,7 +124,7 @@ function app() {
     rcdsFor(tid) { return this.db.rcds.filter(r => r.tavleId === tid); },
     rcd(g) { return this.db.rcds.find(r => r.id === g.rcdId && r.tavleId === g.tavleId); },
     rcdNavn(g) { const r = this.rcd(g); return r ? r.navn : ''; },
-    rcdTxt(g) { const r = this.rcd(g); return r ? r.navn + ', ' + r.idn + ' mA type ' + r.type : 'Ingen'; },
+    rcdTxt(g) { const r = this.rcd(g); return r ? r.navn + ', ' + r.idn + ' mA type ' + r.type + (r.selektiv ? ' S' : '') : 'Ingen'; },
     sorteredeGrupper() { return this.db.tavler.flatMap(t => this.grupperFor(t.id)); },
     enhederFor(gid) { return this.db.enheder.filter(e => e.gruppeId === gid); },
     enhederILokale(lid) { return this.db.enheder.filter(e => e.lokaleId === lid); },
@@ -271,11 +271,11 @@ function app() {
     openForm(type, item, pre) {
       const cur = this.sg(), t0 = (cur && cur.tavleId) || (this.db.tavler[0] || {}).id || '';
       const std = {
-        tavle: { navn:'', placering:'', forsikring:35, hovedafbryder:0, fra:'', fraGruppe:'', tilgang:'', tKabel:(this.db.projekt.sidst || {}).kabel || 'PVC', tLedere:'5G', tTv:6, tLaengde:0 },
-        rcd: { navn:'HPFI ' + (this.rcdsFor((pre && pre.tavleId) || t0).length + 1), tavleId:t0, type:'A', In:40, idn:30 },
+        tavle: { navn:'', placering:'', forsikring:35, hovedafbryder:0, fra:'', fraGruppe:'', tilgang:'', tKabel:(this.db.projekt.sidst || {}).kabel || 'PVC', tLedere:'5G', tTv:6, tLaengde:0, ze:0, ikMaks:0 },
+        rcd: { navn:'HPFI ' + (this.rcdsFor((pre && pre.tavleId) || t0).length + 1), tavleId:t0, type:'A', In:40, idn:30, selektiv:false },
         lokale: { navn:'', etage:'' },
         afbryder: { navn:'', art:'enpolet', gruppeId:(cur && cur.type === 'lys' ? cur.id : (this.sorteredeGrupper().find(g => g.type === 'lys') || {}).id) || '', lokaleId:'', steder:2, tid:3, a:[], b:[] },
-        gruppe: { tavleId:t0, nr:1, navn:'', type:'stik', kar:'B', In:13, faser:1, fase:'L1', rcdId:'', sf:this.sfForslag({ type:'stik' }).v },
+        gruppe: { tavleId:t0, nr:1, navn:'', type:'stik', kar:'B', In:13, faser:1, fase:'L1', rcdId:'', brydeevne:6, sf:this.sfForslag({ type:'stik' }).v },
         enhed: { antal:1, navn:'', gruppeId:this.sel || '', lokaleId:'', daaseId:'', symbol:'auto', effekt:0, kabel:'PVC', ledere:'3G', tv:1.5, laengde:10 },
         daase: { antal:1, navn:'', type:'Membrandåse', gruppeId:this.sel || '', parentId:'', lokaleId:'', kabel:'PVC', ledere:'3G', tv:1.5, laengde:5 },
         rack: { navn:'R' + (this.db.racks.length + 1), type:'19" vægskab', he:9, lokaleId:'', gruppeId:'' },
@@ -309,8 +309,9 @@ function app() {
       const type = this.modal.type, liste = this.liste(type), rec = Object.assign({}, this.form);
       delete rec.belVal; delete rec.belEnh;
       rec.navn = String(rec.navn || '').trim(); if (!rec.navn) return;
-      for (const k of ['nr', 'In', 'idn', 'faser', 'forsikring', 'hovedafbryder', 'effekt', 'tv', 'laengde', 'he', 'pos', 'porte', 'poeBudget', 'poeW', 'panelPort', 'switchPort', 'patch', 'steder', 'tid', 'sf', 'tTv', 'tLaengde']) if (k in rec) rec[k] = Number(rec[k]) || 0;
-      if (type === 'gruppe') { rec.sf = rec.sf > 0 && rec.sf <= 1 ? rec.sf : 1; if (!this.rcdsFor(rec.tavleId).some(r => r.id === rec.rcdId)) rec.rcdId = ''; rec.maal = rec.maal || { riso:'', zs:'', rcd:'', ok:false }; }
+      for (const k of ['nr', 'In', 'idn', 'faser', 'forsikring', 'hovedafbryder', 'effekt', 'tv', 'laengde', 'he', 'pos', 'porte', 'poeBudget', 'poeW', 'panelPort', 'switchPort', 'patch', 'steder', 'tid', 'sf', 'tTv', 'tLaengde', 'ze', 'ikMaks', 'brydeevne']) if (k in rec) rec[k] = Number(rec[k]) || 0;
+      if (type === 'rcd') rec.selektiv = !!rec.selektiv;
+      if (type === 'gruppe') { rec.sf = rec.sf > 0 && rec.sf <= 1 ? rec.sf : 1; rec.brydeevne = rec.brydeevne > 0 ? rec.brydeevne : 6; if (!this.rcdsFor(rec.tavleId).some(r => r.id === rec.rcdId)) rec.rcdId = ''; rec.maal = rec.maal || { riso:'', zs:'', rcd:'', ok:false }; }
       const id = this.modal.id;
       const antal = !id && this.kanDup(type) && type !== 'afbryder' ? Math.min(20, Math.max(1, Math.round(Number(rec.antal)) || 1)) : 1; delete rec.antal;
       let serie = [];

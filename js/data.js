@@ -1,7 +1,7 @@
 /* Konstanter, lagernøgler, tabeller, norm() og eksempeldata. Indlæses først; alt her er globalt og bruges af de andre filer og markup. */
 const KEY = 'tavleoversigt.v2', OLD = 'tavleoversigt.v1', TKEY = 'tavleoversigt.tema', IDX = 'tavleoversigt.projekter';
 /* Versioner: APP_VERSION følger CHANGELOG.md. SCHEMA hæves kun, når datamodellen ændres, og udløser en automatisk backup før migrering. */
-const APP_VERSION = '10.10.0', SCHEMA = 11, BKEY = 'tavleoversigt.backups', BMAX = 3;
+const APP_VERSION = '10.11.0', SCHEMA = 12, BKEY = 'tavleoversigt.backups', BMAX = 3;
 const PK = id => 'tavleoversigt.p.' + id, MEM = {};
 /* Synkronisering: en hemmelig GitHub Gist med en markørfil og én fil pr. projekt. Se docs/planer/2026-11-15-gist-synk.md. */
 const SKEY = 'tavleoversigt.sync', GFIL = 'tavleoversigt.json', GP = id => 'tavleoversigt-' + id + '.json', GPRE = /^tavleoversigt-([A-Za-z0-9_-]+)\.json$/, GH = 'https://api.github.com';
@@ -141,10 +141,12 @@ function norm(d) {
   { const p = o.projekt; p.metode = METODER[p.metode] ? p.metode : 'C'; p.temp = TEMPS.includes(Number(p.temp)) ? Number(p.temp) : 30; p.jtemp = TEMPS.includes(Number(p.jtemp)) ? Number(p.jtemp) : 20;
     p.samlet = Math.round(Number(p.samlet)) >= 1 && Math.round(Number(p.samlet)) <= 20 ? Math.round(Number(p.samlet)) : 1; p.lag = LAG[p.lag] ? p.lag : 'bundt'; }
   for (const k of ['tavler', 'rcds', 'lokaler', 'grupper', 'enheder', 'daaser', 'afbrydere', 'racks', 'udstyr', 'links']) if (!Array.isArray(o[k])) o[k] = [];
-  o.tavler.forEach(t => { t.forsikring = Number(t.forsikring) || 35; t.fra = t.fra || ''; t.tilgang = t.tilgang || ''; t.hovedafbryder = Number(t.hovedafbryder) || 0; t.tKabel = KABLER.includes(t.tKabel) ? t.tKabel : 'PVC'; t.tLedere = t.tLedere || '5G'; t.tTv = Number(t.tTv) || 6; t.tLaengde = Number(t.tLaengde) || 0; forholdNorm(t, 't'); });
+  o.tavler.forEach(t => { t.forsikring = Number(t.forsikring) || 35; t.fra = t.fra || ''; t.tilgang = t.tilgang || ''; t.hovedafbryder = Number(t.hovedafbryder) || 0; t.tKabel = KABLER.includes(t.tKabel) ? t.tKabel : 'PVC'; t.tLedere = t.tLedere || '5G'; t.tTv = Number(t.tTv) || 6; t.tLaengde = Number(t.tLaengde) || 0; forholdNorm(t, 't');
+    /* skema 12: netimpedans Ze (Ω) og prospektiv Ik,maks (kA) ved tavlen. 0 = ukendt */ t.ze = Number(t.ze) > 0 ? Number(t.ze) : 0; t.ikMaks = Number(t.ikMaks) > 0 ? Number(t.ikMaks) : 0; });
+  o.rcds.forEach(r => { r.selektiv = !!r.selektiv; /* skema 12: type S */ });
   o.grupper.forEach((g, i) => {
     g.fase = PH.includes(g.fase) ? g.fase : PH[i % 3]; g.rcdId = g.rcdId || ''; g.sf = Number(g.sf) > 0 && Number(g.sf) <= 1 ? Number(g.sf) : 1;
-    g.maal = Object.assign({ riso:'', zs:'', rcd:'', ok:false }, g.maal || {}); forholdNorm(g, '');
+    g.maal = Object.assign({ riso:'', zs:'', rcd:'', ok:false }, g.maal || {}); forholdNorm(g, ''); g.brydeevne = Number(g.brydeevne) > 0 ? Number(g.brydeevne) : 6; /* skema 12: brydeevne i kA */
   });
   o.enheder.forEach(e => { e.gruppeId = e.gruppeId || ''; e.lokaleId = e.lokaleId || ''; e.daaseId = e.daaseId || ''; e.kabel = kabMap(e.kabel); e.symbol = e.symbol || 'auto'; });
   o.daaser.forEach(d => { d.gruppeId = d.gruppeId || ''; d.parentId = d.parentId || ''; d.lokaleId = d.lokaleId || ''; d.kabel = kabMap(d.kabel); d.type = daaMap(d.type); });
