@@ -14,8 +14,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=10.11.0">
-<link rel="stylesheet" href="css/tailwind.css?v=10.11.0">
+<link rel="stylesheet" href="css/app.css?v=10.12.0">
+<link rel="stylesheet" href="css/tailwind.css?v=10.12.0">
 </head>
 <body class="min-h-full">
 <p id="fail" hidden style="margin:16px;padding:12px;border:1px solid var(--crit);color:var(--crit)">Appen kunne ikke starte, fordi Alpine.js ikke blev indlæst. Genindlæs siden.</p>
@@ -523,7 +523,7 @@
             <span x-text="w.txt"></span>
             <button x-show="w.g" class="underline text-muted hover:text-ink" @click="goGruppe(w.g)">Vis gruppe</button>
             <button x-show="w.fix" class="underline text-muted hover:text-ink" @click="brugForslag(w.e, w.fix)" x-text="'Skift til ' + fmt(w.fix) + ' mm²'"></button>
-            <button x-show="w.bal" class="underline text-muted hover:text-ink" @click="autoBalance(w.bal)">Balancér faser</button>
+            <button x-show="w.bal" class="underline text-muted hover:text-ink" @click="faseForesla(w.bal)">Foreslå fasefordeling</button>
             <button x-show="w.sv" class="underline text-muted hover:text-ink" @click="go('svag')">Vis svagstrøm</button>
           </li>
         </template>
@@ -556,8 +556,22 @@
       <article class="panel overflow-hidden">
         <header class="flex flex-wrap items-center justify-between gap-2 border-b border-line bg-raised px-3 py-2">
           <h2 class="hd text-xl"><span x-text="t.navn"></span> · fasebalance</h2>
-          <button class="btn" @click="autoBalance(t.id)">Balancér faser automatisk</button>
+          <button class="btn" :id="'fase-fs-' + t.id" @click="faseForesla(t.id)">Foreslå fasefordeling</button>
         </header>
+        <template x-if="faseFs && faseFs.tid === t.id">
+          <div class="flex flex-col gap-2 border-b border-line p-3 text-sm" id="fase-forslag">
+            <div class="font-semibold">Forslag til fasefordeling</div>
+            <div class="num" x-text="'Nu: L1 ' + fmt(faseFs.foer.L1) + ' A, L2 ' + fmt(faseFs.foer.L2) + ' A, L3 ' + fmt(faseFs.foer.L3) + ' A (' + fmt(faseFs.diffFoer) + ' A mellem faserne). Med forslaget: L1 ' + fmt(faseFs.efter.L1) + ' A, L2 ' + fmt(faseFs.efter.L2) + ' A, L3 ' + fmt(faseFs.efter.L3) + ' A (' + fmt(faseFs.diff) + ' A mellem faserne).'"></div>
+            <ul class="flex flex-col gap-0.5">
+              <template x-for="r in faseFs.rows" :key="r.id"><li class="num" x-text="'Gruppe ' + r.nr + ' ' + r.navn + ' (' + fmt(r.I) + ' A): ' + r.fra + ' → ' + r.til"></li></template>
+            </ul>
+            <div class="flex flex-wrap items-center gap-2">
+              <button class="btn btn-primary" id="fase-anvend" @click="faseAnvend()">Anvend forslag</button>
+              <button class="btn" @click="faseFs = null">Annullér</button>
+              <span class="text-xs text-muted">Intet ændres, før du vælger Anvend. Bagefter kan det fortrydes.</span>
+            </div>
+          </div>
+        </template>
         <div class="grid gap-4 p-3 lg:grid-cols-[minmax(0,1fr)_16rem]">
           <div class="flex flex-col gap-2">
             <template x-for="p in faseInfo(t.id).vals" :key="p.p">
@@ -1416,12 +1430,12 @@
   </div>
 </div>
 
-<script src="js/data.js?v=10.11.0"></script>
-<script src="js/beregning.js?v=10.11.0"></script>
-<script src="js/diagram.js?v=10.11.0"></script>
-<script src="js/lagring.js?v=10.11.0"></script>
-<script src="js/historik.js?v=10.11.0"></script>
-<script src="js/app.js?v=10.11.0"></script>
+<script src="js/data.js?v=10.12.0"></script>
+<script src="js/beregning.js?v=10.12.0"></script>
+<script src="js/diagram.js?v=10.12.0"></script>
+<script src="js/lagring.js?v=10.12.0"></script>
+<script src="js/historik.js?v=10.12.0"></script>
+<script src="js/app.js?v=10.12.0"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.14.1/cdn.min.js"></script>
 </body>
 </html>

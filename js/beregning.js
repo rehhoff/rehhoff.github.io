@@ -212,7 +212,8 @@ const APP_BEREGNING = () => ({
       return out;
     },
     brugForslag(eid, tv) { const e = this.db.enheder.find(x => x.id === eid); if (!e) return; this.mutate(() => { e.tv = tv; }); this.say(e.navn + ': tværsnit ændret til ' + this.fmt(tv) + ' mm².', true); },
-    autoBalance(tid) {
+    /* Fasefordeling: største 1-fasede gruppe først, på den fase der har mindst last. Bruges af forslaget (faseForesla) og af autoBalance. */
+    fasePlan(tid) {
       const gs = this.grupperFor(tid), tot = { L1:0, L2:0, L3:0 }, cnt = { L1:0, L2:0, L3:0 };
       const last = {}; gs.forEach(g => { last[g.id] = this.gruppeI(g.id); });
       gs.filter(g => g.faser == 3).forEach(g => { const f = this.gruppeFaser(g, new Set([tid])); PH.forEach(p => { tot[p] += f[p]; }); });
@@ -221,8 +222,25 @@ const APP_BEREGNING = () => ({
         const p = PH.slice().sort((x, y) => (tot[x] - tot[y]) || (cnt[x] - cnt[y]))[0];
         tot[p] += last[g.id]; cnt[p]++; return [g, p];
       });
+      return { plan, tot, last };
+    },
+    autoBalance(tid) {
+      const { plan, tot } = this.fasePlan(tid);
       this.mutate(() => plan.forEach(([g, p]) => { g.fase = p; }));
       this.say(this.tavleNavn(tid) + ': faser omfordelt. L1 ' + this.fmt(tot.L1) + ' A, L2 ' + this.fmt(tot.L2) + ' A, L3 ' + this.fmt(tot.L3) + ' A.', true);
+    },
+    /* Forslag til fasefordeling: vises først, og intet ændres, før brugeren vælger Anvend (faseAnvend). */
+    faseForesla(tid) {
+      const { plan, tot, last } = this.fasePlan(tid), fi = this.faseInfo(tid), foer = {}; fi.vals.forEach(v => { foer[v.p] = v.I; });
+      const diff = Math.max(tot.L1, tot.L2, tot.L3) - Math.min(tot.L1, tot.L2, tot.L3);
+      const rows = plan.filter(([g, p]) => g.fase !== p).map(([g, p]) => ({ id:g.id, nr:g.nr, navn:g.navn, fra:g.fase, til:p, I:last[g.id] })).sort((x, y) => x.nr - y.nr);
+      if (!rows.length || diff >= fi.diff - 0.05) { this.faseFs = null; this.say(this.tavleNavn(tid) + ': forslaget giver ikke en bedre fasebalance end den nuværende (' + this.fmt(fi.diff) + ' A mellem faserne).'); return; }
+      this.faseFs = { tid, rows, foer, efter:{ L1:tot.L1, L2:tot.L2, L3:tot.L3 }, diffFoer:fi.diff, diff };
+    },
+    faseAnvend() {
+      const f = this.faseFs; if (!f) return; this.faseFs = null;
+      this.mutate(() => f.rows.forEach(r => { const g = this.gruppe(r.id); if (g && g.faser != 3) g.fase = r.til; }));
+      this.say(this.tavleNavn(f.tid) + ': ' + f.rows.length + (f.rows.length === 1 ? ' gruppe' : ' grupper') + ' flyttet. L1 ' + this.fmt(f.efter.L1) + ' A, L2 ' + this.fmt(f.efter.L2) + ' A, L3 ' + this.fmt(f.efter.L3) + ' A.', true);
     },
     setFase(gid, p) { const g = this.gruppe(gid); if (g && g.fase !== p) this.mutate(() => { g.fase = p; }); },
     setRcd(gid, rid) { const g = this.gruppe(gid); if (g) this.mutate(() => { g.rcdId = rid; }); },
