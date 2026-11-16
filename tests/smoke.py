@@ -367,7 +367,7 @@ async def main():
             d.grupper.push({{id:'gu',tavleId:'tu',nr:1,navn:'U',type:'stik',kar:'B',In:10,faser:1,fase:'L1',rcdId:'ru',sf:1,brydeevne:6,maal:{{riso:'',zs:'',rcd:'',ok:false}},metode:'',temp:'',samlet:'',lag:''}});
             const gu=a.gruppe('gu'); t.ikMaks=10;
             o.under=[rd(a.tavleZe('tu')),a.tavleIkMaks('tu'),rd(a.ikMin(g).R)]; t.ikMaks=0;
-            o.sg1=!w('sg:gk'); gu.In=13; o.sg2=w('sg:gk'); gu.In=10;
+            o.sg1=!w('sg:gk'); gu.In=13; o.sg2=w('sg:gk'); gu.In=10; const tu=a.tavle('tu'); tu.forsikring=10; o.sfu=!w('sf:tu')&&!w('sf:tk'); tu.forsikring=16;
             o.hpfi1=w('sr:ru'); rk.selektiv=true; o.hpfi2=w('sr:ru'); rk.idn=100; o.hpfi3=!w('sr:ru'); rk.selektiv=false; o.hpfi4=w('sr:ru');
             t.forsikring=25; const doc=a.docHtml(); o.doc=doc.includes('Kortslutning og selektivitet')&&doc.includes('Selektivitet er ikke sikret')&&doc.includes('Ik,min (A)');
           }} finally {{
@@ -381,8 +381,8 @@ async def main():
              r['uden'] and r['pvc'] == [0.72, 214.216, 80, True, False] and r['c25'] == [250, False, True, True] and r['xlpe'] == [0.768, 204.588] and r['daase'] == [0.936, 176.78]
              and r['bryde0'] and r['bryde1'] and r['bryde2'] and r['under'] == [0.39, 10, 0.72] and r['zs'] == [1.917, 80, 160, 320] and r['ryddet'], r)
         tjek('kortslutning: Ik,min lige under Ia vises rundet ned (159,6 A står som 159 A, ikke 160 A)', r['afrund'] == [159.6, False, '159', True, True], r)
-        tjek('selektivitet: forsikring under 1,6 × største sikring, gruppe foran undertavle, HPFI i serie med og uden type S, med i dokumentationen',
-             r['sel1'] and r['sel2'] and r['sg1'] and r['sg2'] and r['hpfi1'] and r['hpfi2'] and r['hpfi3'] and r['hpfi4'] and r['doc'], r)
+        tjek('selektivitet: forsikring under 1,6 × største sikring, gruppe foran undertavle, ingen dobbelt advarsel fra undertavlens egen forsikring, HPFI i serie med og uden type S, med i dokumentationen',
+             r['sel1'] and r['sel2'] and r['sfu'] and r['sg1'] and r['sg2'] and r['hpfi1'] and r['hpfi2'] and r['hpfi3'] and r['hpfi4'] and r['doc'], r)
 
         # 4f. Forslag til fasefordeling: vises først, ændrer intet før Anvend, og giver bedre balance
         r = await pg.evaluate(f"""(async()=>{{const a={A};const T=n=>new Promise(f=>setTimeout(f,n));const d=a.db, tid=d.tavler[0].id, gs=a.grupperFor(tid).filter(g=>g.faser!=3), gem=gs.map(g=>g.fase), o={{}};
