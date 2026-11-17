@@ -4,7 +4,7 @@ function bland(...dele) { const r = {}; for (const d of dele) Object.definePrope
 function app() {
   return bland({
     view: 'tavle',
-    fvIkke: false, gren: null,
+    fvIkke: false, gren: null, sfPop: null,
     views: [ { id:'tavle', l:'Tavle' }, { id:'enstreg', l:'Enstregsdiagram' }, { id:'taending', l:'Tændingsdiagram' }, { id:'samlepunkter', l:'Samlepunkter & dåser' }, { id:'foering', l:'Føringsvej' }, { id:'svag', l:'Svagstrøm' }, { id:'beregning', l:'Beregning' }, { id:'lokaler', l:'Lokaler' }, { id:'kabler', l:'Kabler' }, { id:'dokumentation', l:'Dokumentation' }, { id:'fejlfinder', l:'Fejlfinder' } ],
     db: tom(), hist: [], sel: null, drag: null, over: null,
     projekter: [], pid: '', pf: { navn:'', sagsnr:'', kunde:'', adresse:'' }, sldSel: null, z: { x:8, y:8, k:1 }, pan: null, panMoved: false,
@@ -420,7 +420,8 @@ function app() {
       if (type === 'gruppe') { rec.sf = rec.sf > 0 && rec.sf <= 1 ? rec.sf : 1; rec.brydeevne = rec.brydeevne > 0 ? rec.brydeevne : 6; if (!this.rcdsFor(rec.tavleId).some(r => r.id === rec.rcdId)) rec.rcdId = ''; rec.maal = rec.maal || { riso:'', zs:'', rcd:'', ok:false }; }
       const id = this.modal.id;
       const antal = !id && this.kanDup(type) && type !== 'afbryder' ? Math.min(20, Math.max(1, Math.round(Number(rec.antal)) || 1)) : 1; delete rec.antal;
-      let serie = []; const kaede = !!rec.kaede; delete rec.kaede;
+      let serie = []; const kaede = !!rec.kaede, kk = { kabel:rec.kKabel || rec.kabel, ledere:rec.kLedere || rec.ledere, tv:Number(rec.kTv) || rec.tv, laengde:Number(rec.kLaengde) >= 0 && rec.kLaengde !== '' && rec.kLaengde != null ? Number(rec.kLaengde) : rec.laengde };
+      ['kaede', 'kKabel', 'kLedere', 'kTv', 'kLaengde'].forEach(k => delete rec[k]);
       if (type === 'tavle') { const v = String(rec.forsyn || ''); delete rec.forsyn; const g = v.startsWith('g:') ? this.gruppe(v.slice(2)) : null; rec.fraGruppe = g ? g.id : ''; rec.fra = g ? g.tavleId : v.startsWith('t:') ? v.slice(2) : ''; }
       if (type === 'tavle' && rec.fra === id) { rec.fra = ''; rec.fraGruppe = ''; }
       if (type === 'tavle' && !rec.forsikring) rec.forsikring = 35;
@@ -440,7 +441,7 @@ function app() {
         else if (antal > 1) {
           serie = this.serie(rec.navn, this.db[liste], antal);
           let forrige = null;
-          serie.forEach(nv => { const c = JSON.parse(JSON.stringify(rec)); c.id = uid(); c.navn = nv; if (type === 'link') this.givPorte(c); if (type === 'enhed' && kaede && forrige) c.fraEnhed = forrige; forrige = c.id; this.db[liste].push(c); });
+          serie.forEach(nv => { const c = JSON.parse(JSON.stringify(rec)); c.id = uid(); c.navn = nv; if (type === 'link') this.givPorte(c); if (type === 'enhed' && kaede && forrige) Object.assign(c, { fraEnhed:forrige }, kk); forrige = c.id; this.db[liste].push(c); });
         }
         else { rec.id = uid(); this.db[liste].push(rec); }
         if (type === 'enhed' || type === 'daase') this.db.projekt.sidst = { kabel:rec.kabel, ledere:rec.ledere, tv:rec.tv };
@@ -489,6 +490,7 @@ function app() {
 
     /* tastatur */
     key(ev) {
+      if (ev.key === 'Escape' && this.sfPop) { this.sfPop = null; return; }
       if (ev.key === 'Escape') { this.soegAaben = false; if (this.hurtig.aaben) { this.hurtig.aaben = false; return; } this.modal = null; if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); return; }
       const tag = (ev.target.tagName || '').toLowerCase();
       if (this.modal || tag === 'input' || tag === 'select' || tag === 'textarea') return;

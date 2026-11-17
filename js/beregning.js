@@ -330,6 +330,21 @@ const APP_BEREGNING = () => ({
       if (es && g.type === 'stik' && v < 0.8 && es.some(e => /omklæd|fitness|bruse/i.test(this.lokaleNavn(e.lokaleId)) || /hårtørrer/i.test(e.navn))) { v = 0.8; txt += ', omklædning med høj samtidighed'; }
       return { v, txt };
     },
+    /* liste over typiske samtidighedsfaktorer til pop-up: samme tabel som forslaget, ingen nye værdier */
+    sfListe(g) {
+      const an = SF[this.db.projekt.anlaeg] ? this.db.projekt.anlaeg : 'bolig', type = g.type || 'stik', f = this.sfForslag(g), typ = (this.typeLabel[type] || 'gruppe').toLowerCase();
+      const ud = [{ txt:'Forslag: ' + f.txt, v:f.v, forslag:true }];
+      for (const k of Object.keys(ANLAEG)) if (SF[k] && SF[k][type] != null) ud.push({ txt:ANLAEG[k] + ', ' + typ, v:SF[k][type], aktiv:k === an });
+      ud.push({ txt:'Højst én belastning på gruppen', v:1 }, { txt:'Elvarme, vandvarmer, varmepumpe og ladeboks', v:1 });
+      if (type === 'stik') ud.push({ txt:'Stik i omklædning og fitness', v:0.8 });
+      return ud;
+    },
+    sfAabn(ev, gid) {
+      const r = ev.currentTarget.getBoundingClientRect(), w = Math.min(320, window.innerWidth - 16);
+      this.sfPop = { gid:gid || '', left:Math.max(8, Math.min(r.left, window.innerWidth - w - 8)), top:r.bottom + 4, w, op:r.bottom + 330 > window.innerHeight && r.top > 330 };
+      if (this.sfPop.op) this.sfPop.top = r.top - 4;
+    },
+    sfVaelg(v) { const p = this.sfPop; if (!p) return; if (p.gid) this.setSf(p.gid, v); else if (this.form) this.form.sf = v; this.sfPop = null; },
     setSf(gid, v) { const g = this.gruppe(gid), n = Number(String(v).replace(',', '.')); if (g && n > 0 && n <= 1) this.mutate(() => { g.sf = n; }); },
     sfAlle() { this.mutate(() => this.db.grupper.forEach(g => { g.sf = this.sfForslag(g).v; })); this.say('Samtidighedsfaktorer sat efter forslag for ' + ANLAEG[this.db.projekt.anlaeg || 'bolig'].toLowerCase() + '.', true); },
 

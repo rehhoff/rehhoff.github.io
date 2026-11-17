@@ -423,8 +423,8 @@ async def main():
             const rod=nye.filter(e=>!e.fraEnhed), boern=nye.filter(e=>e.fraEnhed);
             o.gren=[nye.length,rod.length,boern.every(b=>rod.some(r=>r.id===b.fraEnhed)),nye.every(e=>e.placering==='Væg B'&&!e.trukket&&e.note===''),d.afbrydere.filter(x=>x.gruppeId==='gf').length];
             o.grenDu=rd(a.du(boern[0]))===o.du[1];
-            a.openForm('enhed',null,{{gruppeId:'gf',navn:'U1',kabel:'PVC',ledere:'3G',tv:1.5,laengde:4}}); a.form.antal=3; a.form.kaede=true; a.saveForm();
-            const u=n=>d.enheder.find(e=>e.navn===n&&e.gruppeId==='gf'); o.kaede=[u('U1')&&u('U1').fraEnhed,u('U2')&&u('U3')&&u('U2').fraEnhed===u('U1').id&&u('U3').fraEnhed===u('U2').id];
+            a.openForm('enhed',null,{{gruppeId:'gf',navn:'U1',kabel:'PVC',ledere:'3G',tv:1.5,laengde:4}}); a.form.antal=3; a.form.kaede=true; Object.assign(a.form,{{kKabel:'XLPE',kLedere:'3G',kTv:2.5,kLaengde:2}}); a.saveForm();
+            const u=n=>d.enheder.find(e=>e.navn===n&&e.gruppeId==='gf'); o.kaede=[u('U1')&&u('U1').fraEnhed,u('U2')&&u('U3')&&u('U2').fraEnhed===u('U1').id&&u('U3').fraEnhed===u('U2').id]; o.kaedeKabel=[u('U1').kabel,u('U1').tv,u('U1').laengde,u('U2').kabel,u('U2').tv,u('U2').laengde,u('U3').kabel,u('U3').laengde];
             a.modal={{type:'enhed',id:'f1'}}; a.delCurrent(); o.slet=[a.enhed('f2').fraEnhed, d.afbrydere.find(x=>x.id==='af').fraEnhed];
             a.go('foering'); await T(200); o.vist=!!document.getElementById('fv-enhed-f2')&&document.querySelector('#fv-enhed-f2 .fv-note').value==='venter på tømrer';
             a.go('tavle');
@@ -436,7 +436,16 @@ async def main():
         tjek('føringsvej: sløjfe i ΔU og Ik, afbrydertræk uden ΔU, træ, trukket og note, ikke trukket i materialeliste, kopiér gren, kæde, sletning',
              r['du0'] == 0.07826 and r['du'] == [0.15652, 0.19565] and r['I'] == [2, 1] and r['R'] and r['afbDu'] and r['afbRow']
              and r['trae'] == [0, 1, 2, 3, 3] and r['orden'] and r['ikkeFoer'] and r['status'] == [True, 'venter på tømrer'] and r['ikkeEfter'] and r['filter']
-             and r['kopier'] == 2 and r['gren'] == [4, 2, True, True, 3] and r['grenDu'] and r['kaede'] == ['', True] and r['slet'] == ['', ''] and r['vist'] and r['ryddet'], r)
+             and r['kopier'] == 2 and r['gren'] == [4, 2, True, True, 3] and r['grenDu'] and r['kaede'] == ['', True] and r['kaedeKabel'] == ['PVC', 1.5, 4, 'XLPE', 2.5, 2, 'XLPE', 2] and r['slet'] == ['', ''] and r['vist'] and r['ryddet'], r)
+
+        # 4i. Pop-up med typiske samtidighedsfaktorer: åbnes fra Beregning, viser forslag og tabellen, valg sætter gruppens faktor
+        r = await pg.evaluate(f"""(async()=>{{const a={A};const T=n=>new Promise(f=>setTimeout(f,n));const g=a.db.grupper.find(x=>x.type==='stik'), sf0=g.sf, o={{}};
+          a.go('beregning'); await T(150); const b=document.querySelector('#sf-'+g.id).nextElementSibling; b.click(); await T(150);
+          const opt=[...document.querySelectorAll('[role=listbox] [role=option]')]; o.antal=opt.length; o.forslag=opt.length>0&&opt[0].textContent.trim().startsWith('Forslag');
+          o.tabel=opt.some(x=>x.textContent.includes('Kontor, stik')&&x.textContent.includes('0,5'));
+          const v=opt.find(x=>x.textContent.includes('omklædning')); v.click(); await T(100); o.valgt=g.sf; o.lukket=!document.querySelector('[role=listbox]');
+          a.setSf(g.id, sf0); a.go('tavle'); return o}})()""")
+        tjek('samtidighedsfaktor: pop-up med forslag og typiske værdier, valg sætter gruppens faktor', r['antal'] >= 8 and r['forslag'] and r['tabel'] and r['valgt'] == 0.8 and r['lukket'], r)
 
         # 4f. Forslag til fasefordeling: vises først, ændrer intet før Anvend, og giver bedre balance
         r = await pg.evaluate(f"""(async()=>{{const a={A};const T=n=>new Promise(f=>setTimeout(f,n));const d=a.db, tid=d.tavler[0].id, gs=a.grupperFor(tid).filter(g=>g.faser!=3), gem=gs.map(g=>g.fase), o={{}};

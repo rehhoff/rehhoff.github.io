@@ -160,3 +160,7 @@ button.din-item{cursor:pointer}
 .fv .btn{padding:.2rem .45rem;font-size:.75rem;min-height:0}
 @media (pointer:coarse){.fv .btn{min-height:2.25rem}}
 .fv input[type=checkbox]{width:1.1rem;height:1.1rem}
+
+/* pop-up med samtidighedsfaktorer */
+.sf-pop{max-height:min(70vh,24rem);overflow-y:auto}
+.sf-valg:hover,.sf-valg:focus-visible{background:var(--raised)}

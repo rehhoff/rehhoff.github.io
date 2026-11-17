@@ -72,7 +72,7 @@ Relationer: gruppe → tavle, gruppe → HPFI, brugsgenstand → gruppe, lokale 
 | Strøm og last | `strom`, `instI`, `egenI`, `gruppeI`, `gruppeFaser`, `subFaser`, `faseInfo`, `fasePlan`, `faseForesla`, `faseAnvend` (forslag til fasefordeling, tilstand i `faseFs`), `autoBalance` |
 | Kabler | `materialer`, `materialeTsv` (materialeliste), `du`, `duLokal`, `duOp`, `tavleDu`, `tilgDu`, `iz`, `izFejl`, `forslag`, `lmax`, `daaseIz`, `tilgIz` |
 | I<sub>z</sub> | `forhold` (gruppens eller tilgangskablets forhold med projektets standard), `izTabel`, `izBeregn`, `kTemp`, `kSamlet`, `korrektion`, `forholdTxt`. Tabeller i `js/data.js`: `IZT`, `METODER`, `ISO`, `TEMPS`, `K_TEMP`, `KREDSE`, `LAG`, `K_JORD_SAMLET`. `IZ` er et alias for PVC, metode C |
-| Føringsvej | `enhed`, `sloejfer`, `enhedNed`, `enhedI` (strøm i trækket inkl. sløjfer), `enhedRod`, `enhedDaase`, `duSloejfe`, `sloejfeVej`, `foeringTrae`, `fvSaet`, `fvNy`, `fvOptael`, `grenKopier` (kopiér gren), `sloejfeValg`, `afbFraSaet` |
+| Føringsvej | `enhed`, `sloejfer`, `enhedNed`, `enhedI` (strøm i trækket inkl. sløjfer), `enhedRod`, `enhedDaase`, `duSloejfe`, `sloejfeVej`, `foeringTrae`, `fvSaet`, `fvNy`, `fvOptael`, `grenKopier` (kopiér gren), `sloejfeValg`, `afbFraSaet`. Samtidighedsfaktor-pop-up: `sfListe`, `sfAabn`, `sfVaelg` (tilstand i `sfPop`) |
 | Kontrol | `gruppeFejl`, `warnings`, `mangler`, `linkFejl`, `maalVurdering`, `zsMax`, `maalTal` |
 | Kortslutning og selektivitet | `ia` (I<sub>a</sub>), `kLeder`, `rSloejfe`, `tavleOp`, `tavleZe`, `tavleIkMaks`, `enhedR`, `ikMin`, `ikVis`, `ikTxt`, `brydeFejl`, `kortslutFejl`, `rcdForan`, `selektivitet`. Advarslernes nøgler begynder med `ik:`, `kb:`, `sf:`, `sg:` og `sr:` |
 | Forslag | `effektForslag`, `sfForslag`, `daaseParse`, `symbolFor` |
