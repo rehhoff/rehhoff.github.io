@@ -2,6 +2,12 @@
 
 Nyeste øverst. Versionsnummeret står også i appen som `APP_VERSION`. Hver version siger, hvilken model der lavede den.
 
+## 10.15.0 · 2026-11-17 · Claude Opus
+
+- Føringsvej: knappen **Slet** på brugsgenstande og afbrydere. Sløjfer efter en slettet brugsgenstand forsynes derefter fra den, den selv var sløjfet fra. Sletningen kan fortrydes.
+- Føringsvej: tryk på kablet (fx "PVC 3G2,5 mm² · 4 m") for at rette kabeltype, ledere, tværsnit og længde direkte i oversigten. Enter gemmer, og Esc annullerer. Ændringen kan fortrydes.
+- Ingen ændring af datamodellen. `SCHEMA` er uændret 13.
+
 ## 10.14.0 · 2026-11-17 · Claude Opus
 
 - Samtidighedsfaktor: forslaget i gruppeformularen og knappen ▾ ved faktoren i Beregning åbner en liste med typiske faktorer. Listen viser forslaget, samme gruppetype for hver installationstype og særtilfældene (én belastning, varme og ladning, omklædning). Et klik sætter faktoren. Værdierne er de samme vejledende værdier som før; ingen nye.

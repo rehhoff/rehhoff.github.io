@@ -427,16 +427,21 @@ async def main():
             const u=n=>d.enheder.find(e=>e.navn===n&&e.gruppeId==='gf'); o.kaede=[u('U1')&&u('U1').fraEnhed,u('U2')&&u('U3')&&u('U2').fraEnhed===u('U1').id&&u('U3').fraEnhed===u('U2').id]; o.kaedeKabel=[u('U1').kabel,u('U1').tv,u('U1').laengde,u('U2').kabel,u('U2').tv,u('U2').laengde,u('U3').kabel,u('U3').laengde];
             a.modal={{type:'enhed',id:'f1'}}; a.delCurrent(); o.slet=[a.enhed('f2').fraEnhed, d.afbrydere.find(x=>x.id==='af').fraEnhed];
             a.go('foering'); await T(200); o.vist=!!document.getElementById('fv-enhed-f2')&&document.querySelector('#fv-enhed-f2 .fv-note').value==='venter på tømrer';
+            document.querySelector('#fv-enhed-f2 .fv-kabel').click(); await T(100); o.redAaben=!!document.querySelector('#fv-enhed-f2 .fv-red');
+            a.fvTmp.kabel='XLPE'; a.fvTmp.ledere='5G'; a.fvTmp.tv=4; a.fvTmp.laengde='7,5'; [...document.querySelectorAll('#fv-enhed-f2 .fv-red .btn')].find(b=>b.textContent==='Gem').click(); await T(100);
+            const f2=a.enhed('f2'); o.red=[f2.kabel,f2.ledere,f2.tv,f2.laengde,!document.querySelector('#fv-enhed-f2 .fv-red')];
+            document.querySelector('#fv-enhed-f2 .fv-slet').click(); await T(100); o.slettet=!a.enhed('f2')&&!document.getElementById('fv-enhed-f2');
+            a.undo(); await T(100); o.fortrudt=!!a.enhed('f2')&&a.enhed('f2').kabel==='XLPE';
             a.go('tavle');
           }} finally {{
-            a.sel=sel0; a.modal=null; await T(50); const g=x=>x.gruppeId!=='gf'; d.enheder=d.enheder.filter(g); d.afbrydere=d.afbrydere.filter(g); d.grupper=d.grupper.filter(x=>x.id!=='gf'); d.tavler=d.tavler.filter(x=>x.id!=='tf'); a.save();
+            a.sel=sel0; a.modal=null; await T(50); const d=a.db; const g=x=>x.gruppeId!=='gf'; d.enheder=d.enheder.filter(g); d.afbrydere=d.afbrydere.filter(g); d.grupper=d.grupper.filter(x=>x.id!=='gf'); d.tavler=d.tavler.filter(x=>x.id!=='tf'); a.save();
           }}
-          o.ryddet=JSON.stringify([d.tavler.length,d.grupper.length,d.enheder.length,d.afbrydere.length])===n0;
+          o.ryddet=JSON.stringify([a.db.tavler.length,a.db.grupper.length,a.db.enheder.length,a.db.afbrydere.length])===n0;
           return o}})()""")
         tjek('føringsvej: sløjfe i ΔU og Ik, afbrydertræk uden ΔU, træ, trukket og note, ikke trukket i materialeliste, kopiér gren, kæde, sletning',
              r['du0'] == 0.07826 and r['du'] == [0.15652, 0.19565] and r['I'] == [2, 1] and r['R'] and r['afbDu'] and r['afbRow']
              and r['trae'] == [0, 1, 2, 3, 3] and r['orden'] and r['ikkeFoer'] and r['status'] == [True, 'venter på tømrer'] and r['ikkeEfter'] and r['filter']
-             and r['kopier'] == 2 and r['gren'] == [4, 2, True, True, 3] and r['grenDu'] and r['kaede'] == ['', True] and r['kaedeKabel'] == ['PVC', 1.5, 4, 'XLPE', 2.5, 2, 'XLPE', 2] and r['slet'] == ['', ''] and r['vist'] and r['ryddet'], r)
+             and r['kopier'] == 2 and r['gren'] == [4, 2, True, True, 3] and r['grenDu'] and r['kaede'] == ['', True] and r['kaedeKabel'] == ['PVC', 1.5, 4, 'XLPE', 2.5, 2, 'XLPE', 2] and r['slet'] == ['', ''] and r['vist'] and r['redAaben'] and r['red'] == ['XLPE', '5G', 4, 7.5, True] and r['slettet'] and r['fortrudt'] and r['ryddet'], r)
 
         # 4i. Pop-up med typiske samtidighedsfaktorer: åbnes fra Beregning, viser forslag og tabellen, valg sætter gruppens faktor
         r = await pg.evaluate(f"""(async()=>{{const a={A};const T=n=>new Promise(f=>setTimeout(f,n));const g=a.db.grupper.find(x=>x.type==='stik'), sf0=g.sf, o={{}};

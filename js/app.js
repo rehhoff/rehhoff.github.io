@@ -4,7 +4,7 @@ function bland(...dele) { const r = {}; for (const d of dele) Object.definePrope
 function app() {
   return bland({
     view: 'tavle',
-    fvIkke: false, gren: null, sfPop: null,
+    fvIkke: false, gren: null, sfPop: null, fvRed: null, fvTmp: null,
     views: [ { id:'tavle', l:'Tavle' }, { id:'enstreg', l:'Enstregsdiagram' }, { id:'taending', l:'Tændingsdiagram' }, { id:'samlepunkter', l:'Samlepunkter & dåser' }, { id:'foering', l:'Føringsvej' }, { id:'svag', l:'Svagstrøm' }, { id:'beregning', l:'Beregning' }, { id:'lokaler', l:'Lokaler' }, { id:'kabler', l:'Kabler' }, { id:'dokumentation', l:'Dokumentation' }, { id:'fejlfinder', l:'Fejlfinder' } ],
     db: tom(), hist: [], sel: null, drag: null, over: null,
     projekter: [], pid: '', pf: { navn:'', sagsnr:'', kunde:'', adresse:'' }, sldSel: null, z: { x:8, y:8, k:1 }, pan: null, panMoved: false,
@@ -248,6 +248,28 @@ function app() {
     },
     sloejfeValg() { const p = this.enhed(this.form.fraEnhed); if (p) { this.form.gruppeId = p.gruppeId; this.form.daaseId = p.daaseId; if (!this.form.lokaleId) this.form.lokaleId = p.lokaleId; if (!this.form.placering) this.form.placering = p.placering; } this.belSync(); },
     afbFraSaet(v) { const f = this.form; f.daaseId = v.startsWith('d:') ? v.slice(2) : ''; f.fraEnhed = v.startsWith('e:') ? v.slice(2) : ''; if (v && !(Number(f.laengde) > 0)) f.laengde = 3; },
+    /* slet direkte fra føringsvejen (kan fortrydes). Sløjfer efter en slettet brugsgenstand forsynes fra den, den selv var sløjfet fra */
+    fvSlet(r) {
+      const type = { enhed:'enhed', afb:'afbryder' }[r.kind]; if (!type) return;
+      const navn = this.fvNavn(r), fra = r.kind === 'enhed' ? this.enhed(r.o.fraEnhed) : null, n = r.kind === 'enhed' ? this.sloejfer(r.o.id).length : 0;
+      if (this.fvRed === r.k) this.fvRed = null;
+      this.modal = { type, id:r.o.id };
+      this.delCurrent(navn + ' er slettet.' + (n ? ' ' + (n === 1 ? 'Sløjfen' : 'De ' + n + ' sløjfer') + ' efter den forsynes nu fra ' + (fra ? fra.navn : r.o.daaseId ? this.daaseTxt(r.o.daaseId) : 'gruppen') + '.' : ''));
+    },
+    /* ret kabel direkte i føringsvejen */
+    fvFelter(r) { return r.kind === 'tavle' ? { kabel:'tKabel', ledere:'tLedere', tv:'tTv', laengde:'tLaengde' } : { kabel:'kabel', ledere:'ledere', tv:'tv', laengde:'laengde' }; },
+    fvRedAabn(r) {
+      const f = this.fvFelter(r), o = r.o; this.fvTmp = { kabel:o[f.kabel] || 'PVC', ledere:o[f.ledere] || '3G', tv:Number(o[f.tv]) || 1.5, laengde:Number(o[f.laengde]) || 0 }; this.fvRed = r.k;
+      this.$nextTick(() => { const el = document.getElementById('fv-red-kabel'); if (el) el.focus(); });
+    },
+    fvRedGem(r) {
+      const t = this.fvTmp, f = this.fvFelter(r), o = r.o; if (!t) return;
+      const ny = { kabel:KABLER.includes(t.kabel) ? t.kabel : o[f.kabel], ledere:['2X', '3G', '4G', '5G'].includes(t.ledere) ? t.ledere : o[f.ledere], tv:Number(t.tv) > 0 ? Number(t.tv) : o[f.tv], laengde:Math.max(0, Number(String(t.laengde).replace(',', '.')) || 0) };
+      this.fvRed = null;
+      if (Object.keys(ny).every(k => o[f[k]] === ny[k])) return;
+      this.mutate(() => { for (const k in ny) o[f[k]] = ny[k]; });
+      this.say('Kabel til ' + this.fvNavn(r) + ' er ændret til ' + ny.kabel + ' ' + ny.ledere + this.fmt(ny.tv) + ' mm² · ' + this.fmt(ny.laengde) + ' m.', true);
+    },
     fvRediger(r) { this.openForm({ tavle:'tavle', gruppe:'gruppe', daase:'daase', enhed:'enhed', afb:'afbryder' }[r.kind], r.o); },
     /* kopiér gren: posten og alt efter den, med nye id'er og navne, som søskende til originalen. Kopien er ikke trukket */
     grenAabn(r) { this.gren = { kind:r.kind, id:r.o.id, navn:this.fvNavn(r), antal:1, placering:'' }; this.modal = { type:'gren' }; this.$nextTick(() => { const el = document.getElementById('gren-plac'); if (el) el.focus(); }); },
@@ -453,7 +475,7 @@ function app() {
       this.modal = null;
       if (serie.length) this.say(serie.length + ' stk. oprettet: ' + serie[0] + ' til ' + serie[serie.length - 1] + '.', true);
     },
-    delCurrent() {
+    delCurrent(txt) {
       const type = this.modal.type, id = this.modal.id, d = this.db;
       this.mutate(() => {
         if (type === 'enhed') { const x0 = this.enhed(id) || {}; d.enheder.forEach(e => { if (e.fraEnhed === id) e.fraEnhed = x0.fraEnhed || ''; }); d.afbrydere.forEach(a => { if (a.fraEnhed === id) { a.fraEnhed = x0.fraEnhed || ''; if (!a.fraEnhed) a.daaseId = x0.daaseId || ''; } });
@@ -480,7 +502,7 @@ function app() {
       if (!this.sg()) this.sel = (this.sorteredeGrupper()[0] || {}).id || null;
       if (this.filter.lokale === id) this.filter.lokale = '';
       if (this.lokF === id) this.lokF = '';
-      this.modal = null; this.say('Slettet. Brugsgenstande fra slettede grupper ligger under Ikke tildelt.', true);
+      this.modal = null; this.say(txt || 'Slettet. Brugsgenstande fra slettede grupper ligger under Ikke tildelt.', true);
     },
     ask(key, fn) {
       if (this.confirm === key) { this.confirm = null; fn(); return; }
