@@ -150,3 +150,13 @@ button.din-item{cursor:pointer}
 .sheet .mk input[type=checkbox]{width:1.35rem;height:1.35rem}
 .sheet .kl{border:1px solid #b3204f;color:#b3204f;padding:.3rem .5rem;font-weight:600;font-size:.78rem}
 @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+
+/* føringsvej */
+.fv-dim{opacity:.5}
+.fv{padding-left:calc(.5rem + var(--d,0) * .9rem)}
+@media (max-width:639px){.fv{padding-left:calc(.25rem + min(var(--d,0),6) * .4rem)}}
+.fv-tavle,.fv-gruppe{background:var(--raised)}
+.fv .fv-note{width:11rem;max-width:100%}
+.fv .btn{padding:.2rem .45rem;font-size:.75rem;min-height:0}
+@media (pointer:coarse){.fv .btn{min-height:2.25rem}}
+.fv input[type=checkbox]{width:1.1rem;height:1.1rem}

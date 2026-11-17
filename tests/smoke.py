@@ -309,7 +309,7 @@ async def main():
             enheder:JSON.stringify(a.db.enheder), daaser:JSON.stringify(a.db.daaser), ng:g.length, nt:t.length,
             bak:(JSON.parse(localStorage.getItem('tavleoversigt.backups'))||[]).length}}}})()""")
         tjek('opgradering fra skema 9: backup, standardforhold og data intakte',
-             r['navn'] == 'Skema 9-projekt' and r['b'] >= 1 and r['s'] == 12 and r['std'] == ['C', 30, 20, 1, 'bundt'] and r['g'] and r['t']
+             r['navn'] == 'Skema 9-projekt' and r['b'] >= 1 and r['s'] == 13 and r['std'] == ['C', 30, 20, 1, 'bundt'] and r['g'] and r['t']
              and r['ng'] == r0['ng'] and r['nt'] == r0['nt'] and r['enheder'] == r0['enheder'] and r['daaser'] == r0['daaser'],
              {k: v for k, v in r.items() if k not in ('enheder', 'daaser')} | {'enheder ens': r['enheder'] == r0['enheder'], 'daaser ens': r['daaser'] == r0['daaser']})
 
@@ -322,7 +322,7 @@ async def main():
         r = await pg.evaluate(f"""(()=>{{const a={A};return {{navn:a.db.projekt.navn, b:a.backups.length, s:JSON.parse(localStorage.getItem('tavleoversigt.projekter')).schema,
             afb:JSON.stringify(a.db.afbrydere), enheder:JSON.stringify(a.db.enheder), svg:a.db.afbrydere.every(x=>a.taendSvg(x).length>500&&a.taendSvg(x,true).length>500)}}}})()""")
         tjek('opgradering fra skema 10: backup taget, afbrydere og brugsgenstande intakte',
-             r['navn'] == 'Skema 10-projekt' and r['b'] >= 1 and r['s'] == 12 and r['afb'] == r0['afb'] and r['enheder'] == r0['enheder'] and r['svg']
+             r['navn'] == 'Skema 10-projekt' and r['b'] >= 1 and r['s'] == 13 and r['afb'] == r0['afb'] and r['enheder'] == r0['enheder'] and r['svg']
              and r0['n'] >= 6 and r0['arter'] == ['enpolet', 'kip', 'korr', 'krone', 'sensor', 'trappe'],
              {'navn': r['navn'], 'b': r['b'], 's': r['s'], 'afb ens': r['afb'] == r0['afb'], 'enheder ens': r['enheder'] == r0['enheder'], 'n': r0['n'], 'arter': r0['arter']})
 
@@ -341,7 +341,7 @@ async def main():
             ik:d.grupper.every(g=>a.ikMin(g)===null), kf:a.kortslutFejl().length}}}})()""")
         ens = {k: r[k] == r0[k] for k in ('enheder', 'daaser', 'g', 't', 'r')}
         tjek('opgradering fra skema 11: backup taget, data intakte, nye felter med standardværdier, ingen Ik uden Ze',
-             r['navn'] == 'Skema 11-projekt' and r['b'] >= 1 and r['s'] == 12 and all(ens.values()) and r['std'] and r['ik'] and r['kf'] == 0,
+             r['navn'] == 'Skema 11-projekt' and r['b'] >= 1 and r['s'] == 13 and all(ens.values()) and r['std'] and r['ik'] and r['kf'] == 0,
              {'navn': r['navn'], 'b': r['b'], 's': r['s'], 'std': r['std'], 'ik': r['ik'], 'kf': r['kf']} | ens)
 
         # 4e. Kortslutningsstrøm og selektivitet med kendte tal (aftalt 2026-11-16). Ændringerne gemmes ikke.
@@ -383,6 +383,60 @@ async def main():
         tjek('kortslutning: Ik,min lige under Ia vises rundet ned (159,6 A står som 159 A, ikke 160 A)', r['afrund'] == [159.6, False, '159', True, True], r)
         tjek('selektivitet: forsikring under 1,6 × største sikring, gruppe foran undertavle, ingen dobbelt advarsel fra undertavlens egen forsikring, HPFI i serie med og uden type S, med i dokumentationen',
              r['sel1'] and r['sel2'] and r['sfu'] and r['sg1'] and r['sg2'] and r['hpfi1'] and r['hpfi2'] and r['hpfi3'] and r['hpfi4'] and r['doc'], r)
+
+        # 4g. Opgradering fra skema 12: data intakte, nye felter til føringsvej med tomme standardværdier
+        r0 = await pg.evaluate("""(()=>{const i=JSON.parse(localStorage.getItem('tavleoversigt.projekter'));i.schema=12;const id=i.aktiv;
+          const p=JSON.parse(localStorage.getItem('tavleoversigt.p.'+id));const fj=x=>{['fraEnhed','hoejde','placering','trukket','note'].forEach(k=>delete x[k]);};
+          p.enheder.forEach(fj);p.daaser.forEach(fj);p.afbrydere.forEach(a=>{fj(a);['daaseId','kabel','ledere','tv','laengde'].forEach(k=>delete a[k]);});p.tavler.forEach(t=>{delete t.tTrukket;delete t.tNote;});
+          p.projekt.navn='Skema 12-projekt';
+          localStorage.setItem('tavleoversigt.p.'+id,JSON.stringify(p));localStorage.setItem('tavleoversigt.projekter',JSON.stringify(i));localStorage.removeItem('tavleoversigt.backups');
+          const k=x=>JSON.stringify(x.map(e=>[e.id,e.navn,e.gruppeId,e.daaseId||e.parentId||'',e.kabel,e.ledere,e.tv,e.laengde]));
+          return {e:k(p.enheder), d:k(p.daaser), a:JSON.stringify(p.afbrydere.map(a=>[a.id,a.navn,a.art,a.a,a.b]))}})()""")
+        await pg.goto(URL); await pg.wait_for_timeout(500)
+        r = await pg.evaluate(f"""(()=>{{const a={A};const d=a.db;const k=x=>JSON.stringify(x.map(e=>[e.id,e.navn,e.gruppeId,e.daaseId||e.parentId||'',e.kabel,e.ledere,e.tv,e.laengde]));
+          return {{navn:d.projekt.navn, b:a.backups.length, s:JSON.parse(localStorage.getItem('tavleoversigt.projekter')).schema, e:k(d.enheder), d:k(d.daaser), a:JSON.stringify(d.afbrydere.map(x=>[x.id,x.navn,x.art,x.a,x.b])),
+            std:d.enheder.concat(d.daaser).every(x=>x.trukket===false&&x.note===''&&x.placering===''&&x.hoejde==='')&&d.enheder.every(e=>e.fraEnhed==='')&&d.afbrydere.every(x=>x.laengde===0&&x.daaseId===''&&x.fraEnhed==='')&&d.tavler.every(t=>t.tTrukket===false&&t.tNote==='')}}}})()""")
+        ens = {k: r[k] == r0[k] for k in ('e', 'd', 'a')}
+        tjek('opgradering fra skema 12: backup taget, data intakte, føringsvejens felter tomme',
+             r['navn'] == 'Skema 12-projekt' and r['b'] >= 1 and r['s'] == 13 and all(ens.values()) and r['std'], {'b': r['b'], 's': r['s'], 'std': r['std']} | ens)
+
+        # 4h. Føringsvej: sløjfer i ΔU og Ik, afbrydertræk, kopiér gren, kæde, trukket og note. Ryddes op bagefter
+        r = await pg.evaluate(f"""(async()=>{{const a={A};const T=n=>new Promise(f=>setTimeout(f,n));const d=a.db, n0=JSON.stringify([d.tavler.length,d.grupper.length,d.enheder.length,d.afbrydere.length]), sel0=a.sel, o={{}}, rd=x=>Math.round(x*100000)/100000;
+          const E=(id,navn,fra,L)=>({{id,gruppeId:'gf',lokaleId:'',daaseId:'',fraEnhed:fra,navn,effekt:230,kabel:'PVC',ledere:'3G',tv:2.5,laengde:L,symbol:'stik',hoejde:'',placering:'Væg A',trukket:false,note:''}});
+          try {{
+            d.tavler.push({{id:'tf',navn:'TF',placering:'',forsikring:35,hovedafbryder:0,fra:'',fraGruppe:'',tilgang:'',tKabel:'PVC',tLedere:'5G',tTv:6,tLaengde:0,ze:0.3,ikMaks:0,tTrukket:false,tNote:''}});
+            d.grupper.push({{id:'gf',tavleId:'tf',nr:1,navn:'F',type:'stik',kar:'B',In:10,faser:1,fase:'L1',rcdId:'',sf:1,brydeevne:6,maal:{{riso:'',zs:'',rcd:'',ok:false}},metode:'',temp:'',samlet:'',lag:''}});
+            d.enheder.push(E('f1','F1','',10)); const e1=a.enhed('f1'); o.du0=rd(a.du(e1));
+            d.enheder.push(E('f2','F2','f1',5)); const e2=a.enhed('f2');
+            o.du=[rd(a.du(e1)),rd(a.du(e2))]; o.I=[a.enhedI(e1),a.enhedI(e2)];
+            o.R=rd(a.enhedR(e2))===rd(a.rSloejfe('PVC',10,2.5)+a.rSloejfe('PVC',5,2.5));
+            d.afbrydere.push({{id:'af',navn:'AF',art:'enpolet',gruppeId:'gf',lokaleId:'',steder:1,tid:3,a:[],b:[],daaseId:'',fraEnhed:'f1',kabel:'PVC',ledere:'3G',tv:1.5,laengde:3,hoejde:'',placering:'',trukket:false,note:''}});
+            o.afbDu=rd(a.du(e1))===o.du[0]; o.afbRow=a.rows().some(x=>x.e.id==='aaf'&&x.e.laengde===3);
+            const tr=a.foeringTrae(), ix=k=>tr.findIndex(x=>x.k===k), dep=k=>(tr[ix(k)]||{{}}).dep;
+            o.trae=[dep('tavle:tf'),dep('gruppe:gf'),dep('enhed:f1'),dep('enhed:f2'),dep('afb:af')]; o.orden=ix('tavle:tf')<ix('gruppe:gf')&&ix('gruppe:gf')<ix('enhed:f1')&&ix('enhed:f1')<ix('enhed:f2');
+            const m0=a.materialer(); o.ikkeFoer=!m0.some(x=>x.gruppe==='Kabler, heraf ikke trukket'&&x.linjer.length);
+            a.fvSaet(tr[ix('enhed:f1')],'trukket',true); a.fvSaet(tr[ix('enhed:f2')],'note','venter på tømrer');
+            o.status=[e1.trukket,e2.note]; o.ikkeEfter=a.materialer().some(x=>x.gruppe==='Kabler, heraf ikke trukket'&&x.linjer.length);
+            a.fvIkke=true; const t2=a.foeringTrae(); a.fvIkke=false; const f1=t2.find(x=>x.k==='enhed:f1');
+            o.filter=!!f1&&f1.dim&&t2.some(x=>x.k==='enhed:f2'&&!x.dim);
+            o.kopier=a.grenKopier('enhed','f1',2,'Væg B'); const nye=d.enheder.filter(e=>e.gruppeId==='gf'&&!['f1','f2'].includes(e.id));
+            const rod=nye.filter(e=>!e.fraEnhed), boern=nye.filter(e=>e.fraEnhed);
+            o.gren=[nye.length,rod.length,boern.every(b=>rod.some(r=>r.id===b.fraEnhed)),nye.every(e=>e.placering==='Væg B'&&!e.trukket&&e.note===''),d.afbrydere.filter(x=>x.gruppeId==='gf').length];
+            o.grenDu=rd(a.du(boern[0]))===o.du[1];
+            a.openForm('enhed',null,{{gruppeId:'gf',navn:'U1',kabel:'PVC',ledere:'3G',tv:1.5,laengde:4}}); a.form.antal=3; a.form.kaede=true; a.saveForm();
+            const u=n=>d.enheder.find(e=>e.navn===n&&e.gruppeId==='gf'); o.kaede=[u('U1')&&u('U1').fraEnhed,u('U2')&&u('U3')&&u('U2').fraEnhed===u('U1').id&&u('U3').fraEnhed===u('U2').id];
+            a.modal={{type:'enhed',id:'f1'}}; a.delCurrent(); o.slet=[a.enhed('f2').fraEnhed, d.afbrydere.find(x=>x.id==='af').fraEnhed];
+            a.go('foering'); await T(200); o.vist=!!document.getElementById('fv-enhed-f2')&&document.querySelector('#fv-enhed-f2 .fv-note').value==='venter på tømrer';
+            a.go('tavle');
+          }} finally {{
+            a.sel=sel0; a.modal=null; await T(50); const g=x=>x.gruppeId!=='gf'; d.enheder=d.enheder.filter(g); d.afbrydere=d.afbrydere.filter(g); d.grupper=d.grupper.filter(x=>x.id!=='gf'); d.tavler=d.tavler.filter(x=>x.id!=='tf'); a.save();
+          }}
+          o.ryddet=JSON.stringify([d.tavler.length,d.grupper.length,d.enheder.length,d.afbrydere.length])===n0;
+          return o}})()""")
+        tjek('føringsvej: sløjfe i ΔU og Ik, afbrydertræk uden ΔU, træ, trukket og note, ikke trukket i materialeliste, kopiér gren, kæde, sletning',
+             r['du0'] == 0.07826 and r['du'] == [0.15652, 0.19565] and r['I'] == [2, 1] and r['R'] and r['afbDu'] and r['afbRow']
+             and r['trae'] == [0, 1, 2, 3, 3] and r['orden'] and r['ikkeFoer'] and r['status'] == [True, 'venter på tømrer'] and r['ikkeEfter'] and r['filter']
+             and r['kopier'] == 2 and r['gren'] == [4, 2, True, True, 3] and r['grenDu'] and r['kaede'] == ['', True] and r['slet'] == ['', ''] and r['vist'] and r['ryddet'], r)
 
         # 4f. Forslag til fasefordeling: vises først, ændrer intet før Anvend, og giver bedre balance
         r = await pg.evaluate(f"""(async()=>{{const a={A};const T=n=>new Promise(f=>setTimeout(f,n));const d=a.db, tid=d.tavler[0].id, gs=a.grupperFor(tid).filter(g=>g.faser!=3), gem=gs.map(g=>g.fase), o={{}};

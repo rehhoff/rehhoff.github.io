@@ -5,13 +5,13 @@ const APP_BEREGNING = () => ({
     strom(e) { const P = Number(e.effekt) || 0; return this.tre(e) ? P / (Math.sqrt(3) * 400) : P / 230; },
     du(e, tv) { const g = this.gruppe(e.gruppeId); return this.duLokal(e, tv) + (g ? this.tavleDu(g.tavleId, 0) : 0); },
     duLokal(e, tv) {
-      const I = this.strom(e), L = Number(e.laengde) || 0, A = Number(tv || e.tv) || 1;
-      return this.duSeg(I, L, A, this.tre(e)) + (e.daaseId ? this.duOp(e.daaseId) : 0);
+      const I = this.enhedI(e), L = Number(e.laengde) || 0, A = Number(tv || e.tv) || 1, did = this.enhedDaase(e);
+      return this.duSeg(I, L, A, this.tre(e)) + this.duSloejfe(e) + (did ? this.duOp(did) : 0);
     },
     duGraense(e) { return this.typeOf(e) === 'lys' ? 3 : 5; },
     duOver(e) { return !!Number(e.effekt) && this.du(e) > this.duGraense(e); },
     lmax(e) {
-      const I = this.strom(e), A = Number(e.tv) || 1, g = Math.max(0, this.duGraense(e) - (e.daaseId ? this.duOp(e.daaseId) : 0) - this.tavleDu((this.gruppe(e.gruppeId) || {}).tavleId, 0)) / 100; if (!I) return null;
+      const I = this.enhedI(e), A = Number(e.tv) || 1, did = this.enhedDaase(e), g = Math.max(0, this.duGraense(e) - (did ? this.duOp(did) : 0) - this.duSloejfe(e) - this.tavleDu((this.gruppe(e.gruppeId) || {}).tavleId, 0)) / 100; if (!I) return null;
       return this.tre(e) ? g * 400 * A / (Math.sqrt(3) * I * RHO) : g * 230 * A / (2 * I * RHO);
     },
     iz(e, tv) { return this.izBeregn(e.kabel, tv || e.tv, this.tre(e), this.forhold(this.gruppe(e.gruppeId))); },
@@ -121,7 +121,7 @@ const APP_BEREGNING = () => ({
       const z = this.tavleZe(op, (n || 0) + 1); return z == null ? null : z + this.rSloejfe(t.tKabel, t.tLaengde, t.tTv);
     },
     tavleIkMaks(tid, n) { const t = this.tavle(tid); if (!t || n > 8) return 0; if (Number(t.ikMaks) > 0) return Number(t.ikMaks); const op = this.tavleOp(t); return op ? this.tavleIkMaks(op, (n || 0) + 1) : 0; },
-    enhedR(e) { let r = this.rSloejfe(e.kabel, e.laengde, e.tv), d = this.daase(e.daaseId), n = 0; while (d && n++ < 20) { r += this.rSloejfe(d.kabel, d.laengde, d.tv); d = this.daase(d.parentId); } return r; },
+    enhedR(e) { let r = this.rSloejfe(e.kabel, e.laengde, e.tv) + this.sloejfeVej(e).reduce((s, p) => s + this.rSloejfe(p.kabel, p.laengde, p.tv), 0), d = this.daase(this.enhedDaase(e)), n = 0; while (d && n++ < 20) { r += this.rSloejfe(d.kabel, d.laengde, d.tv); d = this.daase(d.parentId); } return r; },
     ikMin(g) {
       const ze = this.tavleZe(g.tavleId); if (ze == null) return null;
       const rs = this.enhederFor(g.id).map(e => this.enhedR(e)).concat(this.underTavler(g.id).filter(u => Number(u.tLaengde) > 0).map(u => this.rSloejfe(u.tKabel, u.tLaengde, u.tTv)));
@@ -253,7 +253,7 @@ const APP_BEREGNING = () => ({
       return [
         { l:'Grupper', v:this.db.grupper.length }, { l:'Brugsgenstande', v:this.db.enheder.length }, { l:'Samlepunkter', v:this.db.daaser.length },
         { l:'PDS / CCTV', v:this.db.links.filter(l => l.art !== 'cctv').length + ' / ' + this.db.links.filter(l => l.art === 'cctv').length },
-        { l:'Elkabel i alt', v:this.fmt((this.sumLen(this.db.enheder.concat(this.db.daaser).map(e => ({ e }))) + this.db.tavler.reduce((s, t) => s + (Number(t.tLaengde) || 0), 0))) + ' m' },
+        { l:'Elkabel i alt', v:this.fmt((this.sumLen(this.db.enheder.concat(this.db.daaser, this.db.afbrydere).map(e => ({ e }))) + this.db.tavler.reduce((s, t) => s + (Number(t.tLaengde) || 0), 0))) + ' m' },
         { l:'Mangler kobling', v:this.mangler().length, w:this.mangler().length > 0 }, { l:'Kræver kontrol', v:w, w:w > 0 }
       ];
     },
@@ -263,11 +263,15 @@ const APP_BEREGNING = () => ({
       const f = this.filter, q = f.q.trim().toLowerCase();
       const rs = this.db.enheder.map(e => {
         const g = this.gruppe(e.gruppeId);
-        return { e, g, tn: g ? this.tavleNavn(g.tavleId) : '', lok:this.lokaleNavn(e.lokaleId), I:this.strom(e), du:this.du(e), over:this.duOver(e), lmax:this.lmax(e), iz:this.iz(e), izFejl:this.izFejl(e), via: e.daaseId ? 'via ' + this.daaseTxt(e.daaseId) : '' };
+        return { e, g, tn: g ? this.tavleNavn(g.tavleId) : '', lok:this.lokaleNavn(e.lokaleId), I:this.strom(e), du:this.du(e), over:this.duOver(e), lmax:this.lmax(e), iz:this.iz(e), izFejl:this.izFejl(e), via: e.fraEnhed && this.enhed(e.fraEnhed) ? 'sløjfe fra ' + this.enhed(e.fraEnhed).navn : e.daaseId ? 'via ' + this.daaseTxt(e.daaseId) : '' };
       }).concat(this.db.daaser.map(d => {
         const g = this.gruppe(d.gruppeId), P = this.nedstroem(d.id).reduce((s, e) => s + (Number(e.effekt) || 0), 0);
         return { d, e: Object.assign({}, d, { id:'d' + d.id, navn:d.type + ' ' + d.navn, effekt:P }), g, tn: g ? this.tavleNavn(g.tavleId) : '', lok:this.lokaleNavn(d.lokaleId), I:this.daaseI(d.id), du:this.duOp(d.id), over:false, lmax:null,
           iz:this.daaseIz(d), izFejl:this.daaseIzFejl(d), via: 'tilgang fra ' + (d.parentId ? this.daaseTxt(d.parentId) : 'tavle') };
+      })).concat(this.db.afbrydere.filter(a => Number(a.laengde) > 0).map(a => {
+        const g = this.gruppe(a.gruppeId), fra = this.enhed(a.fraEnhed);
+        return { a, e:{ id:'a' + a.id, navn:'Afbryder ' + a.navn, kabel:a.kabel, ledere:a.ledere, tv:a.tv, laengde:a.laengde, lokaleId:a.lokaleId, effekt:0 }, g, tn: g ? this.tavleNavn(g.tavleId) : '', lok:this.lokaleNavn(a.lokaleId), I:0, du:0, over:false, lmax:null, iz:null, izFejl:false,
+          via: 'træk fra ' + (fra ? fra.navn : a.daaseId ? this.daaseTxt(a.daaseId) : '?') + ' (ikke i ΔU)' };
       })).concat(this.db.tavler.filter(t => Number(t.tLaengde) > 0).map(t => {
         const g = this.gruppe(t.fraGruppe), I = this.tilgI(t);
         return { t, e:{ id:'t' + t.id, navn:'Tilgang til ' + t.navn, kabel:t.tKabel, ledere:t.tLedere, tv:t.tTv, laengde:t.tLaengde, lokaleId:'', effekt:Math.round(I * (this.tilg3(t) ? Math.sqrt(3) * 400 : 230)) }, g, tn: g ? this.tavleNavn(g.tavleId) : '',
@@ -288,14 +292,16 @@ const APP_BEREGNING = () => ({
     materialer() {
       const d = this.db, num = v => Number(v) || 0, tael = (liste, nøgle) => { const m = new Map(); for (const x of liste) { const k = nøgle(x); m.set(k, (m.get(k) || 0) + 1); } return [...m].sort((a, b) => a[0].localeCompare(b[0], 'da')).map(([tekst, antal]) => ({ tekst, antal, enhed:'stk' })); };
       const meter = new Map(), data = new Map();
-      for (const e of d.enheder.concat(d.daaser)) { const k = e.kabel + ' ' + this.kabelDim(e); meter.set(k, (meter.get(k) || 0) + num(e.laengde)); }
-      for (const t of d.tavler) if (num(t.tLaengde) > 0) { const k = t.tKabel + ' ' + t.tLedere + this.fmt(t.tTv) + ' mm²'; meter.set(k, (meter.get(k) || 0) + num(t.tLaengde)); }
+      const ikke = new Map(), laeg = (k, v, trukket) => { meter.set(k, (meter.get(k) || 0) + v); if (!trukket) ikke.set(k, (ikke.get(k) || 0) + v); };
+      for (const e of d.enheder.concat(d.daaser, d.afbrydere)) laeg(e.kabel + ' ' + this.kabelDim(e), num(e.laengde), e.trukket);
+      for (const t of d.tavler) if (num(t.tLaengde) > 0) laeg(t.tKabel + ' ' + t.tLedere + this.fmt(t.tTv) + ' mm²', num(t.tLaengde), t.tTrukket);
       for (const l of d.links) data.set(l.kabel, (data.get(l.kabel) || 0) + num(l.laengde));
       const lang = m => [...m].sort((a, b) => a[0].localeCompare(b[0], 'da')).map(([tekst, v]) => ({ tekst, antal:Math.ceil(Math.round(v * 100) / 100), enhed:'m' })).filter(x => x.antal > 0);
       const afb = new Map(); for (const a of d.afbrydere) { const k = this.afbArt[a.art] || a.art; const o = afb.get(k) || { antal:0, steder:0 }; o.antal++; o.steder += this.afbSteder(a); afb.set(k, o); }
       const afbL = [...afb].sort((a, b) => a[0].localeCompare(b[0], 'da')).map(([tekst, o]) => ({ tekst:tekst + (['Kroneafbryder', 'Korrespondanceafbryder', 'Krydsafbryder'].includes(tekst) ? ' (' + o.steder + ' betjeningssteder)' : ''), antal:o.antal, enhed:'stk' }));
       const ud = [
         { gruppe:'Kabler', linjer:lang(meter) },
+        { gruppe:'Kabler, heraf ikke trukket', linjer:d.enheder.concat(d.daaser, d.afbrydere).some(x => x.trukket) || d.tavler.some(t => t.tTrukket) ? lang(ikke) : [] },
         { gruppe:'Datakabler', linjer:lang(data) },
         { gruppe:'Samlepunkter', linjer:tael(d.daaser, x => x.type) },
         { gruppe:'Afbrydere', linjer:afbL },
