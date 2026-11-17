@@ -14,8 +14,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=10.13.0">
-<link rel="stylesheet" href="css/tailwind.css?v=10.13.0">
+<link rel="stylesheet" href="css/app.css?v=10.14.0">
+<link rel="stylesheet" href="css/tailwind.css?v=10.14.0">
 </head>
 <body class="min-h-full">
 <p id="fail" hidden style="margin:16px;padding:12px;border:1px solid var(--crit);color:var(--crit)">Appen kunne ikke starte, fordi Alpine.js ikke blev indlæst. Genindlæs siden.</p>
@@ -657,7 +657,7 @@
                     </template>
                   </td>
                   <td :class="!rcdNavn(g) && 'warn'" x-text="rcdNavn(g) || 'Mangler'"></td>
-                  <td class="r"><input class="inp inp-s num" style="width:4.4rem" type="number" min="0.1" max="1" step="0.05" :value="sfVal(g)" :id="'sf-' + g.id" :aria-label="'Samtidighedsfaktor for gruppe ' + g.nr" :title="'Forslag: ' + fmt(sfForslag(g).v, 2) + ' (' + sfForslag(g).txt + ')'" @change="setSf(g.id, $event.target.value)"></td>
+                  <td class="r"><input class="inp inp-s num" style="width:4.4rem" type="number" min="0.1" max="1" step="0.05" :value="sfVal(g)" :id="'sf-' + g.id" :aria-label="'Samtidighedsfaktor for gruppe ' + g.nr" :title="'Forslag: ' + fmt(sfForslag(g).v, 2) + ' (' + sfForslag(g).txt + ')'" @change="setSf(g.id, $event.target.value)"><button type="button" class="btn btn-ghost px-1" :aria-label="'Typiske samtidighedsfaktorer for gruppe ' + g.nr" title="Typiske samtidighedsfaktorer" aria-haspopup="listbox" @click="sfAabn($event, g.id)">▾</button></td>
                   <td class="num r" :class="gruppeI(g.id) > g.In && 'warn'" x-text="fmt(gruppeI(g.id)) + ' A'"></td>
                   <td><div class="meter" :class="gruppeI(g.id) > g.In && 'over'"><i :style="'width:' + Math.min(100, gruppeI(g.id)/g.In*100) + '%'"></i></div></td>
                   <td class="num r" :class="maxDu(g.id).over && 'warn'" x-text="maxDu(g.id).v == null ? '–' : fmt(maxDu(g.id).v, 2) + ' %'"></td>
@@ -1240,7 +1240,7 @@
               <select id="m-rcd" class="inp" x-model="form.rcdId"><option value="">Ingen</option>
                 <template x-for="r in rcdsFor(form.tavleId)" :key="r.id"><option :value="r.id" :selected="form.rcdId===r.id" x-text="r.navn"></option></template></select></label>
             <label class="f" for="m-sf">Samtidighedsfaktor (0,1 til 1)<input id="m-sf" class="inp num" type="number" min="0.1" max="1" step="0.05" x-model.number="form.sf"></label>
-            <div class="text-xs num self-end pb-2"><button type="button" class="underline text-left" style="color:var(--accent)" @click="form.sf = sfForslag(form).v" x-text="'Brug forslag: ' + fmt(sfForslag(form).v, 2) + ' (' + sfForslag(form).txt + ')'"></button></div>
+            <div class="text-xs num self-end pb-2"><button type="button" id="m-sf-liste" class="underline text-left" style="color:var(--accent)" aria-haspopup="listbox" @click="sfAabn($event)" x-text="'Forslag: ' + fmt(sfForslag(form).v, 2) + ' (' + sfForslag(form).txt + ') ▾'"></button></div>
             <label class="f" for="m-bryde">Brydeevne (kA)<input id="m-bryde" class="inp num" type="number" min="1" step="0.5" x-model.number="form.brydeevne"></label>
             <div class="sm:col-span-2 border-t border-line pt-2 text-xs font-semibold uppercase tracking-wider text-muted">Fremføring til I<sub>z</sub>. Tom = projektets standard fra Beregning</div>
             <label class="f" for="m-metode">Installationsmetode
@@ -1297,7 +1297,20 @@
                 <template x-for="a in tvs" :key="a"><option :value="a" :selected="form.tv==a" x-text="fmt(a)"></option></template></select></label>
             <label class="f" for="m-len">Længde (m)<input id="m-len" class="inp num" type="number" min="0" step="0.5" x-model.number="form.laengde" required></label>
             <label class="f" for="m-antal" x-show="!mid()">Antal (nummereres automatisk)<input id="m-antal" class="inp num" type="number" min="1" max="20" step="1" x-model.number="form.antal"></label>
-            <label class="flex items-center gap-2 text-sm self-end pb-2" for="m-kaede" x-show="!mid() && form.antal > 1"><input type="checkbox" id="m-kaede" x-model="form.kaede"> Sløjf efter hinanden (1 → 2 → 3 …)</label>
+            <label class="flex items-center gap-2 text-sm self-end pb-2" for="m-kaede" x-show="!mid() && form.antal > 1"><input type="checkbox" id="m-kaede" x-model="form.kaede" @change="if (form.kaede && !form.kKabel) Object.assign(form, { kKabel:form.kabel, kLedere:form.ledere, kTv:form.tv, kLaengde:form.laengde })"> Sløjf efter hinanden (1 → 2 → 3 …)</label>
+            <template x-if="!mid() && form.antal > 1 && form.kaede"><fieldset class="sm:col-span-2 border border-line rounded p-2 grid gap-3 sm:grid-cols-2">
+              <legend class="px-1 text-xs font-semibold uppercase tracking-wider text-muted">Sløjfekabel mellem dem</legend>
+              <p class="text-xs text-muted sm:col-span-2" x-text="'Kablet ovenfor går til den første (' + (form.navn || 'nr. 1') + '). Sløjfekablet går fra hver til den næste.'"></p>
+              <label class="f" for="m-kkabel">Kabeltype
+                <select id="m-kkabel" class="inp" x-model="form.kKabel">
+                  <template x-for="k in kabeltyper" :key="k"><option :value="k" :selected="form.kKabel===k" x-text="k"></option></template></select></label>
+              <label class="f" for="m-kled">Ledere
+                <select id="m-kled" class="inp num" x-model="form.kLedere"><template x-for="l in ['2X','3G','4G','5G']" :key="l"><option :value="l" :selected="form.kLedere===l" x-text="l"></option></template></select></label>
+              <label class="f" for="m-ktv">Tværsnit (mm²)
+                <select id="m-ktv" class="inp num" x-model.number="form.kTv">
+                  <template x-for="a in tvs" :key="a"><option :value="a" :selected="form.kTv==a" x-text="fmt(a)"></option></template></select></label>
+              <label class="f" for="m-klen">Længde pr. sløjfe (m)<input id="m-klen" class="inp num" type="number" min="0" step="0.5" x-model.number="form.kLaengde"></label>
+            </fieldset></template>
             <label class="f" for="m-eplac">Placering<input id="m-eplac" class="inp" x-model="form.placering" placeholder="Væg A, loft …"></label>
             <label class="f" for="m-ehoejde">Højde over gulv (cm)<input id="m-ehoejde" class="inp num" type="number" min="0" step="1" x-model.number="form.hoejde"></label>
             <label class="flex items-center gap-2 text-sm self-end pb-2" for="m-etrukket"><input type="checkbox" id="m-etrukket" x-model="form.trukket"> Kablet er trukket</label>
@@ -1475,6 +1488,18 @@
     </template>
   </div>
   <!-- Hurtig oprettelse fra dropdown -->
+  <template x-if="sfPop">
+    <div class="fixed inset-0 z-[70]" @click.self="sfPop=null">
+      <div class="panel shadow-xl absolute sf-pop" role="listbox" aria-label="Typiske samtidighedsfaktorer" :style="'left:' + sfPop.left + 'px;width:' + sfPop.w + 'px;' + (sfPop.op ? 'bottom:' + (innerHeight - sfPop.top) + 'px' : 'top:' + sfPop.top + 'px')">
+        <p class="px-3 pt-2 pb-1 text-xs font-semibold uppercase tracking-wider text-muted">Typiske samtidighedsfaktorer</p>
+        <template x-for="(x, i) in sfListe(sfPop.gid ? gruppe(sfPop.gid) : form)" :key="i">
+          <button type="button" role="option" class="sf-valg w-full flex justify-between gap-3 px-3 py-1.5 text-sm text-left" :class="(x.forslag || x.aktiv) && 'font-semibold'" @click="sfVaelg(x.v)">
+            <span x-text="x.txt"></span><span class="num" x-text="fmt(x.v, 2)"></span></button>
+        </template>
+        <p class="px-3 py-2 text-xs text-muted border-t border-line">Vejledende. Ret selv værdien, hvis du kender belastningen bedre.</p>
+      </div>
+    </div>
+  </template>
   <div x-show="hurtig.aaben" class="fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto p-4" style="background:rgba(0,0,0,.6)" @click.self="hurtig.aaben=false">
     <form class="panel w-full max-w-md mt-16 shadow-xl" role="dialog" aria-modal="true" @submit.prevent="hurtigGem()">
       <header class="border-b border-line bg-raised px-4 py-3">
@@ -1524,12 +1549,12 @@
   </div>
 </div>
 
-<script src="js/data.js?v=10.13.0"></script>
-<script src="js/beregning.js?v=10.13.0"></script>
-<script src="js/diagram.js?v=10.13.0"></script>
-<script src="js/lagring.js?v=10.13.0"></script>
-<script src="js/historik.js?v=10.13.0"></script>
-<script src="js/app.js?v=10.13.0"></script>
+<script src="js/data.js?v=10.14.0"></script>
+<script src="js/beregning.js?v=10.14.0"></script>
+<script src="js/diagram.js?v=10.14.0"></script>
+<script src="js/lagring.js?v=10.14.0"></script>
+<script src="js/historik.js?v=10.14.0"></script>
+<script src="js/app.js?v=10.14.0"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.14.1/cdn.min.js"></script>
 </body>
 </html>

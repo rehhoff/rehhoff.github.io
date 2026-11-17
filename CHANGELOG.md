@@ -2,6 +2,12 @@
 
 Nyeste øverst. Versionsnummeret står også i appen som `APP_VERSION`. Hver version siger, hvilken model der lavede den.
 
+## 10.14.0 · 2026-11-17 · Claude Opus
+
+- Samtidighedsfaktor: forslaget i gruppeformularen og knappen ▾ ved faktoren i Beregning åbner en liste med typiske faktorer. Listen viser forslaget, samme gruppetype for hver installationstype og særtilfældene (én belastning, varme og ladning, omklædning). Et klik sætter faktoren. Værdierne er de samme vejledende værdier som før; ingen nye.
+- Sløjf efter hinanden: ved flere brugsgenstande med "Sløjf efter hinanden" vælges sløjfekablet mellem dem (kabeltype, ledere, tværsnit og længde pr. sløjfe). Kablet i formularen går til den første.
+- Ingen ændring af datamodellen. `SCHEMA` er uændret 13.
+
 ## 10.13.0 · 2026-11-17 · Claude Opus
 
 Føringsvej og trukne kabler. Plan: `docs/planer/2026-11-17-foeringsvej.md`.
