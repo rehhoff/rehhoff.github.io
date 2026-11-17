@@ -2,6 +2,18 @@
 
 Nyeste øverst. Versionsnummeret står også i appen som `APP_VERSION`. Hver version siger, hvilken model der lavede den.
 
+## 10.13.0 · 2026-11-17 · Claude Opus
+
+Føringsvej og trukne kabler. Plan: `docs/planer/2026-11-17-foeringsvej.md`.
+
+- Ny fane **Føringsvej**: et træ pr. tavle og gruppe, der viser hvert kabeltræk fra tavlen gennem samlepunkter og sløjfer til brugsgenstande og afbrydere, med kabeltype, ledere, tværsnit, længde, placering og højde. Lokalefilteret viser lokalets træk og vejen dertil.
+- Hvert træk har et flueben (trukket) og en note, fx "venter på tømrer". Filteret "Kun ikke trukket" og optællingen af trukne og manglende meter.
+- En brugsgenstand kan sløjfes fra en anden (fx vægudtag → vægudtag → stikkontakt). ΔU, l<sub>max</sub> og I<sub>k,min</sub> følger sløjfen. Uden sløjfer er alle tal som før.
+- En afbryder kan have sit eget træk fra en dåse eller en brugsgenstand. Det kommer i kabelliste, materialeliste og føringsvej, men ikke i ΔU.
+- Hurtig indtastning: **+ Sløjfe** kopierer kabel, lokale, placering og højde fra forrige træk. **Kopiér** kopierer en hel gren (fx en væg) med ny placering. Ved flere stk. kan de sløjfes efter hinanden.
+- Materialelisten viser "Kabler, heraf ikke trukket", når mindst ét træk er markeret som trukket.
+- Datamodel: `SCHEMA` 13 med nye felter (se `docs/ARKITEKTUR.md`). Ingen felter er fjernet. Første start tager en backup.
+
 ## 10.12.2 · 2026-11-16 · Claude Opus
 
 Selektivitet for undertavler (forslag 18, godkendt af Alexander).

@@ -49,18 +49,18 @@ Faner i `views`: Tavle, Enstregsdiagram, Tændingsdiagram, Samlepunkter & dåser
 | Liste | Felter |
 |---|---|
 | `projekt` | `navn, sagsnr, kunde, adresse, installatoer, dato, anlaeg, sidst{kabel, ledere, tv}, metode, temp, jtemp, samlet, lag` (skema 10, standard `C, 30, 20, 1, bundt`) |
-| `tavler` | `id, navn, placering, forsikring, hovedafbryder, fra, fraGruppe, tilgang, tKabel, tLedere, tTv, tLaengde, tMetode, tTemp, tSamlet, tLag` (tom = projektets standard), `ze` (Ω), `ikMaks` (kA) (skema 12, 0 = ukendt) |
+| `tavler` | `id, navn, placering, forsikring, hovedafbryder, fra, fraGruppe, tilgang, tKabel, tLedere, tTv, tLaengde, tMetode, tTemp, tSamlet, tLag` (tom = projektets standard), `ze` (Ω), `ikMaks` (kA) (skema 12, 0 = ukendt), `tTrukket`, `tNote` (skema 13, tilgangskablets status) |
 | `rcds` | `id, tavleId, navn, type, In, idn, selektiv` (skema 12: type S) |
 | `lokaler` | `id, navn, etage` |
 | `grupper` | `id, tavleId, nr, navn, type (lys, kraft, stik, data), kar, In, faser, fase, rcdId, sf, maal{riso, zs, rcd, ok}, metode, temp, samlet, lag` (tom = projektets standard), `brydeevne` (kA, skema 12, standard 6) |
-| `enheder` | `id, gruppeId, lokaleId, daaseId, navn, effekt (W), kabel, ledere, tv, laengde, symbol` |
-| `daaser` | `id, navn, type, gruppeId, parentId, lokaleId, kabel, ledere, tv, laengde` |
-| `afbrydere` | `id, navn, art (enpolet, krone, korr, kryds, kip, trappe, sensor), gruppeId, lokaleId, steder, tid, a[], b[]`. `kryds` (skema 11): `steder` er antal betjeningssteder, 3 til 6 |
+| `enheder` | `id, gruppeId, lokaleId, daaseId, navn, effekt (W), kabel, ledere, tv, laengde, symbol`, `fraEnhed` (sløjfet fra en anden brugsgenstand, arver gruppe og `daaseId`), `hoejde` (cm), `placering`, `trukket`, `note` (skema 13) |
+| `daaser` | `id, navn, type, gruppeId, parentId, lokaleId, kabel, ledere, tv, laengde`, `hoejde`, `placering`, `trukket`, `note` (skema 13) |
+| `afbrydere` | `id, navn, art (enpolet, krone, korr, kryds, kip, trappe, sensor), gruppeId, lokaleId, steder, tid, a[], b[]`. `kryds` (skema 11): `steder` er antal betjeningssteder, 3 til 6. Skema 13: eget træk `daaseId` eller `fraEnhed`, `kabel, ledere, tv, laengde` (0 = intet træk, indgår ikke i ΔU), `hoejde`, `placering`, `trukket`, `note` |
 | `racks` | `id, navn, type, he, lokaleId, gruppeId` |
 | `udstyr` | `id, rackId, navn, art, he, pos, porte, poe, poeBudget, effekt` |
 | `links` | `id, art (data, cctv), navn, lokaleId, kabel, laengde, panelId, panelPort, switchId, switchPort, patch, poeW, kamType, oploesning, nvrId` |
 
-Relationer: gruppe → tavle, gruppe → HPFI, brugsgenstand → gruppe, lokale og evt. samledåse, samledåse → gruppe og evt. overordnet dåse, undertavle → tavle og evt. gruppe (`fraGruppe`), link → patchpanel, switch og NVR.
+Relationer: gruppe → tavle, gruppe → HPFI, brugsgenstand → gruppe, lokale og evt. samledåse eller en anden brugsgenstand (sløjfe), afbryder → evt. dåse eller brugsgenstand (træk), samledåse → gruppe og evt. overordnet dåse, undertavle → tavle og evt. gruppe (`fraGruppe`), link → patchpanel, switch og NVR.
 
 ## Centrale funktioner
 
@@ -72,6 +72,7 @@ Relationer: gruppe → tavle, gruppe → HPFI, brugsgenstand → gruppe, lokale 
 | Strøm og last | `strom`, `instI`, `egenI`, `gruppeI`, `gruppeFaser`, `subFaser`, `faseInfo`, `fasePlan`, `faseForesla`, `faseAnvend` (forslag til fasefordeling, tilstand i `faseFs`), `autoBalance` |
 | Kabler | `materialer`, `materialeTsv` (materialeliste), `du`, `duLokal`, `duOp`, `tavleDu`, `tilgDu`, `iz`, `izFejl`, `forslag`, `lmax`, `daaseIz`, `tilgIz` |
 | I<sub>z</sub> | `forhold` (gruppens eller tilgangskablets forhold med projektets standard), `izTabel`, `izBeregn`, `kTemp`, `kSamlet`, `korrektion`, `forholdTxt`. Tabeller i `js/data.js`: `IZT`, `METODER`, `ISO`, `TEMPS`, `K_TEMP`, `KREDSE`, `LAG`, `K_JORD_SAMLET`. `IZ` er et alias for PVC, metode C |
+| Føringsvej | `enhed`, `sloejfer`, `enhedNed`, `enhedI` (strøm i trækket inkl. sløjfer), `enhedRod`, `enhedDaase`, `duSloejfe`, `sloejfeVej`, `foeringTrae`, `fvSaet`, `fvNy`, `fvOptael`, `grenKopier` (kopiér gren), `sloejfeValg`, `afbFraSaet` |
 | Kontrol | `gruppeFejl`, `warnings`, `mangler`, `linkFejl`, `maalVurdering`, `zsMax`, `maalTal` |
 | Kortslutning og selektivitet | `ia` (I<sub>a</sub>), `kLeder`, `rSloejfe`, `tavleOp`, `tavleZe`, `tavleIkMaks`, `enhedR`, `ikMin`, `ikVis`, `ikTxt`, `brydeFejl`, `kortslutFejl`, `rcdForan`, `selektivitet`. Advarslernes nøgler begynder med `ik:`, `kb:`, `sf:`, `sg:` og `sr:` |
 | Forslag | `effektForslag`, `sfForslag`, `daaseParse`, `symbolFor` |

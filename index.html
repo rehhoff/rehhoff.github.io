@@ -14,8 +14,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=10.12.2">
-<link rel="stylesheet" href="css/tailwind.css?v=10.12.2">
+<link rel="stylesheet" href="css/app.css?v=10.13.0">
+<link rel="stylesheet" href="css/tailwind.css?v=10.13.0">
 </head>
 <body class="min-h-full">
 <p id="fail" hidden style="margin:16px;padding:12px;border:1px solid var(--crit);color:var(--crit)">Appen kunne ikke starte, fordi Alpine.js ikke blev indlæst. Genindlæs siden.</p>
@@ -88,7 +88,7 @@
   <nav class="flex flex-col lg:flex-row lg:flex-wrap lg:items-center border-b border-line">
     <div class="faner flex overflow-x-auto lg:contents" role="tablist">
     <template x-for="(v, i) in views" :key="v.id">
-      <button class="tab hd" role="tab" :aria-selected="view===v.id" @click="go(v.id)"><kbd x-text="(i+1) % 10"></kbd><span x-text="v.l"></span><span x-show="v.id==='fejlfinder' && mangler().length" class="tag warn num" x-text="mangler().length"></span></button>
+      <button class="tab hd" role="tab" :aria-selected="view===v.id" @click="go(v.id)"><kbd x-show="i < 10" x-text="(i+1) % 10"></kbd><span x-text="v.l"></span><span x-show="v.id==='fejlfinder' && mangler().length" class="tag warn num" x-text="mangler().length"></span></button>
     </template>
     </div>
     <div class="lg:ml-auto flex flex-wrap items-center gap-1 py-2">
@@ -415,6 +415,51 @@
       </table>
     </div>
     <p class="text-xs text-muted" x-show="db.daaser.length">Indrykning viser forgreningen: en underdåse forsynes fra dåsen over den. Strøm og spændingsfald er summeret for alt, der ligger efter samlepunktet.</p>
+  </section>
+
+  <!-- ============ FØRINGSVEJ ============ -->
+  <section x-show="view==='foering'" class="flex flex-col gap-3">
+    <div class="flex flex-wrap gap-2 items-center">
+      <label class="flex items-center gap-2 text-sm" for="fv-ikke"><input type="checkbox" id="fv-ikke" x-model="fvIkke"> Kun ikke trukket</label>
+      <span class="tag num" x-text="'Trukket: ' + fmt(fvOptael().trukket) + ' m'"></span>
+      <span class="tag num" :class="fvOptael().ikke > 0 && 'warn'" x-text="'Ikke trukket: ' + fmt(fvOptael().ikke) + ' m'"></span>
+    </div>
+    <p class="text-xs text-muted">Hver linje er ét kabeltræk: fra tavlen gennem samlepunkter og sløjfer til brugsgenstande og afbrydere. Sæt flueben, når kablet er trukket, og skriv en note, fx "venter på tømrer". <strong>+ Sløjfe</strong> laver en ny brugsgenstand med samme kabel, og <strong>Kopiér</strong> kopierer en hel gren, fx en væg med udtag og stikkontakter.</p>
+    <p x-show="!db.grupper.length" class="panel p-6 text-muted">Opret en tavle og en gruppe først.</p>
+    <div class="panel" x-show="db.grupper.length">
+      <template x-for="r in (view==='foering' ? foeringTrae() : [])" :key="r.k">
+        <div class="fv flex flex-wrap items-center gap-x-3 gap-y-1 py-1.5 pr-2 border-b border-line" :class="[r.dim && 'fv-dim', 'fv-' + r.kind]" :style="'--d:' + Math.min(r.dep, 10)" :id="'fv-' + r.k.replace(':', '-')">
+          <span class="w-5 shrink-0 flex justify-center">
+            <input type="checkbox" x-show="r.kabel" :checked="fvTrukket(r)" @change="fvSaet(r, 'trukket', $event.target.checked)" :aria-label="'Trukket: ' + fvNavn(r)" title="Trukket">
+          </span>
+          <span class="min-w-0" :class="(r.kind === 'tavle' || r.kind === 'gruppe') ? 'font-semibold' : 'font-medium'">
+            <span x-show="r.dep > 1" class="text-muted">└ </span>
+            <span x-show="r.kind === 'daase'" x-html="ikon('daase')"></span>
+            <span x-show="r.kind === 'gruppe'" class="typed chip" :class="r.kind === 'gruppe' ? r.o.type : ''" x-text="r.kind === 'gruppe' ? (typeLabel[r.o.type] || r.o.type) : ''"></span>
+            <span :class="fvTrukket(r) && r.kabel && 'line-through text-muted'" x-text="fvNavn(r)"></span>
+            <span class="block text-xs font-normal text-muted" x-show="fvSted(r)" x-text="fvSted(r)"></span>
+          </span>
+          <span class="num text-sm text-muted" x-show="r.kabel" x-text="fvKabelTxt(r)"></span>
+          <input x-show="r.kabel" class="inp inp-s fv-note" type="text" placeholder="Note" :value="fvNote(r)" @change="fvSaet(r, 'note', $event.target.value.trim())" :aria-label="'Note til ' + fvNavn(r)">
+          <span class="ml-auto flex flex-wrap justify-end">
+            <template x-if="r.kind === 'gruppe'"><span class="contents">
+              <button class="btn btn-ghost" @click="fvNy('daase', r)">+ Dåse</button>
+              <button class="btn btn-ghost" @click="fvNy('enhed', r)">+ Brugsgenstand</button></span></template>
+            <template x-if="r.kind === 'daase'"><span class="contents">
+              <button class="btn btn-ghost" @click="fvNy('daase', r)">+ Dåse</button>
+              <button class="btn btn-ghost" @click="fvNy('enhed', r)">+ Afgang</button>
+              <button class="btn btn-ghost" @click="fvNy('afbryder', r)">+ Afbryder</button>
+              <button class="btn btn-ghost" @click="grenAabn(r)">Kopiér</button></span></template>
+            <template x-if="r.kind === 'enhed'"><span class="contents">
+              <button class="btn btn-ghost" @click="fvNy('enhed', r)">+ Sløjfe</button>
+              <button class="btn btn-ghost" @click="fvNy('afbryder', r)">+ Afbryder</button>
+              <button class="btn btn-ghost" @click="grenAabn(r)">Kopiér</button></span></template>
+            <button x-show="r.kind !== 'gruppe'" class="btn btn-ghost" @click="fvRediger(r)">Rediger</button>
+          </span>
+        </div>
+      </template>
+      <p x-show="view==='foering' && !foeringTrae().length" class="p-6 text-muted">Ingen træk matcher filtrene.</p>
+    </div>
   </section>
 
   <!-- ============ SVAGSTRØM ============ -->
@@ -1047,6 +1092,20 @@
         </footer>
       </form>
     </template>
+    <template x-if="modal && modal.type==='gren' && gren">
+      <form class="panel w-full max-w-lg mt-8 shadow-xl" role="dialog" aria-modal="true" @submit.prevent="grenGem()">
+        <header class="border-b border-line bg-raised px-4 py-3"><h2 class="hd text-xl">Kopiér gren</h2>
+          <p class="text-xs text-muted" x-text="'Kopierer ' + gren.navn + ' og alt, der er sløjfet eller forsynet fra den, med samme kabler. Kopien er ikke trukket.'"></p></header>
+        <div class="grid gap-3 p-4 sm:grid-cols-2">
+          <label class="f" for="gren-plac">Ny placering (valgfri)<input id="gren-plac" class="inp" x-model="gren.placering" placeholder="Væg B"></label>
+          <label class="f" for="gren-antal">Antal kopier<input id="gren-antal" class="inp num" type="number" min="1" max="20" step="1" x-model.number="gren.antal"></label>
+        </div>
+        <footer class="flex justify-end gap-2 border-t border-line px-4 py-3">
+          <button type="button" class="btn" @click="modal=null; gren=null">Annuller</button>
+          <button type="submit" class="btn btn-primary">Kopiér</button>
+        </footer>
+      </form>
+    </template>
     <template x-if="modal && modal.type==='historik'">
       <div class="panel w-full max-w-lg mt-8 shadow-xl" role="dialog" aria-modal="true" aria-labelledby="hist-t">
         <header class="border-b border-line bg-raised px-4 py-3 flex justify-between items-center"><h2 id="hist-t" class="hd text-xl">Tidligere versioner</h2><button class="btn" @click="modal=null">Luk</button></header>
@@ -1118,6 +1177,8 @@
             <label class="f" for="m-ttv">Tværsnit (mm²)
               <select id="m-ttv" class="inp num" x-model.number="form.tTv"><template x-for="a in tvs" :key="a"><option :value="a" :selected="form.tTv==a" x-text="fmt(a)"></option></template></select></label>
             <label class="f" for="m-tlen">Længde (m)<input id="m-tlen" class="inp num" type="number" min="0" step="0.5" x-model.number="form.tLaengde"></label>
+            <label class="flex items-center gap-2 text-sm self-end pb-2" for="m-ttrukket" x-show="form.tLaengde > 0"><input type="checkbox" id="m-ttrukket" x-model="form.tTrukket"> Tilgangskablet er trukket</label>
+            <label class="f" for="m-tnote" x-show="form.tLaengde > 0">Note til trækket<input id="m-tnote" class="inp" x-model="form.tNote" placeholder="Venter på tømrer"></label>
             <div class="sm:col-span-2 border-t border-line pt-2 text-xs font-semibold uppercase tracking-wider text-muted">Fremføring til I<sub>z</sub>. Tom = projektets standard fra Beregning</div>
             <label class="f" for="m-tmetode">Installationsmetode
               <select id="m-tmetode" class="inp" x-model="form.tMetode"><option value="" :selected="!form.tMetode" x-text="'Projektets standard (' + db.projekt.metode + ')'"></option>
@@ -1205,7 +1266,10 @@
             <label class="f" for="m-lokale">Lokale
               <select id="m-lokale" class="inp" x-model="form.lokaleId" @change="nyValg($event, 'lokale', 'lokaleId')"><option value="">Ikke tildelt</option><option value="__ny">+ Opret nyt lokale …</option>
                 <template x-for="l in db.lokaler" :key="l.id"><option :value="l.id" :selected="form.lokaleId===l.id" x-text="l.navn"></option></template></select></label>
-            <label class="f sm:col-span-2" for="m-via">Via samlepunkt
+            <label class="f sm:col-span-2" for="m-fra">Sløjfet fra brugsgenstand
+              <select id="m-fra" class="inp" x-model="form.fraEnhed" @change="sloejfeValg()"><option value="">Ingen sløjfe</option>
+                <template x-for="e in db.enheder.filter(e => e.id !== mid() && (!form.gruppeId || e.gruppeId === form.gruppeId) && !(mid() && erSloejfetUnder(e.id, mid())))" :key="e.id"><option :value="e.id" :selected="form.fraEnhed===e.id" x-text="e.navn + ' · ' + lokaleNavn(e.lokaleId) + (e.placering ? ' · ' + e.placering : '')"></option></template></select></label>
+            <label class="f sm:col-span-2" for="m-via" x-show="!form.fraEnhed">Via samlepunkt
               <select id="m-via" class="inp" x-model="form.daaseId" @change="nyValg($event, 'daase', 'daaseId')"><option value="">Direkte fra tavle</option><option value="__ny">+ Opret nyt samlepunkt …</option>
                 <template x-for="d in db.daaser.filter(d => !form.gruppeId || d.gruppeId === form.gruppeId)" :key="d.id"><option :value="d.id" :selected="form.daaseId===d.id" x-text="daaseTxt(d.id) + ' · ' + gruppeTxt(d.gruppeId)"></option></template></select></label>
             <label class="f sm:col-span-2" for="m-sym">Symbol i enstregsdiagram
@@ -1233,6 +1297,11 @@
                 <template x-for="a in tvs" :key="a"><option :value="a" :selected="form.tv==a" x-text="fmt(a)"></option></template></select></label>
             <label class="f" for="m-len">Længde (m)<input id="m-len" class="inp num" type="number" min="0" step="0.5" x-model.number="form.laengde" required></label>
             <label class="f" for="m-antal" x-show="!mid()">Antal (nummereres automatisk)<input id="m-antal" class="inp num" type="number" min="1" max="20" step="1" x-model.number="form.antal"></label>
+            <label class="flex items-center gap-2 text-sm self-end pb-2" for="m-kaede" x-show="!mid() && form.antal > 1"><input type="checkbox" id="m-kaede" x-model="form.kaede"> Sløjf efter hinanden (1 → 2 → 3 …)</label>
+            <label class="f" for="m-eplac">Placering<input id="m-eplac" class="inp" x-model="form.placering" placeholder="Væg A, loft …"></label>
+            <label class="f" for="m-ehoejde">Højde over gulv (cm)<input id="m-ehoejde" class="inp num" type="number" min="0" step="1" x-model.number="form.hoejde"></label>
+            <label class="flex items-center gap-2 text-sm self-end pb-2" for="m-etrukket"><input type="checkbox" id="m-etrukket" x-model="form.trukket"> Kablet er trukket</label>
+            <label class="f" for="m-enote">Note til trækket<input id="m-enote" class="inp" x-model="form.note" placeholder="Venter på tømrer"></label>
             <div class="text-xs num self-end pb-2" x-show="form.gruppeId">
               <div :class="duOver(form) && 'warn'" x-text="'ΔU ' + fmt(du(form), 2) + ' % (grænse ' + duGraense(form) + ' %)'"></div>
               <div :title="korrektion(gruppe(form.gruppeId), '', form.kabel).txt" :class="izFejl(form) && 'warn'" x-text="'Iz ' + fmt(iz(form)) + ' A · sikring ' + (gruppe(form.gruppeId) ? gruppe(form.gruppeId).In : '?') + ' A'"></div>
@@ -1255,6 +1324,26 @@
                 <template x-for="l in db.lokaler" :key="l.id"><option :value="l.id" :selected="form.lokaleId===l.id" x-text="l.navn"></option></template></select></label>
             <label class="f" for="m-asted" x-show="form.art==='kip' || form.art==='trappe'">Antal tryk (1 til 6)<input id="m-asted" class="inp num" type="number" min="1" max="6" step="1" x-model.number="form.steder"></label>
             <label class="f" for="m-akryds" x-show="form.art==='kryds'">Antal betjeningssteder (3 til 6)<input id="m-akryds" class="inp num" type="number" min="3" max="6" step="1" x-model.number="form.steder"></label>
+            <label class="f sm:col-span-2" for="m-afra">Træk til afbryderen fra
+              <select id="m-afra" class="inp" @change="afbFraSaet($event.target.value)"><option value="" :selected="!form.daaseId && !form.fraEnhed">Intet træk registreret</option>
+                <template x-for="d in db.daaser.filter(d => !form.gruppeId || d.gruppeId === form.gruppeId)" :key="d.id"><option :value="'d:' + d.id" :selected="!form.fraEnhed && form.daaseId===d.id" x-text="daaseTxt(d.id) + ' · ' + lokaleNavn(d.lokaleId)"></option></template>
+                <template x-for="e in db.enheder.filter(e => !form.gruppeId || e.gruppeId === form.gruppeId)" :key="e.id"><option :value="'e:' + e.id" :selected="form.fraEnhed===e.id" x-text="e.navn + ' · ' + lokaleNavn(e.lokaleId)"></option></template></select></label>
+            <template x-if="form.daaseId || form.fraEnhed"><div class="contents">
+            <label class="f" for="m-akabel">Kabeltype
+              <select id="m-akabel" class="inp" x-model="form.kabel">
+                <template x-for="k in kabeltyper" :key="k"><option :value="k" :selected="form.kabel===k" x-text="k"></option></template></select></label>
+            <label class="f" for="m-aled">Ledere
+              <select id="m-aled" class="inp num" x-model="form.ledere"><option>2X</option><option>3G</option><option>4G</option><option>5G</option></select></label>
+            <label class="f" for="m-atv">Tværsnit (mm²)
+              <select id="m-atv" class="inp num" x-model.number="form.tv">
+                <template x-for="a in tvs" :key="a"><option :value="a" :selected="form.tv==a" x-text="fmt(a)"></option></template></select></label>
+            <label class="f" for="m-alen">Længde (m)<input id="m-alen" class="inp num" type="number" min="0" step="0.5" x-model.number="form.laengde"></label>
+            <label class="f" for="m-aplac">Placering<input id="m-aplac" class="inp" x-model="form.placering" placeholder="Væg A, loft …"></label>
+            <label class="f" for="m-ahoejde">Højde over gulv (cm)<input id="m-ahoejde" class="inp num" type="number" min="0" step="1" x-model.number="form.hoejde"></label>
+            <label class="flex items-center gap-2 text-sm self-end pb-2" for="m-atrukket"><input type="checkbox" id="m-atrukket" x-model="form.trukket"> Kablet er trukket</label>
+            <label class="f" for="m-anote">Note til trækket<input id="m-anote" class="inp" x-model="form.note" placeholder="Venter på tømrer"></label>
+            <p class="text-xs text-muted sm:col-span-2">Afbryderens træk kommer med i kabelliste, materialeliste og føringsvej, men ikke i ΔU.</p>
+            </div></template>
             <label class="f" for="m-atid" x-show="form.art==='trappe' || form.art==='sensor'">Tid / efterløb (min)<input id="m-atid" class="inp num" type="number" min="0.5" step="0.5" x-model.number="form.tid"></label>
             <fieldset class="sm:col-span-2 border border-line rounded p-2">
               <legend class="px-1 text-xs font-semibold uppercase tracking-wider text-muted" x-text="form.art==='krone' ? 'Tænding 1' : 'Lamper på tændingen'"></legend>
@@ -1296,6 +1385,11 @@
               <select id="m-dtv" class="inp num" x-model.number="form.tv">
                 <template x-for="a in tvs" :key="a"><option :value="a" :selected="form.tv==a" x-text="fmt(a)"></option></template></select></label>
             <label class="f" for="m-dlen">Længde frem til dåsen (m)<input id="m-dlen" class="inp num" type="number" min="0" step="0.5" x-model.number="form.laengde" required></label>
+            <label class="f" for="m-dplac">Placering<input id="m-dplac" class="inp" x-model="form.placering" placeholder="Væg A, loft …"></label>
+            <label class="f" for="m-dhoejde">Højde over gulv (cm)<input id="m-dhoejde" class="inp num" type="number" min="0" step="1" x-model.number="form.hoejde"></label>
+            <label class="flex items-center gap-2 text-sm self-end pb-2" for="m-dtrukket"><input type="checkbox" id="m-dtrukket" x-model="form.trukket"> Tilgangskablet er trukket</label>
+            <label class="f" for="m-dnote">Note til trækket<input id="m-dnote" class="inp" x-model="form.note" placeholder="Venter på tømrer"></label>
+
             <label class="f" for="m-antal" x-show="!mid()">Antal (nummereres automatisk)<input id="m-antal" class="inp num" type="number" min="1" max="20" step="1" x-model.number="form.antal"></label>
             <p class="text-xs text-muted sm:col-span-2">Brugsgenstande knyttes til samlepunktet i deres egen formular under Via samlepunkt. Et samlepunkt kan forsynes fra et andet samlepunkt.</p>
           </div>
@@ -1430,12 +1524,12 @@
   </div>
 </div>
 
-<script src="js/data.js?v=10.12.2"></script>
-<script src="js/beregning.js?v=10.12.2"></script>
-<script src="js/diagram.js?v=10.12.2"></script>
-<script src="js/lagring.js?v=10.12.2"></script>
-<script src="js/historik.js?v=10.12.2"></script>
-<script src="js/app.js?v=10.12.2"></script>
+<script src="js/data.js?v=10.13.0"></script>
+<script src="js/beregning.js?v=10.13.0"></script>
+<script src="js/diagram.js?v=10.13.0"></script>
+<script src="js/lagring.js?v=10.13.0"></script>
+<script src="js/historik.js?v=10.13.0"></script>
+<script src="js/app.js?v=10.13.0"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.14.1/cdn.min.js"></script>
 </body>
 </html>
