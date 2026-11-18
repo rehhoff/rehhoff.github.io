@@ -297,7 +297,7 @@ const APP_LAGRING = () => ({
       const fl = [f.cvr && 'CVR ' + f.cvr, f.adresse, f.telefon && 'Tlf. ' + f.telefon].filter(Boolean);
       if (f.navn || fl.length || f.logo) h += '<div class="fa">' + (/^data:image\//.test(f.logo || '') ? '<img src="' + esc(f.logo) + '" alt="Logo">' : '') + '<div>' + (f.navn ? '<b>' + esc(f.navn) + '</b><br>' : '') + esc(fl.join(' · ')) + '</div></div>';
       h += '<section class="s"><h1>' + esc(p.navn || 'Projekt') + '</h1><table class="st"><tr><th>Sagsnr.</th>' + td(p.sagsnr) + '<th>Kunde</th>' + td(p.kunde) + '</tr><tr><th>Adresse</th>' + td(p.adresse) + '<th>Installatør</th>' + td(p.installatoer) + '</tr><tr><th>Dato</th>' + td(p.dato) +
-        '<th>Omfang</th>' + td(this.db.tavler.length + ' tavler, ' + this.db.grupper.length + ' grupper, ' + this.db.enheder.length + ' brugsgenstande') + '</tr></table><h2>Enstregsdiagram</h2>' + this.sld(true) + '</section>';
+        '<th>Omfang</th>' + td(this.db.tavler.length + ' tavler, ' + this.db.grupper.length + ' grupper, ' + this.db.enheder.length + ' brugsgenstande') + '</tr></table>' + this.aflDocLinje() + '<h2>Enstregsdiagram</h2>' + this.sld(true) + '</section>';
       this.db.tavler.forEach((t, i) => {
         h += '<section' + (i < this.db.tavler.length - 1 ? ' class="s"' : '') + '><h1>Gruppeskema · ' + esc(t.navn) + '</h1><p class="m">' + esc([p.navn, p.sagsnr && 'Sag ' + p.sagsnr, t.placering, 'Forsikring ' + t.forsikring + ' A', p.installatoer, p.dato].filter(Boolean).join(' · ')) + '</p>';
         h += '<table><tr><th>Gr.</th><th>Betegnelse</th><th>Type</th><th>Sikring</th><th>Fase</th><th>HPFI</th><th>Kabel</th><th>Lokaler</th><th>Last</th></tr>';
@@ -310,7 +310,7 @@ const APP_LAGRING = () => ({
         h += '</table><h2>Verifikation · måleskema</h2><p class="k">Kladde til egenkontrol. Ikke en gyldig installationsattest eller sikkerhedsdokumentation.</p>' +
           '<table><tr><th>Gr.</th><th>Betegnelse</th><th>Isolationsmodstand (MΩ)</th><th>Zs (Ω)</th><th>Maks. Zs (Ω)</th><th>HPFI udløsetid (ms)</th><th>Visuel kontrol</th><th>Vurdering</th></tr>';
         for (const g of this.grupperFor(t.id)) h += '<tr>' + [g.nr, g.navn, g.maal.riso, g.maal.zs, this.zsMax(g) ? this.fmt(this.zsMax(g), 2) : '–', g.maal.rcd, g.maal.ok ? 'OK' : '', this.maalVurdering(g).txt].map(td).join('') + '</tr>';
-        h += '</table><h2>Kortslutning og selektivitet</h2><p class="m">' + esc('Ze ved tavlen: ' + (this.tavleZe(t.id) == null ? 'ikke angivet' : this.fmt(this.tavleZe(t.id), 3) + ' Ω') + ' · Ik,maks: ' + (this.tavleIkMaks(t.id) ? this.fmt(this.tavleIkMaks(t.id)) + ' kA' : 'ikke angivet')) + '</p>' +
+        h += '</table><h2>Kortslutning og selektivitet</h2><p class="m">' + esc('Ze ved tavlen: ' + (this.tavleZe(t.id) == null ? 'ikke angivet' : this.fmt(this.tavleZe(t.id), 3) + ' Ω' + (this.zeBeregnet(t) ? ' (beregnet fra forsynende tavle)' : '')) + ' · Ik,maks: ' + (this.tavleIkMaks(t.id) ? this.fmt(this.tavleIkMaks(t.id)) + ' kA' : 'ikke angivet')) + '</p>' +
           '<table><tr><th>Gr.</th><th>Betegnelse</th><th>Sikring</th><th>Ia (A)</th><th>Ik,min (A)</th><th>Udkobling</th><th>Brydeevne (kA)</th></tr>';
         for (const g of this.grupperFor(t.id)) { const k = this.ikMin(g); h += '<tr>' + [g.nr, g.navn, g.kar + g.In, this.ia(g) ? this.fmt(this.ia(g), 0) : '–', k ? this.ikVis(k) : '–', !k || k.ok == null ? '–' : k.ok ? 'OK' : 'Ik,min under Ia',
           this.fmt(Number(g.brydeevne) || 6) + (this.brydeFejl(t.id).includes(g) ? ' (under Ik,maks)' : '')].map(td).join('') + '</tr>'; }

@@ -162,8 +162,20 @@ button.din-item{cursor:pointer}
 
 /* føringsvej */
 .fv-dim{opacity:.5}
-.fv{padding-left:calc(.5rem + var(--d,0) * .9rem)}
-@media (max-width:639px){.fv{padding-left:calc(.25rem + min(var(--d,0),6) * .4rem)}}
+.fv{padding-left:.5rem}
+.fv-sp{flex:none;width:1rem;position:relative}
+.fv-sp.l::before,.fv-ci::before{content:'';position:absolute;left:.45rem;top:0;bottom:0;border-left:1px solid var(--muted)}
+.fv-ci.sidst::before{bottom:50%}
+.fv-ci::after{content:'';position:absolute;left:.45rem;top:50%;width:.5rem;border-top:1px solid var(--muted)}
+@media (max-width:639px){.fv{padding-left:.25rem}.fv-sp{width:.65rem}.fv-sp.l::before,.fv-ci::before,.fv-ci::after{left:.3rem}.fv-ci::after{width:.3rem}}
+.fv-anc{background:color-mix(in srgb,var(--accent) 14%,transparent);box-shadow:inset 3px 0 var(--accent)}
+.fv-anc .fv-sp::before,.fv-anc .fv-ci::after{border-color:var(--accent)}
+.fv-hi{background:color-mix(in srgb,var(--accent) 8%,transparent)}
+.fv-blink{animation:fvblink .7s ease 2}
+@keyframes fvblink{50%{background:color-mix(in srgb,var(--accent) 35%,transparent)}}
+.fv-fra{display:block;text-align:left;text-decoration:underline dotted}
+.fv-fra:hover{color:var(--accent)}
+.fv-fold{width:1.25rem;line-height:1;flex:none}
 .fv-tavle,.fv-gruppe{background:var(--raised)}
 .fv .fv-note{width:11rem;max-width:100%}
 .fv-kabel{border-bottom:1px dashed var(--line)}
