@@ -10,7 +10,7 @@ function app() {
     projekter: [], pid: '', pf: { navn:'', sagsnr:'', kunde:'', adresse:'' }, sldSel: null, z: { x:8, y:8, k:1 }, pan: null, pinch: null, panMoved: false,
     filter: { q:'', tavle:'', type:'', lokale:'' }, sort: { key:'gruppe', dir:1 },
     modal: null, form: {}, confirm: null, toasts: [], storageOk: true, tema: 'auto', qa: '', io: '',
-    typeLabel: { lys:'Lys', kraft:'Kraft', stik:'Stik', data:'Data og teknik' },
+    typeLabel: { lys:'Lys', lysstik:'Lys og stik', kraft:'Kraft', stik:'Stik', data:'Data og teknik' },
     modalNavn: { afbryder:'afbryder', tavle:'tavle', rcd:'HPFI', lokale:'lokale', gruppe:'gruppe', enhed:'brugsgenstand', daase:'samlepunkt', rack:'rackskab', udstyr:'rackudstyr', link:'forbindelse' },
     udstArt: { patchpanel:'Patchpanel', switch:'Switch', router:'Router', nvr:'NVR (optager)', andet:'Andet udstyr' },
     daaseTyper: DAASER,
@@ -158,13 +158,14 @@ function app() {
       for (const d of this.db.daaser.filter(d => d.parentId === did)) out = out.concat(this.nedstroem(d.id, seen));
       return out;
     },
-    daaseI(did) { return this.nedstroem(did).reduce((s, e) => s + this.strom(e), 0); },
+    daaseFaser(did) { return this.faseSum(this.nedstroem(did)); },
+    daaseI(did) { const v = this.daaseFaser(did); return Math.max(v.L1, v.L2, v.L3); },
     daaseIz(d) { const g = this.gruppe(d.gruppeId); return this.izBeregn(d.kabel, d.tv, !!g && g.faser == 3, this.forhold(g)); },
     daaseIzFejl(d) { const g = this.gruppe(d.gruppeId); return !!g && !!this.daaseIz(d) && g.In > this.daaseIz(d); },
     duSeg(I, L, A, tre) { return tre ? Math.sqrt(3) * L * I * RHO / A / 400 * 100 : 2 * L * I * RHO / A / 230 * 100; },
     duOp(did) {
       let s = 0, d = this.daase(did), n = 0;
-      while (d && n++ < 20) { const g = this.gruppe(d.gruppeId); s += this.duSeg(this.daaseI(d.id), Number(d.laengde) || 0, Number(d.tv) || 1, !!g && g.faser == 3); d = this.daase(d.parentId); }
+      while (d && n++ < 20) { s += this.duV(this.daaseFaser(d.id), Number(d.laengde) || 0, Number(d.tv) || 1); d = this.daase(d.parentId); }
       return s;
     },
     syncDaaser() {
@@ -182,10 +183,14 @@ function app() {
     sloejfer(id) { return id ? this.db.enheder.filter(e => e.fraEnhed === id) : []; },
     erSloejfetUnder(id, anc) { let e = this.enhed(id), n = 0; while (e && n++ < 50) { if (e.id === anc) return true; e = this.enhed(e.fraEnhed); } return false; },
     enhedNed(e, seen) { seen = seen || new Set(); if (!e || seen.has(e.id)) return []; seen.add(e.id); return [e].concat(...this.sloejfer(e.id).map(x => this.enhedNed(x, seen))); },
-    enhedI(e) { return this.enhedNed(e).reduce((s, x) => s + this.strom(x), 0); },
+    /* strøm i e's eget træk pr. fase: e og alt sløjfet efter den, hver på sine faser (skema 14) */
+    enhedFaser(e) { return this.faseSum(this.enhedNed(e)); },
+    enhedI(e) { const v = this.enhedFaser(e); return Math.max(v.L1, v.L2, v.L3); },
+    /* ΔU i e's eget træk; L kan gives for at regne pr. meter (lmax) */
+    duEget(e, tv, L) { return this.duV(this.enhedFaser(e), L == null ? Number(e.laengde) || 0 : L, Number(tv || e.tv) || 1); },
     enhedRod(e) { let x = e, n = 0; while (x && x.fraEnhed && this.enhed(x.fraEnhed) && n++ < 50) x = this.enhed(x.fraEnhed); return x; },
     enhedDaase(e) { const r = this.enhedRod(e); return r ? r.daaseId : ''; },
-    duSloejfe(e) { let s = 0, p = this.enhed(e.fraEnhed), n = 0; while (p && n++ < 50) { s += this.duSeg(this.enhedI(p), Number(p.laengde) || 0, Number(p.tv) || 1, this.tre(p)); p = this.enhed(p.fraEnhed); } return s; },
+    duSloejfe(e) { let s = 0, p = this.enhed(e.fraEnhed), n = 0; while (p && n++ < 50) { s += this.duEget(p); p = this.enhed(p.fraEnhed); } return s; },
     sloejfeVej(e) { const v = []; let p = this.enhed(e.fraEnhed), n = 0; while (p && n++ < 50) { v.push(p); p = this.enhed(p.fraEnhed); } return v; },
     /* føringsvej: træ pr. tavle og gruppe. Hver linje er ét træk (postens eget kabel) */
     fvNode(kind, o, kids) { return { kind, o, kids:kids || [] }; },
@@ -402,9 +407,9 @@ function app() {
         tavle: { navn:'', placering:'', forsikring:35, hovedafbryder:0, fra:'', fraGruppe:'', tilgang:'', tKabel:(this.db.projekt.sidst || {}).kabel || 'PVC', tLedere:'5G', tTv:6, tLaengde:0, ze:0, ikMaks:0, tTrukket:false, tNote:'' },
         rcd: { navn:'HPFI ' + (this.rcdsFor((pre && pre.tavleId) || t0).length + 1), tavleId:t0, type:'A', In:40, idn:30, selektiv:false },
         lokale: { navn:'', etage:'' },
-        afbryder: { navn:'', art:'enpolet', daaseId:'', fraEnhed:'', kabel:'PVC', ledere:'3G', tv:1.5, laengde:0, hoejde:'', placering:'', trukket:false, note:'', gruppeId:(cur && cur.type === 'lys' ? cur.id : (this.sorteredeGrupper().find(g => g.type === 'lys') || {}).id) || '', lokaleId:'', steder:2, tid:3, a:[], b:[] },
+        afbryder: { navn:'', art:'enpolet', daaseId:'', fraEnhed:'', kabel:'PVC', ledere:'3G', tv:1.5, laengde:0, hoejde:'', placering:'', trukket:false, note:'', gruppeId:(cur && LYS_TYPER.includes(cur.type) ? cur.id : (this.sorteredeGrupper().find(g => LYS_TYPER.includes(g.type)) || {}).id) || '', lokaleId:'', steder:2, tid:3, a:[], b:[] },
         gruppe: { tavleId:t0, nr:1, navn:'', type:'stik', kar:'B', In:13, faser:1, fase:'L1', rcdId:'', brydeevne:6, sf:this.sfForslag({ type:'stik' }).v },
-        enhed: { antal:1, navn:'', gruppeId:this.sel || '', lokaleId:'', daaseId:'', fraEnhed:'', hoejde:'', placering:'', trukket:false, note:'', symbol:'auto', effekt:0, kabel:'PVC', ledere:'3G', tv:1.5, laengde:10 },
+        enhed: { antal:1, navn:'', gruppeId:this.sel || '', lokaleId:'', daaseId:'', fraEnhed:'', fase:'', hoejde:'', placering:'', trukket:false, note:'', symbol:'auto', effekt:0, kabel:'PVC', ledere:'3G', tv:1.5, laengde:10 },
         daase: { antal:1, navn:'', type:'Membrandåse', gruppeId:this.sel || '', parentId:'', lokaleId:'', hoejde:'', placering:'', trukket:false, note:'', kabel:'PVC', ledere:'3G', tv:1.5, laengde:5 },
         rack: { navn:'R' + (this.db.racks.length + 1), type:'19" vægskab', he:9, lokaleId:'', gruppeId:'' },
         udstyr: { rackId:(this.db.racks[0] || {}).id || '', navn:'', art:'switch', he:1, pos:1, porte:24, poe:false, poeBudget:0, effekt:20 },

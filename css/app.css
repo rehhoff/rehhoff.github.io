@@ -1,11 +1,11 @@
 /* El-oversigtsappen: farvetokens, lyst og mørkt tema og egne klasser. Tailwind kommer fra CDN. */
 /* Layout: stålgrå tavlefront. Header med projektskifter og søgning, resumé og hurtig tilføj, derefter ti faner.
-   Gruppetype = farvet vippearm og stribe (lys gul, kraft orange, stik blå, data violet).
+   Gruppetype = farvet vippearm og stribe (lys gul, lys og stik oliven, kraft orange, stik blå, data violet).
    Faser følger lederfarverne: L1 brun, L2 sort, L3 grå. */
 :root{
   --bg:#e6e9ea; --panel:#f6f7f7; --raised:#ffffff; --ink:#181d20; --muted:#566068; --line:#bfc6ca;
   --accent:#0d6b63; --on-accent:#ffffff; --crit:#b3204f;
-  --lys:#c99700; --kraft:#d4500a; --stik:#1c6bb0; --data:#7446b8; --cctv:#0f7d58;
+  --lys:#c99700; --lysstik:#6b8a00; --kraft:#d4500a; --stik:#1c6bb0; --data:#7446b8; --cctv:#0f7d58;
   --l1:#8a5a2b; --l2:#16181a; --l3:#9aa2a8;
   --cab:#d3d8db; --rail:#aab2b7; --dev:#eef0f1; --dev-line:#8f989e;
 }
@@ -14,7 +14,7 @@
     color-scheme:dark;
     --bg:#13171a; --panel:#1c2226; --raised:#242b30; --ink:#e5e9eb; --muted:#94a1a9; --line:#374148;
     --accent:#35b5a6; --on-accent:#08201d; --crit:#f0669a;
-    --lys:#f0b824; --kraft:#ff7a33; --stik:#55a8ea; --data:#b18cf5; --cctv:#3fcf9a;
+    --lys:#f0b824; --lysstik:#a8d13c; --kraft:#ff7a33; --stik:#55a8ea; --data:#b18cf5; --cctv:#3fcf9a;
     --l1:#b9824c; --l2:#050606; --l3:#aab3b9;
     --cab:#0c0f11; --rail:#4a555c; --dev:#cfd4d7; --dev-line:#6f7a81;
   }
@@ -23,7 +23,7 @@
   color-scheme:dark;
   --bg:#13171a; --panel:#1c2226; --raised:#242b30; --ink:#e5e9eb; --muted:#94a1a9; --line:#374148;
   --accent:#35b5a6; --on-accent:#08201d; --crit:#f0669a;
-  --lys:#f0b824; --kraft:#ff7a33; --stik:#55a8ea; --data:#b18cf5; --cctv:#3fcf9a;
+  --lys:#f0b824; --lysstik:#a8d13c; --kraft:#ff7a33; --stik:#55a8ea; --data:#b18cf5; --cctv:#3fcf9a;
   --l1:#b9824c; --l2:#050606; --l3:#aab3b9;
   --cab:#0c0f11; --rail:#4a555c; --dev:#cfd4d7; --dev-line:#6f7a81;
 }
@@ -54,7 +54,7 @@ kbd{font-family:"IBM Plex Mono",monospace;font-size:.7rem;border:1px solid var(-
 @media (pointer:coarse){input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]),select,textarea{font-size:16px!important}}
 .tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
 .typed{--t:var(--muted)}
-.typed.lys{--t:var(--lys)} .typed.kraft{--t:var(--kraft)} .typed.stik{--t:var(--stik)} .typed.data{--t:var(--data)} .typed.cctv{--t:var(--cctv)}
+.typed.lys{--t:var(--lys)} .typed.lysstik{--t:var(--lysstik)} .typed.kraft{--t:var(--kraft)} .typed.stik{--t:var(--stik)} .typed.data{--t:var(--data)} .typed.cctv{--t:var(--cctv)}
 .stripe{border-left:6px solid var(--t)}
 .chip{display:inline-flex;align-items:center;gap:.35rem;border:1px solid var(--t);border-radius:2px;padding:.05rem .4rem;
   font-size:.75rem;font-weight:600;background:color-mix(in srgb,var(--t) 14%,transparent);color:var(--ink);white-space:nowrap}

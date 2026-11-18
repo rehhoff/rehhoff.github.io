@@ -357,7 +357,7 @@ const APP_DIAGRAM = () => ({
       const lu = this.db.links.filter(l => !this.udst(l.switchId) && !this.udst(l.panelId)).length; if (lu) { y += 18; o.push(tx(16, y, lu + ' svagstrømsforbindelser uden rack er ikke vist.', 'm')); }
       const H = y + 30;
       const css = print ? '<style>.l{stroke:#111;stroke-width:1.3;fill:none}.f{fill:#fff}.b{stroke-width:3}.b2{stroke-width:2}.t{fill:#111;font:11px monospace;stroke:none}.m{fill:#555;font:10px monospace}' +
-        '.h{fill:#111;font:bold 15px Arial,sans-serif}.s{font-size:9px}.hit{fill:none}.dot{fill:#111;stroke:none}.tc{fill:#666}.cctv .tc{fill:#0f7d58}.lys .tc{fill:#c99700}.kraft .tc{fill:#d4500a}.stik .tc{fill:#1c6bb0}.data .tc{fill:#7446b8}' +
+        '.h{fill:#111;font:bold 15px Arial,sans-serif}.s{font-size:9px}.hit{fill:none}.dot{fill:#111;stroke:none}.tc{fill:#666}.cctv .tc{fill:#0f7d58}.lys .tc{fill:#c99700}.lysstik .tc{fill:#6b8a00}.kraft .tc{fill:#d4500a}.stik .tc{fill:#1c6bb0}.data .tc{fill:#7446b8}' +
         '.bad .l{stroke:#b3204f}.bad .t{fill:#b3204f}</style><rect width="' + W + '" height="' + H + '" fill="#fff"/>' : '';
       return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" ${print ? '' : 'width="' + W + '" height="' + H + '"'}>${css}${o.join('')}</svg>`;
     },

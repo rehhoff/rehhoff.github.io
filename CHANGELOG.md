@@ -2,6 +2,16 @@
 
 Nyeste øverst. Versionsnummeret står også i appen som `APP_VERSION`. Hver version siger, hvilken model der lavede den.
 
+## 10.17.0 · 2026-11-18 · Claude Opus
+
+Gruppetypen "Lys og stik" og 1-faset tilslutning på 3-faset gruppe. Plan: `docs/planer/2026-11-18-lysstik-fase.md`.
+
+- Ny gruppetype **Lys og stik** til installationer med både lys og stikkontakter. ΔU-grænsen er 3 % som for lys, og samtidighedsfaktoren foreslås som lys-værdien for installationstypen. Typen har sin egen farve (oliven) i lyst og mørkt tema, kan vælges i filtre, formularer og skabeloner, og en Lys og stik-gruppe forvælges til afbrydere ligesom lys.
+- Brugsgenstand på en 3-faset gruppe: nyt felt **Tilslutning** (Som gruppen, L1, L2 eller L3 og nul, 230 V), fx et 5G-kabel med kun én fase og nul tilsluttet. Strømmen er P/230, ΔU for eget træk regnes 1-faset (2·L, 230 V), I<sub>z</sub> med 2 belastede ledere, og strømmen lægges kun på den valgte fase i fasebalance, fasefordeling og tavlens fasestrømme.
+- Sløjfer og dåser med blandede 1- og 3-fasede brugsgenstande regnes pr. fase (værst belastede fase med nulstrømmens bidrag). Ved symmetrisk last er tallene uændrede.
+- Fasen vises som "L2, 230 V" i gruppens liste, kabeltabellen og dokumentationen. Beregning viser fasestrømmene for 3-fasede grupper med 1-fasede tilslutninger.
+- Datamodel: `SCHEMA` 14 med `enheder.fase` (standard `''` = som gruppen). Ingen felter er fjernet. Første start tager en backup.
+
 ## 10.16.0 · 2026-11-18 · Claude Opus
 
 Plan: `docs/planer/2026-11-18-enstreg-sloejfer.md`.
