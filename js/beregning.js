@@ -251,7 +251,7 @@ const APP_BEREGNING = () => ({
     stats() {
       const w = this.warnings().length, u = this.enhederFor('').length;
       return [
-        { l:'Grupper', v:this.db.grupper.length }, { l:'Brugsgenstande', v:this.db.enheder.length }, { l:'Samlepunkter', v:this.db.daaser.length },
+        { l:'Grupper', v:this.db.grupper.length }, { l:'Brugsgenstande', v:this.db.enheder.filter(e => this.symbolFor(e) !== 'tilgang').length }, { l:'Samlepunkter', v:this.db.daaser.length },
         { l:'PDS / CCTV', v:this.db.links.filter(l => l.art !== 'cctv').length + ' / ' + this.db.links.filter(l => l.art === 'cctv').length },
         { l:'Elkabel i alt', v:this.fmt((this.sumLen(this.db.enheder.concat(this.db.daaser, this.db.afbrydere).map(e => ({ e }))) + this.db.tavler.reduce((s, t) => s + (Number(t.tLaengde) || 0), 0))) + ' m' },
         { l:'Mangler kobling', v:this.mangler().length, w:this.mangler().length > 0 }, { l:'Kræver kontrol', v:w, w:w > 0 }
@@ -307,7 +307,7 @@ const APP_BEREGNING = () => ({
         { gruppe:'Afbrydere', linjer:afbL },
         { gruppe:'Automatsikringer', linjer:tael(d.grupper, g => g.kar + g.In + ', ' + (g.faser == 3 ? '3' : '1') + '-polet') },
         { gruppe:'HPFI', linjer:tael(d.rcds, r => 'Type ' + r.type + ' ' + this.fmt(r.In, 0) + ' A ' + this.fmt(r.idn, 0) + ' mA') },
-        { gruppe:'Brugsgenstande', linjer:tael(d.enheder, e => this.symNavn[this.symbolFor(e)] || this.symbolFor(e)) }
+        { gruppe:'Brugsgenstande', linjer:tael(d.enheder.filter(e => this.symbolFor(e) !== 'tilgang'), e => this.symNavn[this.symbolFor(e)] || this.symbolFor(e)) }
       ];
       return ud.filter(g => g.linjer.length);
     },
@@ -363,6 +363,7 @@ const APP_BEREGNING = () => ({
 
     /* belastning i W, kW eller A samt effektforslag */
     effektForslag(e) {
+      if (this.symbolFor(e) === 'tilgang') return { W:0, txt:'0 W (tilgang, ingen last)' };
       const n = String(e.navn || '').toLowerCase(), stk = n.match(/(\d+)\s*stk/), w = n.match(/(?:(\d+)\s*x\s*)?(\d+(?:[.,]\d+)?)\s*(kw|w)\b/);
       if (w) { const pr = tal(w[2]) * (w[3] === 'kw' ? 1000 : 1), ant = Number(w[1]) || (stk ? Number(stk[1]) : 1), W = Math.round(pr * ant); return { W, txt:this.fmt(W, 0) + ' W (aflæst fra navnet' + (ant > 1 ? ', ' + ant + ' × ' + this.fmt(pr, 0) + ' W' : '') + ')' }; }
       let r = EFFEKT.find(x => x[0].test(n));
