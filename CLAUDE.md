@@ -17,10 +17,10 @@ Webapp til elektrikerarbejde: tavler, grupper, lokaler, kabler, samlepunkter, af
 
 Projekterne ligger i browserens localStorage på `rehhoff.github.io` og kan synkroniseres til en hemmelig GitHub Gist.
 
-1. Omdøb eller fjern aldrig disse nøgler: `tavleoversigt.projekter`, `tavleoversigt.p.<id>`, `tavleoversigt.backups`, `tavleoversigt.tema`, `tavleoversigt.firma`, `tavleoversigt.sync`, samt de gamle `tavleoversigt.v1` og `.v2`, som stadig migreres.
+1. Omdøb eller fjern aldrig disse nøgler: `tavleoversigt.projekter`, `tavleoversigt.p.<id>`, `tavleoversigt.backups`, `tavleoversigt.tema`, `tavleoversigt.firma`, `tavleoversigt.sync`, samt de gamle `tavleoversigt.v1` og `.v2`, som stadig migreres. Det samme gælder IndexedDB-databasen `tavleoversigt-billeder` (tabellerne `billeder` og `mini`), hvor billederne til brandlukninger ligger (skema 15).
 2. Ændres datamodellen: udvid `norm()` med standardværdier og migrering af gamle felter, og hæv `SCHEMA`. Første start efter en hævning tager automatisk en backup (`lavBackup`).
 3. Slet aldrig et felt med brugerdata uden at flytte dataene først.
-4. Synkronisering: en app med lavere `SCHEMA` end Gist'ens markørfil (`tavleoversigt.json`) må hverken læse eller skrive. Formatet i Gist'en (markør plus `tavleoversigt-<id>.json` pr. projekt) må kun udvides, aldrig omdøbes.
+4. Synkronisering: en app med lavere `SCHEMA` end Gist'ens markørfil (`tavleoversigt.json`) må hverken læse eller skrive. Formatet i Gist'en (markør plus `tavleoversigt-<id>.json` pr. projekt) må kun udvides, aldrig omdøbes. Billederne ligger i en separat hemmelig Gist (markør `tavleoversigt-billeder.json` plus `tavleoversigt-billede-<id>.txt` pr. billede) med samme skemaregel. Billeder slettes aldrig automatisk, hverken i IndexedDB eller i Gist'en.
 5. Hæves `SCHEMA`: tilføj et tjek i `tests/smoke.py` med data i det gamle format, som skal være intakte efter opgraderingen.
 
 ## 2. Arbejdsgang

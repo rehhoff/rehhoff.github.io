@@ -2,6 +2,18 @@
 
 Nyeste øverst. Versionsnummeret står også i appen som `APP_VERSION`. Hver version siger, hvilken model der lavede den.
 
+## 10.18.0 · 2026-11-18 · Claude Opus
+
+Ny fane Brandlukning med billeder. Plan: `docs/planer/2026-11-18-brandlukning.md`.
+
+- Ny fane **Brandlukning** (sidst i fanerækken) til registrering af brandtætning af huller og gennemføringer i brandvægge og brandceller. Hver lukning har nummer (næste ledige foreslås), lokale, placering, beskrivelse, brandklasse, produkt, note, afkrydsningerne **Udført** og **Mærkat** og billeder.
+- Afkrydsningerne sættes direkte i listen. Filteret "Kun ikke udført / mangler mærkat", lokalefilteret og optællingen "Udført x af y" og "Mærkat x af y" virker sammen. Sletning kan fortrydes, og søgningen finder lukningerne.
+- Billeder: "Tag billede" åbner kameraet direkte på telefonen, og "Vælg billeder" henter flere fra galleriet. Billederne gøres mindre i browseren (JPEG, højst 1600 px, typisk 100–300 KB) og gemmes i IndexedDB-databasen `tavleoversigt-billeder`, ikke i localStorage. Projektet gemmer kun id'erne. Tryk på en miniature viser billedet i fuld størrelse.
+- Synkronisering: billederne sendes til en separat hemmelig Gist, så projekt-Gist'en stadig er lille og hurtig. Kun billeder, som Gist'en ikke har, sendes, og manglende billeder hentes via `raw_url`. Billeder slettes aldrig automatisk, hverken på enheden eller på GitHub.
+- Backupfilen indeholder nu billederne. Projekt-JSON og de automatiske backups i browseren har kun billedernes id'er, og det står ved knapperne.
+- Dokumentation og udskrift: nyt afsnit **Brandlukninger** med status, optælling og små billeder.
+- Datamodel: `SCHEMA` 15 med listen `brandlukninger`. Ingen felter er fjernet. Første start tager en backup.
+
 ## 10.17.0 · 2026-11-18 · Claude Opus
 
 Gruppetypen "Lys og stik" og 1-faset tilslutning på 3-faset gruppe. Plan: `docs/planer/2026-11-18-lysstik-fase.md`.
