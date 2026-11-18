@@ -122,6 +122,7 @@
             <div class="flex items-baseline gap-3 flex-wrap">
               <h2 class="hd text-2xl" x-text="t.navn"></h2>
               <span class="text-sm text-muted" x-text="t.placering"></span>
+              <span class="flex flex-wrap gap-1" x-show="(t.billeder || []).length"><template x-for="id in (t.billeder || [])" :key="id"><button type="button" class="bl-mini bl-mini-s" @click="billedVis(id)" :aria-label="'Vis billede af ' + t.navn"><img x-show="billedSrc(id)" :src="billedSrc(id)" alt=""><span x-show="!billedSrc(id)" class="text-xs text-muted">–</span></button></template></span>
               <span class="tag num" x-text="'Forsikring ' + t.forsikring + ' A'"></span>
               <span class="tag num" x-show="t.hovedafbryder" x-text="'Hovedafbryder ' + t.hovedafbryder + ' A'"></span>
               <span class="tag num" x-show="t.tLaengde > 0" :class="tilgIzFejl(t) && 'warn'" x-text="'Tilgang ' + tilgTxt(t) + ' · ΔU ' + fmt(tilgDu(t), 2) + ' %'"></span>
@@ -393,6 +394,7 @@
                 <div :style="'padding-left:' + (r.dep * 1.2) + 'rem'">
                   <span class="font-medium whitespace-nowrap"><span x-show="r.dep" class="text-muted">└ </span><span x-html="ikon('daase')"></span> <span x-text="r.d.navn"></span></span>
                   <span class="block text-xs text-muted" x-text="daaseAfgange(r.d.id)"></span>
+                  <span class="flex flex-wrap gap-1" x-show="(r.d.billeder || []).length"><template x-for="id in (r.d.billeder || [])" :key="id"><button type="button" class="bl-mini bl-mini-s" @click="billedVis(id)" :aria-label="'Vis billede af ' + r.d.navn"><img x-show="billedSrc(id)" :src="billedSrc(id)" alt=""><span x-show="!billedSrc(id)" class="text-xs text-muted">–</span></button></template></span>
                 </div>
               </td>
               <td x-text="r.d.type"></td>
@@ -484,6 +486,7 @@
     </div>
     <p class="text-xs text-muted">Registrér brandtætning af huller og gennemføringer ind i og igennem brandvægge og brandceller. Sæt flueben, når lukningen er udført, og når brandmærkatet sidder ved siden af. Billeder gemmes på enheden og sendes til GitHub, hvis synkronisering er slået til.</p>
     <p x-show="!billedOk" class="panel p-3 text-sm warn">Browseren tillader ikke lagring af billeder (IndexedDB). Lukningerne gemmes, men billeder kan ikke tilføjes her.</p>
+    <p x-show="lagerTxt()" class="panel p-3 text-sm warn" x-text="lagerTxt()"></p>
     <p x-show="!db.brandlukninger.length" class="panel p-6 text-muted">Ingen brandlukninger endnu. Tryk på + Brandlukning.</p>
     <p x-show="db.brandlukninger.length && !brandListe().length" class="panel p-6 text-muted">Ingen brandlukninger matcher filtrene.</p>
     <div class="flex flex-col gap-2" id="bl-liste">
@@ -735,6 +738,7 @@
             <div>
               <h2 class="hd text-xl" x-text="l.navn"></h2>
               <p class="text-xs text-muted" x-text="(l.etage || 'Etage ikke angivet') + ' · ' + fmt(lokaleMeter(l.id)) + ' m elkabel'"></p>
+              <span class="flex flex-wrap gap-1 mt-1" x-show="(l.billeder || []).length"><template x-for="id in (l.billeder || [])" :key="id"><button type="button" class="bl-mini bl-mini-s" @click="billedVis(id)" :aria-label="'Vis billede af ' + l.navn"><img x-show="billedSrc(id)" :src="billedSrc(id)" alt=""><span x-show="!billedSrc(id)" class="text-xs text-muted">–</span></button></template></span>
               <p class="num text-xs mt-0.5 flex flex-wrap gap-x-3">
                 <span><span class="c-el" x-html="ikon('el')"></span> <span x-text="enhederILokale(l.id).length"></span></span>
                 <span x-show="daaserILokale(l.id).length"><span x-html="ikon('daase')"></span> <span x-text="daaserILokale(l.id).length"></span></span>
@@ -890,9 +894,11 @@
       </div>
       <div class="panel p-3 flex flex-col gap-2">
         <h2 class="hd text-lg">Datasikring</h2>
-        <p class="text-xs text-muted">Projekterne gemmes i denne browser på denne enhed. Opdateringer af appen sletter dem ikke, og der tages automatisk en backup i browseren, før data opgraderes. Backupfilen indeholder også billederne til brandlukninger; de automatiske backups i browseren gør ikke, men billederne bliver liggende på enheden. Ryddes browserdata, eller skifter du enhed, er en backupfil eller synkronisering via GitHub den eneste kopi.</p>
+        <p class="text-xs text-muted">Projekterne gemmes i denne browser på denne enhed. Opdateringer af appen sletter dem ikke, og der tages automatisk en backup i browseren, før data opgraderes. Backupfilen indeholder også billederne; de automatiske backups i browseren gør ikke, men billederne bliver liggende på enheden. Ryddes browserdata, eller skifter du enhed, er en backupfil eller synkronisering via GitHub den eneste kopi.</p>
         <button class="btn justify-center btn-primary" @click="hentBackup()" x-text="'Hent backup af alle ' + projekter.length + ' projekter'"></button>
         <p class="text-xs num" :class="!sidstBackup && 'warn'" x-text="sidstBackup ? 'Seneste backupfil: ' + datoTxt(sidstBackup) : 'Der er ikke hentet en backupfil endnu.'"></p>
+        <p x-show="lagerTxt()" class="text-xs warn" id="lager-adv" x-text="lagerTxt()"></p>
+        <button class="btn justify-center" id="opryd-knap" @click="billedOprydAabn()">Find ubrugte billeder …</button>
         <p class="text-xs text-muted" x-text="persistent ? 'Browseren har givet varig lagring, så data ryddes ikke automatisk ved pladsmangel.' : 'Browseren har ikke bekræftet varig lagring. Hent en backupfil jævnligt.'"></p>
         <template x-if="backups.length">
           <div class="flex flex-col gap-1 border-t border-line pt-2">
@@ -959,7 +965,7 @@
           <p class="text-xs text-muted">Gemmes kun i denne browser, gælder alle projekter og synkroniseres ikke.</p>
         </div>
         <button class="btn justify-center" @click="hent(filnavn('projekt','json'), exportJson())">Hent projekt som JSON</button>
-        <p class="text-xs text-muted" x-show="db.brandlukninger.some(b => b.billeder.length)">Projekt-JSON indeholder ikke billederne, kun deres id'er. Backupfilen af alle projekter indeholder billederne.</p>
+        <p class="text-xs text-muted" x-show="harBilleder()">Projekt-JSON indeholder ikke billederne, kun deres id'er. Backupfilen af alle projekter indeholder billederne.</p>
         <button class="btn justify-center" @click="kopier(exportJson())">Kopiér JSON</button>
         <button class="btn justify-center" @click="kopier(gruppeTsv())">Kopiér gruppeskema til regneark</button>
       </div>
@@ -1174,6 +1180,30 @@
           <p class="text-xs text-muted" x-show="!historik.henter && !historik.fejl && !historik.liste.length">Ingen versioner fundet for dette projekt endnu.</p>
           <p class="text-xs warn" x-show="historik.fejl" x-text="historik.fejl"></p>
           <button class="btn justify-center" x-show="historikFlere() && !historik.henter" @click="historikHent()">Hent ældre versioner</button>
+        </div>
+      </div>
+    </template>
+    <template x-if="modal && modal.type==='opryd' && opryd">
+      <div class="panel w-full max-w-lg mt-8 shadow-xl" role="dialog" aria-modal="true" aria-labelledby="opryd-t" id="opryd">
+        <header class="border-b border-line bg-raised px-4 py-3 flex justify-between items-center"><h2 id="opryd-t" class="hd text-xl">Ubrugte billeder</h2><button class="btn" @click="modal=null" :disabled="opryd.henter">Luk</button></header>
+        <div class="p-4 flex flex-col gap-2 text-sm">
+          <p class="text-xs text-muted">Finder billeder, som intet projekt, ingen automatisk backup og ingen anden enhed bruger. Kan noget ikke læses, slettes intet. Billeder, der er nyere end 24 timer, røres ikke på enheden.</p>
+          <p class="text-xs text-muted" x-show="opryd.henter">Gennemgår projekter, backups og GitHub …</p>
+          <p class="text-xs warn" x-show="opryd.fejl" x-text="opryd.fejl"></p>
+          <template x-if="opryd.fund">
+            <div class="flex flex-col gap-2">
+              <p class="text-xs text-muted" x-text="'Tjekket: ' + opryd.fund.tjek.join(', ') + '. ' + opryd.fund.brugt + ' billeder er i brug.'"></p>
+              <p class="text-xs warn" x-show="!opryd.fund.synk">Synkronisering er ikke slået til, så projekter på andre enheder kan ikke ses. Kun billeder på denne enhed vises.</p>
+              <p id="opryd-lokal" class="num" x-text="'På enheden: ' + opryd.fund.lokal.length + ' billeder, ' + oprydMB(oprydSum(opryd.fund.lokal))"></p>
+              <p id="opryd-gh" class="num" x-show="opryd.fund.synk" x-text="'På GitHub: ' + opryd.fund.gh.length + ' billeder, ' + oprydMB(oprydSum(opryd.fund.gh))"></p>
+              <p class="text-xs text-muted" x-show="opryd.fund.nye" x-text="opryd.fund.nye + ' ubrugte billeder på enheden er nyere end 24 timer og bliver liggende.'"></p>
+              <p class="text-xs text-muted">Gamle versioner i Gist'ens historik tjekkes ikke. En version, der gendannes derfra efter oprydningen, kan mangle billeder. Hentede backupfiler har deres egne billeder med.</p>
+              <button class="btn justify-center btn-danger" id="opryd-slet" x-show="opryd.fund.lokal.length + opryd.fund.gh.length" :disabled="opryd.henter" :class="confirm==='opryd' && 'armed'" @click="ask('opryd', () => billedOprydSlet())"
+                x-text="confirm==='opryd' ? 'Bekræft: slet ' + (opryd.fund.lokal.length + opryd.fund.gh.length) + ' billeder' : 'Slet ' + (opryd.fund.lokal.length + opryd.fund.gh.length) + ' billeder'"></button>
+              <p class="text-xs text-muted" x-show="!(opryd.fund.lokal.length + opryd.fund.gh.length)">Der er ingen ubrugte billeder at slette.</p>
+            </div>
+          </template>
+          <p x-show="opryd.slettet" class="text-sm" x-text="opryd.slettet ? 'Slettet: ' + opryd.slettet.lokal + ' på enheden og ' + opryd.slettet.gh + ' på GitHub (' + oprydMB(opryd.slettet.bytes) + ').' : ''"></p>
         </div>
       </div>
     </template>
@@ -1511,21 +1541,6 @@
             <label class="bl-chk" :class="form.udfoert && 'on'" for="m-budf"><input type="checkbox" id="m-budf" x-model="form.udfoert"> Udført</label>
             <label class="bl-chk" :class="form.maerkat && 'on'" for="m-bmaerk"><input type="checkbox" id="m-bmaerk" x-model="form.maerkat"> Brandmærkat sat</label>
             <label class="f sm:col-span-2" for="m-bnote">Note<input id="m-bnote" class="inp" x-model="form.note" placeholder="Venter på tømrer"></label>
-            <div class="sm:col-span-2 flex flex-col gap-2">
-              <span class="text-xs font-semibold uppercase tracking-wider text-muted">Billeder</span>
-              <div class="flex flex-wrap gap-2" x-show="(form.billeder || []).length">
-                <template x-for="(id, i) in (form.billeder || [])" :key="id">
-                  <span class="bl-mini bl-mini-f"><img x-show="billedSrc(id)" :src="billedSrc(id)" alt=""><span x-show="!billedSrc(id)" class="text-xs text-muted">Mangler</span>
-                    <button type="button" class="bl-fjern" @click="brandFjernBillede(i)" :aria-label="'Fjern billede ' + (i + 1)" title="Fjern billedet fra lukningen">×</button></span>
-                </template>
-              </div>
-              <div class="flex flex-wrap items-center gap-2" x-show="billedOk">
-                <label class="btn" for="bl-kamera">Tag billede<input type="file" id="bl-kamera" class="sr-only" accept="image/*" capture="environment" @change="billedFraFil($event)"></label>
-                <label class="btn" for="bl-galleri">Vælg billeder<input type="file" id="bl-galleri" class="sr-only" accept="image/*" multiple @change="billedFraFil($event)"></label>
-                <span x-show="billedArbejder" class="text-xs text-muted">Gør billedet klar …</span>
-              </div>
-              <p class="text-xs text-muted">Billederne gøres mindre (ca. 200 KB) og gemmes på enheden. Er synkronisering slået til, sendes de også til en hemmelig Gist på GitHub. Et fjernet billede slettes ikke fra enheden.</p>
-            </div>
           </div>
         </template>
         <template x-if="modal.type==='link'">
@@ -1562,6 +1577,26 @@
               <select id="m-lopl" class="inp" x-model="form.oploesning"><option>2 MP</option><option>4 MP</option><option>5 MP</option><option>8 MP (4K)</option><option>12 MP</option></select></label>
           </div>
         </template>
+        <!-- Billeder (brandlukning, skema 15; tavle, lokale og samlepunkt, skema 16). Fælles felt, se js/billeder.js -->
+        <template x-if="modal && billedFelt(modal.type)">
+          <div class="sm:col-span-2 flex flex-col gap-2" id="bl-felt">
+            <span class="text-xs font-semibold uppercase tracking-wider text-muted">Billeder</span>
+            <div class="flex flex-wrap gap-2" x-show="(form.billeder || []).length">
+              <template x-for="(id, i) in (form.billeder || [])" :key="id">
+                <span class="bl-mini bl-mini-f"><img x-show="billedSrc(id)" :src="billedSrc(id)" alt=""><span x-show="!billedSrc(id)" class="text-xs text-muted">Mangler</span>
+                  <button type="button" class="bl-fjern" @click="billedFjern(i)" :aria-label="'Fjern billede ' + (i + 1)" title="Fjern billedet">×</button></span>
+              </template>
+            </div>
+            <div class="flex flex-wrap items-center gap-2" x-show="billedOk">
+              <label class="btn" for="bl-kamera">Tag billede<input type="file" id="bl-kamera" class="sr-only" accept="image/*" capture="environment" @change="billedFraFil($event)"></label>
+              <label class="btn" for="bl-galleri">Vælg billeder<input type="file" id="bl-galleri" class="sr-only" accept="image/*" multiple @change="billedFraFil($event)"></label>
+              <span x-show="billedArbejder" class="text-xs text-muted">Gør billedet klar …</span>
+            </div>
+            <p x-show="!billedOk" class="text-xs warn">Browseren tillader ikke lagring af billeder (IndexedDB).</p>
+            <p x-show="lagerTxt()" class="text-xs warn" x-text="lagerTxt()"></p>
+            <p class="text-xs text-muted" x-text="(modal && modal.type === 'daase' ? 'Fx placeringen af en skjult dåse. ' : '') + 'Billederne gøres mindre (ca. 200 KB) og gemmes på enheden. Er synkronisering slået til, sendes de også til en hemmelig Gist på GitHub. Et fjernet billede slettes ikke fra enheden.'"></p>
+          </div>
+        </template>
       </div>
       <footer class="flex flex-wrap justify-between gap-2 border-t border-line px-4 py-3">
         <button type="button" x-show="modal.id" class="btn btn-danger" :class="confirm==='m' && 'armed'" @click="ask('m', () => delCurrent())" x-text="confirm==='m' ? 'Bekræft sletning' : 'Slet'"></button>
@@ -1576,8 +1611,8 @@
   </div>
   <!-- Billede i fuld størrelse -->
   <template x-if="lysbillede">
-    <div class="fixed inset-0 z-[80] flex items-center justify-center p-4" style="background:rgba(0,0,0,.85)" role="dialog" aria-modal="true" aria-label="Billede af brandlukning" @click="lysbillede=null">
-      <img x-show="lysbillede.src" :src="lysbillede.src" alt="Billede af brandlukning" class="bl-stor">
+    <div class="fixed inset-0 z-[80] flex items-center justify-center p-4" style="background:rgba(0,0,0,.85)" role="dialog" aria-modal="true" aria-label="Billede" @click="lysbillede=null">
+      <img x-show="lysbillede.src" :src="lysbillede.src" alt="Billede" class="bl-stor">
       <button type="button" class="btn absolute top-3 right-3" @click.stop="lysbillede=null">Luk</button>
     </div>
   </template>
