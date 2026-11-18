@@ -2,6 +2,17 @@
 
 Nyeste øverst. Versionsnummeret står også i appen som `APP_VERSION`. Hver version siger, hvilken model der lavede den.
 
+## 10.20.0 · 2026-11-18 · Claude Sonnet
+
+Import fra regneark (forslag 16). Plan: `docs/planer/2026-11-18-import-regneark.md`.
+
+- Knappen **Importér fra regneark** i fanen Lokaler og i fanen Kabler åbner en dialog, hvor celler indsættes fra Excel (tabulator; semikolon og komma accepteres). Vælg Brugsgenstande eller Lokaler.
+- Første linje bruges som overskrifter, hvis den genkendes (navn, lokale, gruppe, effekt, kW, A, kabel, ledere, tværsnit, længde, placering, højde; etage for lokaler), uden hensyn til store/små bogstaver og æøå. Ellers vælges kolonnerne med en dropdown pr. kolonne.
+- Komma-decimaler læses som tal. kW og A omregnes til W som i formularen. Uudfyldte felter får samme standardværdier som en ny brugsgenstand.
+- Forhåndsvisning før noget oprettes, med røde fejl (ukendt kabeltype, gruppe, tavle, lokale, ledere eller tværsnit, manglende navn). Rækker med fejl oprettes ikke. Ukendte lokaler kan oprettes automatisk.
+- "Importér N rækker" opretter alt i én handling, som kan fortrydes med Fortryd.
+- Ny fil `js/import.js` (`APP_IMPORT`). Ingen ændring af datamodellen (`SCHEMA` 15).
+
 ## 10.19.0 · 2026-11-18 · Claude Sonnet
 
 Tydeligere tilhørsforhold i Føringsvej og beregnet Z<sub>e</sub> vist (forslag 19). Plan: `docs/planer/2026-11-18-foering-tydelig.md`. Ingen ændring af data, beregninger eller `SCHEMA`.
