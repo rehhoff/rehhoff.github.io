@@ -15,6 +15,9 @@ TYPER = {'.html': 'text/html', '.js': 'application/javascript', '.css': 'text/cs
 ALPINE = ROD / 'node_modules' / 'alpinejs' / 'dist' / 'cdn.min.js'
 URL = 'http://app.test/'
 fejl, kontrol = [], []
+# Tidsgrænser, så en test, der hænger, fejler med en besked i stedet for at vente (forslag 17).
+TRIN_MS = int(os.environ.get('SMOKE_TRIN_MS', '15000'))   # pr. Playwright-handling (klik, navigation, popup …)
+SAMLET_S = int(os.environ.get('SMOKE_SAMLET_S', '300'))   # hele kørslen
 
 
 def tjek(navn, ok, info=''):
@@ -124,7 +127,7 @@ TESTBILLEDE = """(()=>{const c=document.createElement('canvas');c.width=2400;c.h
 
 
 async def ny_enhed(b):
-    ctx = await b.new_context(viewport={'width': 1300, 'height': 1000})
+    ctx = await b.new_context(viewport={'width': 1300, 'height': 1000}); ctx.set_default_timeout(TRIN_MS)
     await ctx.route('**/*', route)
     await ctx.route('https://api.github.com/**', github)
     await ctx.route('https://gist.test/**', gist_raw)
@@ -146,7 +149,7 @@ async def main():
     async with async_playwright() as p:
         chrome = os.environ.get('CHROME')
         b = await p.chromium.launch(executable_path=chrome, args=['--no-sandbox']) if chrome else await p.chromium.launch()
-        ctx = await b.new_context(viewport={'width': 1300, 'height': 1000}, accept_downloads=True)
+        ctx = await b.new_context(viewport={'width': 1300, 'height': 1000}, accept_downloads=True); ctx.set_default_timeout(TRIN_MS)
         await ctx.route('**/*', route)
         pg = await ctx.new_page()
         pg.on('pageerror', lambda e: fejl.append(str(e)) if 'tailwind' not in str(e) else None)
@@ -762,7 +765,7 @@ async def main():
         tjek('synk: slå fra fjerner token men ikke projekter', r['s'] is None and r['n'] >= 3, r)
 
         # Mobil: 390 px bred telefon
-        ctx = await b.new_context(viewport={'width': 390, 'height': 844}, is_mobile=True, has_touch=True)
+        ctx = await b.new_context(viewport={'width': 390, 'height': 844}, is_mobile=True, has_touch=True); ctx.set_default_timeout(TRIN_MS)
         await ctx.route('**/*', route)
         pm = await ctx.new_page()
         pm.on('pageerror', lambda e: fejl.append('mobil: ' + str(e)))
@@ -794,7 +797,7 @@ async def main():
              r['groft'] and not r['smaa'] and r['zoom'] == 2 and r['pan'] and not r['bred'], r)
         await ctx.close()
         # Tablet med touch: 16 px gælder uanset bredde (pointer:coarse), ikke kun under 640 px
-        ctx = await b.new_context(viewport={'width': 1024, 'height': 1366}, is_mobile=True, has_touch=True)
+        ctx = await b.new_context(viewport={'width': 1024, 'height': 1366}, is_mobile=True, has_touch=True); ctx.set_default_timeout(TRIN_MS)
         await ctx.route('**/*', route)
         pm = await ctx.new_page()
         await pm.goto(URL); await pm.wait_for_timeout(500)
@@ -818,7 +821,7 @@ async def main():
             if 'alpinejs' in u: await r.fulfill(body=ALPINE.read_text(encoding='utf-8'), content_type='application/javascript', headers={'access-control-allow-origin': '*'})
             elif u.startswith(lok): await r.continue_()
             else: await r.abort()
-        ctx = await b.new_context(viewport={'width': 1300, 'height': 1000}, service_workers='allow')
+        ctx = await b.new_context(viewport={'width': 1300, 'height': 1000}, service_workers='allow'); ctx.set_default_timeout(TRIN_MS)
         await ctx.route('**/*', lok_route)
         pg = await ctx.new_page()
         pg.on('pageerror', lambda e: fejl.append('offline: ' + str(e)))
@@ -845,4 +848,15 @@ async def main():
     print('OK')
 
 
-asyncio.run(main())
+async def med_tidsgraense():
+    try:
+        await asyncio.wait_for(main(), timeout=SAMLET_S)
+    except (asyncio.TimeoutError, TimeoutError):
+        for navn, ok, info in kontrol:
+            print(('OK    ' if ok else 'FEJL  ') + navn + ('' if ok else f'  {info}'))
+        sidst = kontrol[-1][0] if kontrol else 'intet tjek nået'
+        print(f'FEJL  røgtesten blev stoppet efter {SAMLET_S} s. Sidste færdige tjek: {sidst}. Det næste tjek hænger.')
+        sys.exit(1)
+
+
+asyncio.run(med_tidsgraense())
