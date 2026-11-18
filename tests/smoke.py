@@ -411,7 +411,7 @@ async def main():
              {'navn': r['navn'], 'b': r['b'], 's': r['s'], 'std': r['std'], 'ik': r['ik'], 'kf': r['kf']} | ens)
 
         # 4e. Kortslutningsstrøm og selektivitet med kendte tal (aftalt 2026-11-16). Ændringerne gemmes ikke.
-        r = await pg.evaluate(f"""(()=>{{const a={A};const d=a.db, n={{t:d.tavler.length,g:d.grupper.length,r:d.rcds.length,e:d.enheder.length,d:d.daaser.length}}, o={{}};
+        r = await pg.evaluate(f"""async()=>{{const a={A};const d=a.db, n={{t:d.tavler.length,g:d.grupper.length,r:d.rcds.length,e:d.enheder.length,d:d.daaser.length}}, o={{}}, T=ms=>new Promise(f=>setTimeout(f,ms));
           const w=k=>a.warnings().some(x=>x.k===k), rd=x=>Math.round(x*1000)/1000;
           try {{
             d.tavler.push({{id:'tk',navn:'TK',placering:'',forsikring:25,hovedafbryder:0,fra:'',fraGruppe:'',tilgang:'',tKabel:'PVC',tLedere:'5G',tTv:6,tLaengde:0,ze:0,ikMaks:0}});
@@ -433,6 +433,7 @@ async def main():
             d.grupper.push({{id:'gu',tavleId:'tu',nr:1,navn:'U',type:'stik',kar:'B',In:10,faser:1,fase:'L1',rcdId:'ru',sf:1,brydeevne:6,maal:{{riso:'',zs:'',rcd:'',ok:false}},metode:'',temp:'',samlet:'',lag:''}});
             const gu=a.gruppe('gu'); t.ikMaks=10;
             o.under=[rd(a.tavleZe('tu')),a.tavleIkMaks('tu'),rd(a.ikMin(g).R)]; t.ikMaks=0;
+            o.zeTxt=[a.docHtml().includes('(beregnet fra forsynende tavle)'),a.zeBeregnet(a.tavle('tu')),a.zeBeregnet(a.tavle('tk'))]; const v0=a.view; a.go('beregning'); await T(150); o.zeDom=document.body.innerText.includes('(beregnet fra forsynende tavle)'); a.go(v0);
             o.sg1=!w('sg:gk'); gu.In=13; o.sg2=w('sg:gk'); gu.In=10; const tu=a.tavle('tu'); tu.forsikring=10; o.sfu=!w('sf:tu')&&!w('sf:tk'); tu.forsikring=16;
             o.hpfi1=w('sr:ru'); rk.selektiv=true; o.hpfi2=w('sr:ru'); rk.idn=100; o.hpfi3=!w('sr:ru'); rk.selektiv=false; o.hpfi4=w('sr:ru');
             t.forsikring=25; const doc=a.docHtml(); o.doc=doc.includes('Kortslutning og selektivitet')&&doc.includes('Selektivitet er ikke sikret')&&doc.includes('Ik,min (A)');
@@ -442,10 +443,10 @@ async def main():
           }}
           o.ryddet=d.tavler.length===n.t&&d.grupper.length===n.g&&d.rcds.length===n.r&&d.enheder.length===n.e&&d.daaser.length===n.d;
           const g0={{kar:'B',In:16}}; o.zs=[rd(a.zsMax(g0)),a.ia(g0),a.ia({{kar:'C',In:16}}),a.ia({{kar:'D',In:16}})];
-          return o}})()""")
+          return o}}""")
         tjek('kortslutning: Ik,min med kendte tal (PVC, XLPE, dåse, undertavle), Ia, brydeevne',
              r['uden'] and r['pvc'] == [0.72, 214.216, 80, True, False] and r['c25'] == [250, False, True, True] and r['xlpe'] == [0.768, 204.588] and r['daase'] == [0.936, 176.78]
-             and r['bryde0'] and r['bryde1'] and r['bryde2'] and r['under'] == [0.39, 10, 0.72] and r['zs'] == [1.917, 80, 160, 320] and r['ryddet'], r)
+             and r['bryde0'] and r['bryde1'] and r['bryde2'] and r['under'] == [0.39, 10, 0.72] and r['zeTxt'] == [True, True, False] and r['zeDom'] and r['zs'] == [1.917, 80, 160, 320] and r['ryddet'], r)
         tjek('kortslutning: Ik,min lige under Ia vises rundet ned (159,6 A står som 159 A, ikke 160 A)', r['afrund'] == [159.6, False, '159', True, True], r)
         tjek('selektivitet: forsikring under 1,6 × største sikring, gruppe foran undertavle, ingen dobbelt advarsel fra undertavlens egen forsikring, HPFI i serie med og uden type S, med i dokumentationen',
              r['sel1'] and r['sel2'] and r['sfu'] and r['sg1'] and r['sg2'] and r['hpfi1'] and r['hpfi2'] and r['hpfi3'] and r['hpfi4'] and r['doc'], r)
@@ -480,6 +481,9 @@ async def main():
             o.afbDu=rd(a.du(e1))===o.du[0]; o.afbRow=a.rows().some(x=>x.e.id==='aaf'&&x.e.laengde===3);
             const tr=a.foeringTrae(), ix=k=>tr.findIndex(x=>x.k===k), dep=k=>(tr[ix(k)]||{{}}).dep;
             o.trae=[dep('tavle:tf'),dep('gruppe:gf'),dep('enhed:f1'),dep('enhed:f2'),dep('afb:af')]; o.orden=ix('tavle:tf')<ix('gruppe:gf')&&ix('gruppe:gf')<ix('enhed:f1')&&ix('enhed:f1')<ix('enhed:f2');
+            const R=k=>tr[ix(k)]; o.linjer=[R('enhed:f1').sidst,R('enhed:f2').sidst,R('afb:af').sidst,JSON.stringify(R('enhed:f2').linjer),JSON.stringify(R('afb:af').linjer),R('enhed:f1').boern];
+            o.fraTxt=[R('enhed:f2').fra,R('afb:af').fra,R('enhed:f1').fra];
+            a.fvFold=new Set(['enhed:f1']); const tf=a.foeringTrae(); a.fvFold=new Set(); o.fold=[tf.some(x=>x.k==='enhed:f1'&&x.luk),tf.some(x=>x.k==='enhed:f2'),tf.some(x=>x.k==='afb:af'),a.foeringTrae().some(x=>x.k==='enhed:f2')];
             const m0=a.materialer(); o.ikkeFoer=!m0.some(x=>x.gruppe==='Kabler, heraf ikke trukket'&&x.linjer.length);
             a.fvSaet(tr[ix('enhed:f1')],'trukket',true); a.fvSaet(tr[ix('enhed:f2')],'note','venter på tømrer');
             o.status=[e1.trukket,e2.note]; o.ikkeEfter=a.materialer().some(x=>x.gruppe==='Kabler, heraf ikke trukket'&&x.linjer.length);
@@ -506,7 +510,7 @@ async def main():
           return o}})()""")
         tjek('føringsvej: sløjfe i ΔU og Ik, afbrydertræk uden ΔU, træ, trukket og note, ikke trukket i materialeliste, kopiér gren, kæde, sletning',
              r['du0'] == 0.07826 and r['du'] == [0.15652, 0.19565] and r['I'] == [2, 1] and r['R'] and r['afbDu'] and r['afbRow']
-             and r['trae'] == [0, 1, 2, 3, 3] and r['orden'] and r['ikkeFoer'] and r['status'] == [True, 'venter på tømrer'] and r['ikkeEfter'] and r['filter']
+             and r['trae'] == [0, 1, 2, 3, 3] and r['linjer'] == [True, False, True, '[false,false]', '[false,false]', 2] and r['fraTxt'] == ['sløjfe fra F1', 'fra F1', ''] and r['fold'] == [True, False, False, True] and r['orden'] and r['ikkeFoer'] and r['status'] == [True, 'venter på tømrer'] and r['ikkeEfter'] and r['filter']
              and r['kopier'] == 2 and r['gren'] == [4, 2, True, True, 3] and r['grenDu'] and r['kaede'] == ['', True] and r['kaedeKabel'] == ['PVC', 1.5, 4, 'XLPE', 2.5, 2, 'XLPE', 2] and r['slet'] == ['', ''] and r['vist'] and r['redAaben'] and r['red'] == ['XLPE', '5G', 4, 7.5, True] and r['slettet'] and r['fortrudt'] and r['ryddet'], r)
 
         # 4h2. Enstregsdiagram: sløjfekæde (Tilgang → U1 → U2 …, stikkontakt efter sit eget udtag), forgreningsprikker, sporing og lokalefilter. Tilgang uden last

@@ -14,8 +14,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=10.19.0">
-<link rel="stylesheet" href="css/tailwind.css?v=10.19.0">
+<link rel="stylesheet" href="css/app.css?v=10.20.0">
+<link rel="stylesheet" href="css/tailwind.css?v=10.20.0">
 </head>
 <body class="min-h-full">
 <p id="fail" hidden style="margin:16px;padding:12px;border:1px solid var(--crit);color:var(--crit)">Appen kunne ikke starte, fordi Alpine.js ikke blev indlæst. Genindlæs siden.</p>
@@ -430,15 +430,19 @@
     <p x-show="!db.grupper.length" class="panel p-6 text-muted">Opret en tavle og en gruppe først.</p>
     <div class="panel" x-show="db.grupper.length">
       <template x-for="r in (view==='foering' ? foeringTrae() : [])" :key="r.k">
-        <div class="fv flex flex-wrap items-center gap-x-3 gap-y-1 py-1.5 pr-2 border-b border-line" :class="[r.dim && 'fv-dim', 'fv-' + r.kind]" :style="'--d:' + Math.min(r.dep, 10)" :id="'fv-' + r.k.replace(':', '-')">
+        <div class="fv flex" :class="[r.dim && 'fv-dim', 'fv-' + r.kind, fvAnc.includes(r.k) && 'fv-anc', fvHi === r.k && 'fv-hi', fvBlink === r.k && 'fv-blink']" :id="'fv-' + r.k.replace(':', '-')" @mouseenter="fvHover(r)" @mouseleave="fvHover(null)" @click="fvHover(fvHi === r.k ? null : r)">
+          <template x-for="(l, i) in r.linjer" :key="i"><span class="fv-sp" :class="l && 'l'" aria-hidden="true"></span></template>
+          <span x-show="r.dep > 0" class="fv-sp fv-ci" :class="r.sidst && 'sidst'" aria-hidden="true"></span>
+          <div class="flex flex-wrap items-center gap-x-3 gap-y-1 py-1.5 pr-2 border-b border-line min-w-0 flex-1">
           <span class="w-5 shrink-0 flex justify-center">
             <input type="checkbox" x-show="r.kabel" :checked="fvTrukket(r)" @change="fvSaet(r, 'trukket', $event.target.checked)" :aria-label="'Trukket: ' + fvNavn(r)" title="Trukket">
           </span>
+          <button type="button" x-show="r.boern" class="fv-fold text-muted" @click.stop="fvToggle(r)" :aria-expanded="!r.luk" :aria-label="(r.luk ? 'Fold ud: ' : 'Fold sammen: ') + fvNavn(r)" x-text="r.luk ? '▸' : '▾'"></button>
           <span class="min-w-0" :class="(r.kind === 'tavle' || r.kind === 'gruppe') ? 'font-semibold' : 'font-medium'">
-            <span x-show="r.dep > 1" class="text-muted">└ </span>
             <span x-show="r.kind === 'daase'" x-html="ikon('daase')"></span>
             <span x-show="r.kind === 'gruppe'" class="typed chip" :class="r.kind === 'gruppe' ? r.o.type : ''" x-text="r.kind === 'gruppe' ? (typeLabel[r.o.type] || r.o.type) : ''"></span>
             <span :class="fvTrukket(r) && r.kabel && 'line-through text-muted'" x-text="fvNavn(r)"></span>
+            <button type="button" x-show="r.fra" class="fv-fra text-xs font-normal text-muted" @click.stop="fvGaa(r.par)" :title="'Gå til ' + r.fra" x-text="r.fra"></button>
             <span class="block text-xs font-normal text-muted" x-show="fvSted(r)" x-text="fvSted(r)"></span>
           </span>
           <template x-if="(r.kabel || r.kind === 'enhed' || r.kind === 'daase') && fvRed !== r.k">
@@ -469,6 +473,7 @@
             <button x-show="r.kind !== 'gruppe'" class="btn btn-ghost" @click="fvRediger(r)">Rediger</button>
             <button x-show="r.kind === 'enhed' || r.kind === 'afb'" class="btn btn-ghost fv-slet" @click="fvSlet(r)" :aria-label="'Slet ' + fvNavn(r)" title="Slet (kan fortrydes)">Slet</button>
           </span>
+          </div>
         </div>
       </template>
       <p x-show="view==='foering' && !foeringTrae().length" class="p-6 text-muted">Ingen træk matcher filtrene.</p>
@@ -687,7 +692,7 @@
             <dt class="text-muted">Størst − mindst</dt><dd class="num text-right" x-text="fmt(faseInfo(t.id).diff) + ' A'"></dd>
             <dt class="text-muted">Nulstrøm I<sub>N</sub></dt><dd class="num text-right" x-text="fmt(faseInfo(t.id).IN) + ' A'"></dd>
             <dt class="text-muted">Samlet effekt</dt><dd class="num text-right" x-text="fmt(tavleW(t.id)/1000, 2) + ' kW'"></dd>
-            <dt class="text-muted">Z<sub>e</sub> ved tavlen</dt><dd class="num text-right" x-text="tavleZe(t.id) == null ? '–' : fmt(tavleZe(t.id), 3) + ' Ω'"></dd>
+            <dt class="text-muted">Z<sub>e</sub> ved tavlen</dt><dd class="num text-right" x-text="tavleZe(t.id) == null ? '–' : fmt(tavleZe(t.id), 3) + ' Ω' + (zeBeregnet(t) ? ' (beregnet fra forsynende tavle)' : '')"></dd>
             <dt class="text-muted">I<sub>k,maks</sub></dt><dd class="num text-right" :class="brydeFejl(t.id).length && 'warn'" x-text="tavleIkMaks(t.id) ? fmt(tavleIkMaks(t.id)) + ' kA' : '–'"></dd>
           </dl>
         </div>
@@ -1658,15 +1663,15 @@
   </div>
 </div>
 
-<script src="js/data.js?v=10.19.0"></script>
-<script src="js/beregning.js?v=10.19.0"></script>
-<script src="js/diagram.js?v=10.19.0"></script>
-<script src="js/lagring.js?v=10.19.0"></script>
-<script src="js/historik.js?v=10.19.0"></script>
-<script src="js/billeder.js?v=10.19.0"></script>
-<script src="js/brand.js?v=10.19.0"></script>
-<script src="js/aflevering.js?v=10.19.0"></script>
-<script src="js/app.js?v=10.19.0"></script>
+<script src="js/data.js?v=10.20.0"></script>
+<script src="js/beregning.js?v=10.20.0"></script>
+<script src="js/diagram.js?v=10.20.0"></script>
+<script src="js/lagring.js?v=10.20.0"></script>
+<script src="js/historik.js?v=10.20.0"></script>
+<script src="js/billeder.js?v=10.20.0"></script>
+<script src="js/brand.js?v=10.20.0"></script>
+<script src="js/aflevering.js?v=10.20.0"></script>
+<script src="js/app.js?v=10.20.0"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.14.1/cdn.min.js"></script>
 </body>
 </html>
