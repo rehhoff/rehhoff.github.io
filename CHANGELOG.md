@@ -2,6 +2,16 @@
 
 Nyeste øverst. Versionsnummeret står også i appen som `APP_VERSION`. Hver version siger, hvilken model der lavede den.
 
+## 10.19.0 · 2026-11-18 · Claude Sonnet
+
+Tydeligere tilhørsforhold i Føringsvej og beregnet Z<sub>e</sub> vist (forslag 19). Plan: `docs/planer/2026-11-18-foering-tydelig.md`. Ingen ændring af data, beregninger eller `SCHEMA`.
+
+- Føringsvej: trælinjer (├ └ og lodrette linjer pr. niveau) i stedet for indrykning alene.
+- "fra …" / "sløjfe fra …" ved posterne; tryk på teksten ruller til forælderen og blinker den.
+- Hold musen over eller tryk på en post: forældrene op til tavlen fremhæves.
+- Fold sammen/ud (▸/▾) pr. tavle, gruppe og post med børn. Huskes kun i appen, ikke i projektet.
+- Beregning og dokumentation: en undertavle uden egen Z<sub>e</sub> viser den beregnede værdi med "(beregnet fra forsynende tavle)".
+
 ## 10.18.0 · 2026-11-18 · Claude Opus
 
 Ny fane Brandlukning med billeder. Plan: `docs/planer/2026-11-18-brandlukning.md`.
