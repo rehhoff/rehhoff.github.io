@@ -678,6 +678,42 @@ async def main():
              and r['ikkeNr'] == ['2'] and r['lok'] == ['Udført 0 af 1', 'Mærkat 0 af 1', 1] and r['soeg'] == 1, r)
         tjek('brandlukning: sletning kan fortrydes, og billederne bliver på enheden', r['slet'] == [1, True] and r['fortryd'] == [2, True, True] and r['fjernBil'] == [2, True], r)
         tjek('dokumentation: brandlukninger med status, optælling og små billeder', r['docOk'] == [True, True, 2, True], r['docOk'])
+        # 4b. Import fra regneark (forslag 16)
+        await pg.evaluate(f"{A}.go('kabler')")
+        await pg.click('text=Importér fra regneark >> visible=true')
+        g0 = await pg.evaluate(f"(()=>{{const a={A},g=a.db.grupper[0];return {{id:g.id,txt:a.tavleNavn(g.tavleId)+':'+g.nr}}}})()")
+        tekst = ('Navn\tLokale\tGruppe\tEffekt (kW)\tKabel\tLængde (m)\tTværsnit\n'
+                 f'Testovn\tImportrum\t{g0["txt"]}\t2,5\txlpe\t7,5\t2,5\n'
+                 f'Fejlrække\t\t{g0["txt"]}\t1\tGummi\t3\t\n'
+                 'Tomrække\t\t\t\t\t\t\n'
+                 'Ugruppe\t\t99:99\t1\t\t\t\n')
+        await pg.fill('#imp-tekst', tekst)
+        await pg.wait_for_timeout(150)
+        r = await pg.evaluate(f"""async()=>{{const a={A},T=n=>new Promise(f=>setTimeout(f,n));const o={{}};
+          o.hdr=a.imp.hdr; o.map=a.imp.map.join(','); o.ok=a.impAntal(); o.fejl=a.imp.fh.filter(x=>!x.ok).map(x=>x.fejl.join('|'));
+          o.knap=document.getElementById('imp-gem').textContent.trim(); o.rader=document.querySelectorAll('[aria-label="Forhåndsvisning af import"] tbody tr').length;
+          o.foer=[a.db.enheder.length,a.db.lokaler.length]; document.getElementById('imp-gem').click(); await T(100);
+          const e=a.db.enheder.find(x=>x.navn==='Testovn'), t=a.db.enheder.find(x=>x.navn==='Tomrække');
+          o.efter=[a.db.enheder.length,a.db.lokaler.length]; o.lukket=!a.imp.aaben;
+          o.ovn=e&&[e.effekt,e.kabel,e.tv,e.laengde,a.lokaleNavn(e.lokaleId),e.gruppeId===a.db.grupper[0].id];
+          o.tom=t&&[t.effekt,t.kabel,t.ledere,t.tv,t.laengde,t.lokaleId,t.symbol];
+          o.ingenFejl=!a.db.enheder.some(x=>x.navn==='Fejlrække'||x.navn==='Ugruppe');
+          o.besked=a.toasts.some(x=>x.undo&&/2 brugsgenstande oprettet \(og 1 nye lokaler\)/.test(x.txt));
+          a.undo(); await T(60); o.fortrudt=[a.db.enheder.length,a.db.lokaler.length];
+          a.impAaben('lokale'); a.imp.tekst='Navn;Etage\\nImpLok;1. sal\\nImpLok2;\\n'+a.db.lokaler[0].navn+';2'; a.impAnalyser();
+          o.lok=[a.imp.hdr,a.impAntal(),a.imp.fh[2].fejl.join()]; a.impGem(); await T(60);
+          o.lokNy=a.db.lokaler.filter(l=>/^ImpLok/.test(l.navn)).map(l=>l.navn+'/'+l.etage);
+          a.undo(); await T(60); o.lokFort=a.db.lokaler.some(l=>/^ImpLok/.test(l.navn));
+          a.impAaben('enhed'); a.imp.tekst='Brugsgenstand;kabel;A\\nSpot;PVC;10'; a.impAnalyser(); o.amp=a.imp.fh[0].o.effekt; a.imp.aaben=false;
+          return o}}""")
+        tjek('import fra regneark: overskrifter, kW og komma-decimaler, nyt lokale, standardværdier; fejlrækker oprettes ikke',
+             r['hdr'] is True and r['map'] == 'navn,lokale,gruppe,kw,kabel,laengde,tv' and r['ok'] == 2 and r['knap'] == 'Importér 2 rækker' and r['rader'] == 4
+             and r['fejl'] == ['Ukendt kabeltype "Gummi"', 'Ukendt tavle "99"'] and r['efter'] == [r['foer'][0] + 2, r['foer'][1] + 1] and r['lukket']
+             and r['ovn'] == [2500, 'XLPE', 2.5, 7.5, 'Importrum', True] and r['tom'][:5] == [0, 'PVC', '3G', 1.5, 10] and r['tom'][6] == 'auto'
+             and r['ingenFejl'] and r['amp'] == 2300, r)
+        tjek('import fra regneark: kan fortrydes i ét trin, og import af lokaler virker (semikolon, dublet afvises)',
+             r['besked'] and r['fortrudt'] == r['foer'] and r['lok'][:2] == [True, 2] and 'findes allerede' in r['lok'][2]
+             and r['lokNy'] == ['ImpLok/1. sal', 'ImpLok2/'] and r['lokFort'] is False, r)
         await pg.evaluate(f"{A}.go('tavle')")
 
         # 5. Backupfil kan hentes og indlæses uden at overskrive. Den indeholder billederne

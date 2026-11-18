@@ -6,7 +6,7 @@ const CACHE = 'el-oversigt-' + VERSION, FONTE = 'el-oversigt-fonte';
 const V = '?v=' + VERSION;
 const SKAL = ['./', 'index.html', 'manifest.webmanifest', 'ikoner/ikon-192.png', 'ikoner/ikon-512.png', 'ikoner/ikon.svg', 'ikoner/apple-touch-icon.png',
   'css/app.css' + V, 'css/tailwind.css' + V,
-  'js/data.js' + V, 'js/beregning.js' + V, 'js/diagram.js' + V, 'js/lagring.js' + V, 'js/historik.js' + V, 'js/billeder.js' + V, 'js/brand.js' + V, 'js/app.js' + V,
+  'js/data.js' + V, 'js/beregning.js' + V, 'js/diagram.js' + V, 'js/lagring.js' + V, 'js/historik.js' + V, 'js/billeder.js' + V, 'js/brand.js' + V, 'js/import.js' + V, 'js/app.js' + V,
   'https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.14.1/cdn.min.js'];
 
 self.addEventListener('install', ev => {
