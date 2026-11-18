@@ -16,6 +16,7 @@
 | `js/lagring.js` | `APP_LAGRING()`: projekter, eksport, import, backup, synkronisering |
 | `js/billeder.js` | `APP_BILLEDER()`: billeder til brandlukninger. Komprimering med canvas, IndexedDB (`tavleoversigt-billeder`), miniaturer, billedsynk til en separat Gist, billeder i backupfilen |
 | `js/brand.js` | `APP_BRAND()`: fanen Brandlukning (liste, filtre, optælling, formular) og afsnittet i dokumentationen |
+| `js/aflevering.js` | `APP_AFLEVERING()`: afleveringstjek i Fejlfinder (`aflTjek`, `aflAntal`, `aflGaa`, statuslinje i dokumentationen) og tavlefortegnelsen (`tavleFortegnelseHtml`, `udskrivFortegnelse`). Ingen egne data |
 | `js/historik.js` | `APP_HISTORIK()`: tidligere versioner af det aktive projekt fra Gist'ens versionshistorik (`/gists/{id}/commits`), gendannes som kopi |
 | `js/app.js` | `app()`: tilstand, `init()` og resten af brugerfladen. `bland()` samler metoderne fra de tre filer ovenfor |
 | `CLAUDE.md` | Regler og hukommelse for Claude |

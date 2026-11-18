@@ -245,6 +245,32 @@ async def main():
         r = await vindue.evaluate("[document.body.innerText.includes('Test El ApS'), document.body.innerText.includes('Underskrift'), document.querySelectorAll('img').length]")
         tjek('udskriv() åbner et vindue med dokumentationen', r == [True, True, 1], r)
         await vindue.close()
+        # Afleveringstjek (forslag 10) og tavlefortegnelse (forslag 11)
+        r = await pg.evaluate(f"""(()=>{{const a={A};const k=a.aflTjek();return {{kat:k.filter(x=>x.punkter.length).map(x=>x.k),n:a.aflAntal(),doc:a.docHtml().includes('Afleveringstjek: '+a.aflAntal()+' ')}}}})()""")
+        tjek('afleveringstjek viser kendte mangler i eksempelprojektet, og dokumentationen har en statuslinje', r['n'] > 0 and len(r['kat']) > 0 and r['doc'], r)
+        r = await pg.evaluate(f"""(async()=>{{const a={A};const T=n=>new Promise(f=>setTimeout(f,n));const gem=a.db, v=a.view;const o={{}};
+          try {{ a.db=norm(JSON.parse(JSON.stringify(gem)));const d=a.db;
+            d.enheder=[];d.daaser=[];d.afbrydere=[];d.links=[];d.racks=[];d.udstyr=[];d.brandlukninger=[];d.grupper=[];d.rcds=[];
+            d.tavler.forEach(t=>{{t.tTrukket=true;t.ze=0.3;if(t.fra&&!t.tilgang)t.tilgang='5G6'}});
+            o.n=a.aflAntal();o.doc=a.docHtml().includes('Afleveringstjek');a.view='fejlfinder';await T(150);
+            const e=document.getElementById('afl-klar');o.klar=!!e&&getComputedStyle(e).display!=='none';
+            d.tavler[0].ze=0;o.ze=a.aflTjek().find(x=>x.k==='tavle').punkter.length;
+          }} finally {{ a.db=gem;a.view=v }} return o}})()""")
+        tjek('afleveringstjek: "Klar til aflevering", når intet mangler; mangler Ze tæller med', r['n'] == 0 and r['klar'] and not r['doc'] and r['ze'] >= 1, r)
+        r = await pg.evaluate(f"""(async()=>{{const a={A};const T=n=>new Promise(f=>setTimeout(f,n));const o={{}};a.view='fejlfinder';await T(150);
+          const knap=document.querySelector('.afl-punkt');o.har=!!knap;o.foer=[a.view,!!a.modal];if(knap)knap.click();await T(150);o.efter=[a.view,!!a.modal];
+          if(a.modal&&a.closeModal)a.closeModal();else a.modal=null;
+          const g=a.sorteredeGrupper()[0];a.view='fejlfinder';a.aflGaa({{nav:{{g:g.id}}}});await T(100);o.g=[a.view,a.sel===g.id];return o}})()""")
+        tjek('afleveringstjek: et klik går til stedet (formular eller gruppe)', r['har'] and (r['efter'][0] != 'fejlfinder' or r['efter'][1]) and r['g'] == ['tavle', True], r)
+        r = await pg.evaluate(f"""(()=>{{const a={A};const t=a.db.tavler[0];const h=a.tavleFortegnelseHtml(t.id);return {{nr:a.grupperFor(t.id).every(g=>h.includes('<td class="n">'+g.nr+'</td>')),n:a.grupperFor(t.id).length,side:h.includes('@page'),navn:h.includes(t.navn)}}}})()""")
+        tjek('tavleFortegnelseHtml indeholder alle gruppenumre og @page', r['n'] > 0 and r['nr'] and r['side'] and r['navn'], r)
+        async with pg.expect_popup() as pop:
+            await pg.evaluate(f"{A}.udskrivFortegnelse({A}.db.tavler[0].id)")
+        vindue = await pop.value
+        await vindue.wait_for_load_state()
+        r = await vindue.evaluate("[document.body.textContent.includes('Betegnelse'), document.querySelectorAll('tbody tr').length]")
+        tjek('udskrivFortegnelse() åbner et vindue med tavlefortegnelsen', r[0] and r[1] > 0, r)
+        await vindue.close()
         await pg.evaluate(f"{A}.view={json.dumps(sidstVisning)}")
         await pg.evaluate(f"(()=>{{{A}.firma={{navn:'',cvr:'',adresse:'',telefon:'',logo:''}};localStorage.removeItem('tavleoversigt.firma')}})()")
 

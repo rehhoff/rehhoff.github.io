@@ -14,8 +14,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=10.18.0">
-<link rel="stylesheet" href="css/tailwind.css?v=10.18.0">
+<link rel="stylesheet" href="css/app.css?v=10.19.0">
+<link rel="stylesheet" href="css/tailwind.css?v=10.19.0">
 </head>
 <body class="min-h-full">
 <p id="fail" hidden style="margin:16px;padding:12px;border:1px solid var(--crit);color:var(--crit)">Appen kunne ikke starte, fordi Alpine.js ikke blev indlæst. Genindlæs siden.</p>
@@ -133,6 +133,7 @@
               <button class="btn btn-ghost" @click="openForm('gruppe', null, {tavleId:t.id})">+ Gruppe</button>
               <button class="btn btn-ghost" @click="openForm('rcd', null, {tavleId:t.id})">+ HPFI</button>
               <button type="button" class="btn btn-ghost px-1" @click="ryk('tavler', t.id, -1)" aria-label="Flyt tavle op" title="Flyt op">▲</button><button type="button" class="btn btn-ghost px-1" @click="ryk('tavler', t.id, 1)" aria-label="Flyt tavle ned" title="Flyt ned">▼</button>
+              <button class="btn btn-ghost" @click="udskrivFortegnelse(t.id)" title="A4-side til tavlelågen">Tavlefortegnelse</button>
               <button class="btn btn-ghost" @click="openForm('tavle', t)">Rediger</button>
             </div>
           </header>
@@ -946,6 +947,7 @@
       <div class="panel p-3 flex flex-col gap-2">
         <h2 class="hd text-lg">Eksport</h2>
         <button class="btn justify-center btn-primary" @click="udskriv()">Udskriv / gem som PDF</button>
+        <template x-for="t in db.tavler" :key="'tf' + t.id"><button class="btn justify-center" @click="udskrivFortegnelse(t.id)" x-text="'Udskriv tavlefortegnelse · ' + t.navn"></button></template>
         <button class="btn justify-center" @click="hent(filnavn('dokumentation','html'), docHtml())">Hent dokumentation som HTML-fil</button>
         <p class="text-xs text-muted">Indeholder stamdata, enstregsdiagram, gruppeskema, måleskema og underskriftsfelt for det aktive projekt, sat op til A4. Vælg "Gem som PDF" som printer i udskriftsdialogen for at få en PDF-fil.</p>
         <div class="flex flex-col gap-2 border-t border-line pt-2">
@@ -1044,6 +1046,19 @@
 
   <!-- ============ FEJLFINDER ============ -->
   <section x-show="view==='fejlfinder'" class="flex flex-col gap-4">
+    <div class="panel p-3 flex flex-col gap-2" id="afl-panel">
+      <h2 class="hd text-lg">Klar til aflevering?</h2>
+      <p x-show="!aflAntal()" id="afl-klar" class="flex items-center gap-2 font-semibold" style="color:var(--cctv)"><span aria-hidden="true">✓</span> Klar til aflevering</p>
+      <p x-show="aflAntal()" class="warn" x-text="aflAntal() + (aflAntal() === 1 ? ' punkt mangler' : ' punkter mangler')"></p>
+      <template x-for="k in aflTjek().filter(k => k.punkter.length)" :key="k.k">
+        <div class="afl-kat">
+          <h3 class="text-sm font-semibold" x-text="k.l + ' (' + k.punkter.length + ')'"></h3>
+          <ul class="max-h-48 overflow-y-auto">
+            <template x-for="p in k.punkter" :key="p.k"><li><button type="button" class="afl-punkt text-left text-sm underline-offset-2 hover:underline py-0.5" @click="aflGaa(p)" x-text="p.txt"></button></li></template>
+          </ul>
+        </div>
+      </template>
+    </div>
     <div class="flex flex-wrap gap-2 items-center">
       <button class="btn" :class="mFilter==='' && 'sel'" @click="mFilter=''" x-text="'Alle (' + mangler().length + ')'"></button>
       <template x-for="(l, k) in manglerKat" :key="k">
@@ -1643,14 +1658,15 @@
   </div>
 </div>
 
-<script src="js/data.js?v=10.18.0"></script>
-<script src="js/beregning.js?v=10.18.0"></script>
-<script src="js/diagram.js?v=10.18.0"></script>
-<script src="js/lagring.js?v=10.18.0"></script>
-<script src="js/historik.js?v=10.18.0"></script>
-<script src="js/billeder.js?v=10.18.0"></script>
-<script src="js/brand.js?v=10.18.0"></script>
-<script src="js/app.js?v=10.18.0"></script>
+<script src="js/data.js?v=10.19.0"></script>
+<script src="js/beregning.js?v=10.19.0"></script>
+<script src="js/diagram.js?v=10.19.0"></script>
+<script src="js/lagring.js?v=10.19.0"></script>
+<script src="js/historik.js?v=10.19.0"></script>
+<script src="js/billeder.js?v=10.19.0"></script>
+<script src="js/brand.js?v=10.19.0"></script>
+<script src="js/aflevering.js?v=10.19.0"></script>
+<script src="js/app.js?v=10.19.0"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.14.1/cdn.min.js"></script>
 </body>
 </html>
