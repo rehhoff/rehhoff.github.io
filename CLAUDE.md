@@ -37,6 +37,7 @@ Projekterne ligger i browserens localStorage på `rehhoff.github.io` og kan synk
    python tools/byg_css.py
    python tests/smoke.py
    ```
+   Røgtesten stopper selv efter 300 s (`SMOKE_SAMLET_S`) og hver Playwright-handling efter 15 s (`SMOKE_TRIN_MS`) og siger, hvilket tjek der hang.
    Med npm: `npm install` og `python3 tests/smoke.py`. Sæt `PYTHONIOENCODING=utf-8`, hvis æ, ø og å giver fejl i konsollen.
 6. Commit med en beskrivelse på dansk, og nævn planen, hvis der er en. Push branchen.
 7. Claude merger selv (aftalt med Alexander 2026-11-16), når røgtesten giver `OK`. Hent først den nyeste `main` ind i branchen (`git fetch && git merge origin/main`), løs konflikter, sæt versionen ud fra den aktuelle `main`, og kør røgtesten igen. Derefter `git checkout main && git pull && git merge --no-ff <branch>` og `git push origin main`. `gh` er ikke logget ind, så der bruges ingen pull request.
