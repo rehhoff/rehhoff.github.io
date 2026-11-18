@@ -1,7 +1,7 @@
 /* Konstanter, lagernøgler, tabeller, norm() og eksempeldata. Indlæses først; alt her er globalt og bruges af de andre filer og markup. */
 const KEY = 'tavleoversigt.v2', OLD = 'tavleoversigt.v1', TKEY = 'tavleoversigt.tema', IDX = 'tavleoversigt.projekter';
 /* Versioner: APP_VERSION følger CHANGELOG.md. SCHEMA hæves kun, når datamodellen ændres, og udløser en automatisk backup før migrering. */
-const APP_VERSION = '10.15.0', SCHEMA = 13, BKEY = 'tavleoversigt.backups', BMAX = 3;
+const APP_VERSION = '10.16.0', SCHEMA = 14, BKEY = 'tavleoversigt.backups', BMAX = 3;
 const PK = id => 'tavleoversigt.p.' + id, MEM = {};
 /* Synkronisering: en hemmelig GitHub Gist med en markørfil og én fil pr. projekt. Se docs/planer/2026-11-15-gist-synk.md. */
 const SKEY = 'tavleoversigt.sync', GFIL = 'tavleoversigt.json', GP = id => 'tavleoversigt-' + id + '.json', GPRE = /^tavleoversigt-([A-Za-z0-9_-]+)\.json$/, GH = 'https://api.github.com';
@@ -76,6 +76,8 @@ const LAG = {
 };
 const K_JORD_SAMLET = { D1:[1, 0.85, 0.75, 0.70, 0.65, 0.60], D2:[1, 0.75, 0.65, 0.60, 0.55, 0.50] };
 const PH = ['L1', 'L2', 'L3'];
+/* Gruppetyper med lys: ΔU-grænse 3 % og forvalgt til afbrydere. "Lys og stik" (lysstik) aftalt med Alexander 2026-11-18. */
+const LYS_TYPER = ['lys', 'lysstik'];
 const KABLER = ['Brandkabel', 'XLPE', 'PVC', 'PKAJ', 'PKL'];
 const DAASER = ['Membrandåse', 'Indmuringsdåse', 'Forfradåse', 'Underlag', 'Europadåse', 'PL-dåse'];
 const kabMap = k => KABLER.includes(k) ? k : /noik|halogen|xlpe/i.test(k || '') ? 'XLPE' : 'PVC';
@@ -101,8 +103,8 @@ const EFFEKT = [
 ];
 /* Samtidighedsfaktorer som vejledende forslag pr. installationstype og gruppetype */
 const ANLAEG = { bolig:'Bolig', kontor:'Kontor', butik:'Butik', institution:'Skole og institution', fitness:'Fitness og omklædning', storkoekken:'Storkøkken og restaurant', industri:'Værksted og industri' };
-const SF = { bolig:{ lys:0.7, stik:0.3, kraft:0.8, data:1 }, kontor:{ lys:0.9, stik:0.5, kraft:0.8, data:1 }, butik:{ lys:1, stik:0.5, kraft:0.8, data:1 }, institution:{ lys:0.9, stik:0.4, kraft:0.8, data:1 },
-  fitness:{ lys:1, stik:0.8, kraft:0.9, data:1 }, storkoekken:{ lys:1, stik:0.7, kraft:0.8, data:1 }, industri:{ lys:1, stik:0.6, kraft:0.7, data:1 } };
+const SF = { bolig:{ lys:0.7, lysstik:0.7, stik:0.3, kraft:0.8, data:1 }, kontor:{ lys:0.9, lysstik:0.9, stik:0.5, kraft:0.8, data:1 }, butik:{ lys:1, lysstik:1, stik:0.5, kraft:0.8, data:1 }, institution:{ lys:0.9, lysstik:0.9, stik:0.4, kraft:0.8, data:1 },
+  fitness:{ lys:1, lysstik:1, stik:0.8, kraft:0.9, data:1 }, storkoekken:{ lys:1, lysstik:1, stik:0.7, kraft:0.8, data:1 }, industri:{ lys:1, lysstik:1, stik:0.6, kraft:0.7, data:1 } };
 /* Lokaleskabeloner: grupper med [navn, W] */
 const SKABELONER = {
   koekken: { navn:'Køkken', grupper:[ { navn:'Lys', type:'lys', In:10, items:[['Downlight 6 stk.', 60], ['LED-bånd under overskabe', 30]] }, { navn:'Stik', type:'stik', In:13, items:[['Stikkontakter over bord 4 stk.', 1000], ['Køleskab', 150], ['Fryser', 150], ['Emhætte', 250], ['Mikroovn', 1200]] },
@@ -151,7 +153,7 @@ function norm(d) {
   });
   /* skema 13: føringsvej. Hver post har ét indgående træk med status (trukket, note) og placering (fx "Væg A") og højde (cm) */
   const traek = x => { x.hoejde = Number(x.hoejde) > 0 ? Number(x.hoejde) : ''; x.placering = String(x.placering || ''); x.trukket = !!x.trukket; x.note = String(x.note || ''); };
-  o.enheder.forEach(e => { e.gruppeId = e.gruppeId || ''; e.lokaleId = e.lokaleId || ''; e.daaseId = e.daaseId || ''; e.kabel = kabMap(e.kabel); e.symbol = e.symbol || 'auto'; e.fraEnhed = e.fraEnhed || ''; traek(e); });
+  o.enheder.forEach(e => { e.gruppeId = e.gruppeId || ''; e.lokaleId = e.lokaleId || ''; e.daaseId = e.daaseId || ''; e.kabel = kabMap(e.kabel); e.symbol = e.symbol || 'auto'; e.fraEnhed = e.fraEnhed || ''; /* skema 14: 1-faset tilslutning på 3-faset gruppe ('' = som gruppen) */ e.fase = PH.includes(e.fase) ? e.fase : ''; traek(e); });
   o.daaser.forEach(d => { d.gruppeId = d.gruppeId || ''; d.parentId = d.parentId || ''; d.lokaleId = d.lokaleId || ''; d.kabel = kabMap(d.kabel); d.type = daaMap(d.type); traek(d); });
   const eid = new Set(o.enheder.map(e => e.id));
   /* skema 13: sløjfe fra en anden brugsgenstand. Ukendt eller sig selv = ingen sløjfe; kredse brydes */

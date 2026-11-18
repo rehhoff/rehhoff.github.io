@@ -309,7 +309,7 @@ async def main():
             enheder:JSON.stringify(a.db.enheder), daaser:JSON.stringify(a.db.daaser), ng:g.length, nt:t.length,
             bak:(JSON.parse(localStorage.getItem('tavleoversigt.backups'))||[]).length}}}})()""")
         tjek('opgradering fra skema 9: backup, standardforhold og data intakte',
-             r['navn'] == 'Skema 9-projekt' and r['b'] >= 1 and r['s'] == 13 and r['std'] == ['C', 30, 20, 1, 'bundt'] and r['g'] and r['t']
+             r['navn'] == 'Skema 9-projekt' and r['b'] >= 1 and r['s'] == 14 and r['std'] == ['C', 30, 20, 1, 'bundt'] and r['g'] and r['t']
              and r['ng'] == r0['ng'] and r['nt'] == r0['nt'] and r['enheder'] == r0['enheder'] and r['daaser'] == r0['daaser'],
              {k: v for k, v in r.items() if k not in ('enheder', 'daaser')} | {'enheder ens': r['enheder'] == r0['enheder'], 'daaser ens': r['daaser'] == r0['daaser']})
 
@@ -322,7 +322,7 @@ async def main():
         r = await pg.evaluate(f"""(()=>{{const a={A};return {{navn:a.db.projekt.navn, b:a.backups.length, s:JSON.parse(localStorage.getItem('tavleoversigt.projekter')).schema,
             afb:JSON.stringify(a.db.afbrydere), enheder:JSON.stringify(a.db.enheder), svg:a.db.afbrydere.every(x=>a.taendSvg(x).length>500&&a.taendSvg(x,true).length>500)}}}})()""")
         tjek('opgradering fra skema 10: backup taget, afbrydere og brugsgenstande intakte',
-             r['navn'] == 'Skema 10-projekt' and r['b'] >= 1 and r['s'] == 13 and r['afb'] == r0['afb'] and r['enheder'] == r0['enheder'] and r['svg']
+             r['navn'] == 'Skema 10-projekt' and r['b'] >= 1 and r['s'] == 14 and r['afb'] == r0['afb'] and r['enheder'] == r0['enheder'] and r['svg']
              and r0['n'] >= 6 and r0['arter'] == ['enpolet', 'kip', 'korr', 'krone', 'sensor', 'trappe'],
              {'navn': r['navn'], 'b': r['b'], 's': r['s'], 'afb ens': r['afb'] == r0['afb'], 'enheder ens': r['enheder'] == r0['enheder'], 'n': r0['n'], 'arter': r0['arter']})
 
@@ -341,7 +341,7 @@ async def main():
             ik:d.grupper.every(g=>a.ikMin(g)===null), kf:a.kortslutFejl().length}}}})()""")
         ens = {k: r[k] == r0[k] for k in ('enheder', 'daaser', 'g', 't', 'r')}
         tjek('opgradering fra skema 11: backup taget, data intakte, nye felter med standardværdier, ingen Ik uden Ze',
-             r['navn'] == 'Skema 11-projekt' and r['b'] >= 1 and r['s'] == 13 and all(ens.values()) and r['std'] and r['ik'] and r['kf'] == 0,
+             r['navn'] == 'Skema 11-projekt' and r['b'] >= 1 and r['s'] == 14 and all(ens.values()) and r['std'] and r['ik'] and r['kf'] == 0,
              {'navn': r['navn'], 'b': r['b'], 's': r['s'], 'std': r['std'], 'ik': r['ik'], 'kf': r['kf']} | ens)
 
         # 4e. Kortslutningsstrøm og selektivitet med kendte tal (aftalt 2026-11-16). Ændringerne gemmes ikke.
@@ -398,7 +398,7 @@ async def main():
             std:d.enheder.concat(d.daaser).every(x=>x.trukket===false&&x.note===''&&x.placering===''&&x.hoejde==='')&&d.enheder.every(e=>e.fraEnhed==='')&&d.afbrydere.every(x=>x.laengde===0&&x.daaseId===''&&x.fraEnhed==='')&&d.tavler.every(t=>t.tTrukket===false&&t.tNote==='')}}}})()""")
         ens = {k: r[k] == r0[k] for k in ('e', 'd', 'a')}
         tjek('opgradering fra skema 12: backup taget, data intakte, føringsvejens felter tomme',
-             r['navn'] == 'Skema 12-projekt' and r['b'] >= 1 and r['s'] == 13 and all(ens.values()) and r['std'], {'b': r['b'], 's': r['s'], 'std': r['std']} | ens)
+             r['navn'] == 'Skema 12-projekt' and r['b'] >= 1 and r['s'] == 14 and all(ens.values()) and r['std'], {'b': r['b'], 's': r['s'], 'std': r['std']} | ens)
 
         # 4h. Føringsvej: sløjfer i ΔU og Ik, afbrydertræk, kopiér gren, kæde, trukket og note. Ryddes op bagefter
         r = await pg.evaluate(f"""(async()=>{{const a={A};const T=n=>new Promise(f=>setTimeout(f,n));const d=a.db, n0=JSON.stringify([d.tavler.length,d.grupper.length,d.enheder.length,d.afbrydere.length]), sel0=a.sel, o={{}}, rd=x=>Math.round(x*100000)/100000;
@@ -464,6 +464,72 @@ async def main():
           gs.forEach((g,i)=>{{g.fase=gem[i];}}); a.save(); return o}})()""")
         tjek('fasefordeling: forslag vises uden at ændre noget, Anvend flytter grupperne, intet forslag når balancen ikke bliver bedre',
              r['vist'] and r['uroert'] and r['tal'] and r['anvendt'] and r['ingen'], r)
+
+        # 4j. Opgradering fra skema 13: brugsgenstande uden fase får fase '' (som gruppen), data intakte
+        r0 = await pg.evaluate("""(()=>{const i=JSON.parse(localStorage.getItem('tavleoversigt.projekter'));i.schema=13;const id=i.aktiv;
+          const p=JSON.parse(localStorage.getItem('tavleoversigt.p.'+id));p.enheder.forEach(e=>{delete e.fase;});p.projekt.navn='Skema 13-projekt';
+          localStorage.setItem('tavleoversigt.p.'+id,JSON.stringify(p));localStorage.setItem('tavleoversigt.projekter',JSON.stringify(i));localStorage.removeItem('tavleoversigt.backups');
+          const k=x=>JSON.stringify(x.map(e=>[e.id,e.navn,e.gruppeId,e.daaseId,e.fraEnhed,e.effekt,e.kabel,e.ledere,e.tv,e.laengde,e.placering,e.trukket,e.note]));
+          return {e:k(p.enheder), g:JSON.stringify(p.grupper.map(g=>[g.id,g.type,g.faser,g.fase,g.sf])), n:p.enheder.length}})()""")
+        await pg.goto(URL); await pg.wait_for_timeout(500)
+        r = await pg.evaluate(f"""(()=>{{const a={A};const d=a.db;const k=x=>JSON.stringify(x.map(e=>[e.id,e.navn,e.gruppeId,e.daaseId,e.fraEnhed,e.effekt,e.kabel,e.ledere,e.tv,e.laengde,e.placering,e.trukket,e.note]));
+          a.save(); return {{navn:d.projekt.navn, b:a.backups.length, s:JSON.parse(localStorage.getItem('tavleoversigt.projekter')).schema, e:k(d.enheder), g:JSON.stringify(d.grupper.map(g=>[g.id,g.type,g.faser,g.fase,g.sf])),
+            fase:d.enheder.every(e=>e.fase===''), gemt:JSON.parse(localStorage.getItem('tavleoversigt.p.'+a.pid)||'{{}}').enheder.every(e=>e.fase==='')}}}})()""")
+        tjek('opgradering fra skema 13: backup taget, brugsgenstande og grupper intakte, fase sat til som gruppen',
+             r['navn'] == 'Skema 13-projekt' and r['b'] >= 1 and r['s'] == 14 and r['e'] == r0['e'] and r['g'] == r0['g'] and r['fase'] and r['gemt'] and r0['n'] > 0,
+             {k: r[k] for k in ('navn', 'b', 's', 'fase', 'gemt')} | {'e': r['e'] == r0['e'], 'g': r['g'] == r0['g']})
+
+        # 4k. 1-faset tilslutning på 3-faset gruppe med kendte tal, samt gruppetypen Lys og stik. Ryddes op bagefter
+        r = await pg.evaluate(f"""(async()=>{{const a={A};const T=n=>new Promise(f=>setTimeout(f,n));const d=a.db, n0=JSON.stringify([d.tavler.length,d.grupper.length,d.enheder.length,d.daaser.length,d.afbrydere.length]), sel0=a.sel, o={{}}, rd=x=>Math.round(x*100000)/100000;
+          const E=(id,navn,gid,P,fase,L,x)=>Object.assign({{id,gruppeId:gid,lokaleId:'',daaseId:'',fraEnhed:'',fase,navn,effekt:P,kabel:'PVC',ledere:'5G',tv:2.5,laengde:L,symbol:'auto',hoejde:'',placering:'',trukket:false,note:''}},x||{{}});
+          const G=(id,nr,type,faser,fase)=>({{id,tavleId:'tqp',nr,navn:'P'+nr,type,kar:'B',In:16,faser,fase,rcdId:'',sf:1,brydeevne:6,maal:{{riso:'',zs:'',rcd:'',ok:false}},metode:'',temp:'',samlet:'',lag:''}});
+          const P3=4000*Math.sqrt(3);
+          try {{
+            d.tavler.push({{id:'tqp',navn:'TP',placering:'',forsikring:63,hovedafbryder:0,fra:'',fraGruppe:'',tilgang:'',tKabel:'PVC',tLedere:'5G',tTv:6,tLaengde:0,ze:0,ikMaks:0,tTrukket:false,tNote:''}});
+            d.grupper.push(G('gqp',1,'kraft',3,'L1'), G('gq1',2,'stik',1,'L1'), G('gql',3,'lysstik',1,'L2'));
+            d.enheder.push(E('p1','P1 3F','gqp',P3,'',10), E('p2','P2 L2','gqp',2300,'L2',10));
+            const p1=a.enhed('p1'), p2=a.enhed('p2');
+            o.p2=[a.fase1(p2),a.tre(p2),rd(a.strom(p2)),rd(a.du(p2)),rd(a.lmax(p2)),a.iz(p2)===a.izTabel('PVC',2.5,false,'C'),a.faseTxt(p2)];
+            o.p1=[a.fase1(p1),a.tre(p1),rd(a.strom(p1)),rd(a.du(p1))];
+            const gf=a.gruppeFaser(a.gruppe('gqp')); o.faser=[rd(gf.L1),rd(gf.L2),rd(gf.L3),rd(a.gruppeI('gqp'))];
+            const fi=a.faseInfo('tqp'); o.tavle=[...fi.vals.map(v=>rd(v.I)),rd(fi.IN)];
+            d.enheder.push(E('p3','P3 L1 sløjfe','gqp',2300,'L1',5,{{fraEnhed:'p1'}})); const p3=a.enhed('p3'), ef=a.enhedFaser(p1);
+            o.sloejfe=[rd(ef.L1),rd(ef.L2),rd(ef.L3),rd(a.enhedI(p1)),rd(a.du(p1)),rd(a.du(p3))];
+            const gf2=a.gruppeFaser(a.gruppe('gqp')); o.faser2=[rd(gf2.L1),rd(gf2.L2),rd(gf2.L3)];
+            d.daaser.push({{id:'dp',navn:'DP',type:'Forfradåse',gruppeId:'gqp',parentId:'',lokaleId:'',kabel:'PVC',ledere:'5G',tv:2.5,laengde:10,hoejde:'',placering:'',trukket:false,note:''}});
+            d.enheder.push(E('p4','P4 3F','gqp',P3,'',0,{{daaseId:'dp'}}), E('p5','P5 L3','gqp',2300,'L3',0,{{daaseId:'dp'}}));
+            o.daase=[rd(a.daaseI('dp')),rd(a.duOp('dp')),rd(a.du(a.enhed('p5')))];
+            d.enheder.push(E('q1','Q1','gq1',2300,'L3',10)); const q1=a.enhed('q1'); const g1f=a.gruppeFaser(a.gruppe('gq1'));
+            o.en1=[a.fase1(q1),rd(a.strom(q1)),rd(g1f.L1),g1f.L3,q1.fase];
+            o.rows=a.rows().some(x=>x.e.id==='p2'&&x.via.includes('L2, 230 V')); o.doc=a.docHtml().includes('P2 L2 (L2, 230 V)');
+            a.sel='gqp'; a.go('beregning'); await T(150); o.beregning=document.body.innerText.includes('L1 30 · L2 30 · L3 30 A');
+            a.go('tavle'); await T(100);
+            a.openForm('enhed',p2); await T(100); const fs=document.getElementById('m-fase');
+            o.form=[!!fs&&fs.offsetParent!==null,a.form.fase,a.belTxt().includes('230 V (L2 og nul)')];
+            a.form.belEnh='A'; a.belFra(); o.belA=a.form.belVal; a.form.belVal=8; a.belSync(); o.belW=a.form.effekt;
+            a.form.fase=''; a.belSync(); o.form3=a.belTxt().includes('3 × 400 V'); a.modal=null; await T(50);
+            a.openForm('enhed',q1); await T(100); o.skjult=document.getElementById('m-fase').offsetParent===null; a.modal=null; await T(50);
+            d.enheder.push(E('l1','Spot','gql',100,'',10,{{ledere:'3G'}}));
+            o.ls=[a.typeLabel.lysstik,a.duGraense(a.enhed('l1')),Object.keys(SF).every(k=>SF[k].lysstik===SF[k].lys),a.sfForslag({{type:'lysstik'}}).v===SF[d.projekt.anlaeg||'bolig'].lys,
+              a.sfListe({{type:'lysstik'}}).some(x=>x.txt.includes('lys og stik'))];
+            a.sel='gql'; a.openForm('afbryder'); o.afb=a.form.gruppeId; a.modal=null; await T(50);
+            a.go('tavle'); await T(150); const chip=document.querySelector('.typed.lysstik'), cs=getComputedStyle(document.documentElement).getPropertyValue('--lysstik').trim();
+            o.farve=!!chip&&cs!==''&&getComputedStyle(chip).getPropertyValue('--t').trim()===cs;
+            o.filter=[...document.querySelectorAll('#f-type option')].some(x=>x.value==='lysstik'&&x.textContent==='Lys og stik');
+            o.print=a.sld(true).includes('.lysstik .tc');
+          }} finally {{
+            a.sel=sel0; a.modal=null; await T(50); const g=x=>!['gqp','gq1','gql'].includes(x.gruppeId); d.enheder=d.enheder.filter(g); d.daaser=d.daaser.filter(g); d.grupper=d.grupper.filter(x=>x.tavleId!=='tqp'); d.tavler=d.tavler.filter(x=>x.id!=='tqp'); a.save();
+          }}
+          o.ryddet=JSON.stringify([a.db.tavler.length,a.db.grupper.length,a.db.enheder.length,a.db.daaser.length,a.db.afbrydere.length])===n0;
+          return o}})()""")
+        tjek('1-faset tilslutning på 3-faset gruppe: P/230, ΔU 1-faset (2·L, 230 V), Iz med 2 belastede ledere, fasestrømme, sløjfe, dåse, formular og visning',
+             r['p2'] == ['L2', False, 10, 0.78261, 63.88889, True, 'L2, 230 V'] and r['p1'] == ['', True, 10, 0.38971]
+             and r['faser'] == [10, 20, 10, 20] and r['tavle'] == [10, 20, 10, 10]
+             and r['sloejfe'] == [20, 10, 10, 20, 1.16913, 1.56044] and r['faser2'] == [20, 20, 10]
+             and r['daase'] == [20, 1.16913, 1.16913] and r['en1'] == ['', 10, 10, 0, 'L3']
+             and r['rows'] and r['doc'] and r['beregning'] and r['form'] == [True, 'L2', True] and r['belA'] == 10 and r['belW'] == 1840 and r['form3'] and r['skjult'] and r['ryddet'], r)
+        tjek('gruppetype Lys og stik: label, ΔU-grænse 3 %, samtidighed som lys, afbryder, farvetoken, filter, printfarve',
+             r['ls'] == ['Lys og stik', 3, True, True, True] and r['afb'] == 'gql' and r['farve'] and r['filter'] and r['print'], r)
 
         # 5. Backupfil kan hentes og indlæses uden at overskrive
         async with pg.expect_download() as dl:

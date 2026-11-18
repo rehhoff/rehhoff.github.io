@@ -1,18 +1,30 @@
 /* Beregning: strøm, spændingsfald, Iz, fasebalance, kabeltabel, samtidighed, tilgangskabel og effektforslag. Metoderne samles i app() i js/app.js, så this er hele app-tilstanden. */
 const APP_BEREGNING = () => ({
     /* beregning */
-    tre(e) { const g = this.gruppe(e.gruppeId); return !!g && g.faser == 3; },
+    /* 1-faset tilslutning (skema 14): fasen, når gruppen er 3-faset og brugsgenstanden kun er tilsluttet én fase og nul, ellers '' */
+    fase1(e) { const g = this.gruppe(e.gruppeId); return !!g && g.faser == 3 && PH.includes(e.fase) ? e.fase : ''; },
+    faseTxt(e) { const p = this.fase1(e); return p ? p + ', 230 V' : ''; },
+    tre(e) { const g = this.gruppe(e.gruppeId); return !!g && g.faser == 3 && !this.fase1(e); },
+    /* strøm pr. fase for én brugsgenstand: 3-faset på alle tre, 1-faset tilslutning på sin fase, 1-faset gruppe på gruppens fase */
+    faseV(e) { const I = this.strom(e), v = { L1:0, L2:0, L3:0 }, g = this.gruppe(e.gruppeId); if (this.tre(e)) PH.forEach(p => { v[p] = I; }); else v[this.fase1(e) || (g && PH.includes(g.fase) ? g.fase : 'L1')] = I; return v; },
+    faseSum(es) { const v = { L1:0, L2:0, L3:0 }; for (const e of es) { const f = this.faseV(e); PH.forEach(p => { v[p] += f[p]; }); } return v; },
+    /* ΔU i ét træk ud fra strøm pr. fase, cos φ = 1, nul som faselederen. Én fase belastet: 2·L·I·ρ/A/230. Ellers største ΔU_p = ρL/A·(2·I_p − ½·(I_q + I_r))/(400/√3), som ved symmetrisk last er den 3-fasede formel. */
+    duV(v, L, A) {
+      const ps = PH.filter(p => v[p] > 1e-9); if (!ps.length) return 0;
+      if (ps.length === 1) return this.duSeg(v[ps[0]], L, A, false);
+      return Math.max(...PH.map((p, i) => 2 * v[p] - 0.5 * (v[PH[(i + 1) % 3]] + v[PH[(i + 2) % 3]]))) * RHO * L / A / (400 / Math.sqrt(3)) * 100;
+    },
     strom(e) { const P = Number(e.effekt) || 0; return this.tre(e) ? P / (Math.sqrt(3) * 400) : P / 230; },
     du(e, tv) { const g = this.gruppe(e.gruppeId); return this.duLokal(e, tv) + (g ? this.tavleDu(g.tavleId, 0) : 0); },
     duLokal(e, tv) {
-      const I = this.enhedI(e), L = Number(e.laengde) || 0, A = Number(tv || e.tv) || 1, did = this.enhedDaase(e);
-      return this.duSeg(I, L, A, this.tre(e)) + this.duSloejfe(e) + (did ? this.duOp(did) : 0);
+      const did = this.enhedDaase(e);
+      return this.duEget(e, tv) + this.duSloejfe(e) + (did ? this.duOp(did) : 0);
     },
-    duGraense(e) { return this.typeOf(e) === 'lys' ? 3 : 5; },
+    duGraense(e) { return LYS_TYPER.includes(this.typeOf(e)) ? 3 : 5; },
     duOver(e) { return !!Number(e.effekt) && this.du(e) > this.duGraense(e); },
     lmax(e) {
-      const I = this.enhedI(e), A = Number(e.tv) || 1, did = this.enhedDaase(e), g = Math.max(0, this.duGraense(e) - (did ? this.duOp(did) : 0) - this.duSloejfe(e) - this.tavleDu((this.gruppe(e.gruppeId) || {}).tavleId, 0)) / 100; if (!I) return null;
-      return this.tre(e) ? g * 400 * A / (Math.sqrt(3) * I * RHO) : g * 230 * A / (2 * I * RHO);
+      const pr = this.duEget(e, null, 1), did = this.enhedDaase(e), g = Math.max(0, this.duGraense(e) - (did ? this.duOp(did) : 0) - this.duSloejfe(e) - this.tavleDu((this.gruppe(e.gruppeId) || {}).tavleId, 0)); if (!pr) return null;
+      return g / pr;
     },
     iz(e, tv) { return this.izBeregn(e.kabel, tv || e.tv, this.tre(e), this.forhold(this.gruppe(e.gruppeId))); },
     izFejl(e) { const g = this.gruppe(e.gruppeId); return !!g && !!this.iz(e) && g.In > this.iz(e); },
@@ -56,15 +68,22 @@ const APP_BEREGNING = () => ({
     },
     underTavler(gid) { return gid ? this.db.tavler.filter(t => t.fraGruppe === gid) : []; },
     gruppeFaser(g, seen) {
-      const egen = this.egenI(g.id), f = { L1:0, L2:0, L3:0 }; (g.faser == 3 ? PH : [g.fase]).forEach(p => { f[p] += egen; });
+      const f = this.egenFaser(g);
       for (const u of this.underTavler(g.id)) { const s = this.subFaser(u.id, seen || new Set([g.tavleId])); if (g.faser == 3) PH.forEach(p => { f[p] += s[p]; }); else f[g.fase] += s.L1 + s.L2 + s.L3; }
       return f;
     },
     gruppeI(gid) { const g = this.gruppe(gid); if (!g) return this.egenI(gid); const f = this.gruppeFaser(g); return Math.max(f.L1, f.L2, f.L3); },
     egenI(gid) {
-      const g = this.gruppe(gid), rw = this.racksFor(gid).reduce((s, r) => s + this.rackW(r.id), 0);
-      return (g ? this.sfVal(g) : 1) * this.instI(gid) + (g && g.faser == 3 ? rw / (Math.sqrt(3) * 400) : rw / 230);
+      const g = this.gruppe(gid); if (g) { const f = this.egenFaser(g); return Math.max(f.L1, f.L2, f.L3); }
+      return this.instI(gid) + this.racksFor(gid).reduce((s, r) => s + this.rackW(r.id), 0) / 230;
     },
+    /* gruppens egen last pr. fase: samtidighedsfaktor × brugsgenstande (hver på sine faser) + rackforbrug */
+    egenFaser(g) {
+      const v = this.faseSum(this.enhederFor(g.id)), sf = this.sfVal(g), rw = this.racksFor(g.id).reduce((s, r) => s + this.rackW(r.id), 0), f = { L1:0, L2:0, L3:0 };
+      PH.forEach(p => { f[p] = sf * v[p]; }); if (g.faser == 3) PH.forEach(p => { f[p] += rw / (Math.sqrt(3) * 400); }); else f[g.fase] += rw / 230;
+      return f;
+    },
+    harFase1(gid) { return this.enhederFor(gid).some(e => this.fase1(e)); },
     maxDu(gid) {
       const es = this.enhederFor(gid).filter(e => Number(e.effekt)); if (!es.length) return { v:null, over:false };
       return { v: Math.max(...es.map(e => this.du(e))), over: es.some(e => this.duOver(e)) };
@@ -263,7 +282,7 @@ const APP_BEREGNING = () => ({
       const f = this.filter, q = f.q.trim().toLowerCase();
       const rs = this.db.enheder.map(e => {
         const g = this.gruppe(e.gruppeId);
-        return { e, g, tn: g ? this.tavleNavn(g.tavleId) : '', lok:this.lokaleNavn(e.lokaleId), I:this.strom(e), du:this.du(e), over:this.duOver(e), lmax:this.lmax(e), iz:this.iz(e), izFejl:this.izFejl(e), via: e.fraEnhed && this.enhed(e.fraEnhed) ? 'sløjfe fra ' + this.enhed(e.fraEnhed).navn : e.daaseId ? 'via ' + this.daaseTxt(e.daaseId) : '' };
+        return { e, g, tn: g ? this.tavleNavn(g.tavleId) : '', lok:this.lokaleNavn(e.lokaleId), I:this.strom(e), du:this.du(e), over:this.duOver(e), lmax:this.lmax(e), iz:this.iz(e), izFejl:this.izFejl(e), via: [this.faseTxt(e), e.fraEnhed && this.enhed(e.fraEnhed) ? 'sløjfe fra ' + this.enhed(e.fraEnhed).navn : e.daaseId ? 'via ' + this.daaseTxt(e.daaseId) : ''].filter(Boolean).join(' · ') };
       }).concat(this.db.daaser.map(d => {
         const g = this.gruppe(d.gruppeId), P = this.nedstroem(d.id).reduce((s, e) => s + (Number(e.effekt) || 0), 0);
         return { d, e: Object.assign({}, d, { id:'d' + d.id, navn:d.type + ' ' + d.navn, effekt:P }), g, tn: g ? this.tavleNavn(g.tavleId) : '', lok:this.lokaleNavn(d.lokaleId), I:this.daaseI(d.id), du:this.duOp(d.id), over:false, lmax:null,
@@ -321,7 +340,7 @@ const APP_BEREGNING = () => ({
 
     /* samtidighedsfaktor */
     sfVal(g) { const v = Number(g && g.sf); return v > 0 && v <= 1 ? v : 1; },
-    instI(gid) { return this.enhederFor(gid).reduce((s, e) => s + this.strom(e), 0); },
+    instI(gid) { const es = this.enhederFor(gid); if (!this.gruppe(gid)) return es.reduce((s, e) => s + this.strom(e), 0); const v = this.faseSum(es); return Math.max(v.L1, v.L2, v.L3); },
     sfForslag(g) {
       const an = SF[this.db.projekt.anlaeg] ? this.db.projekt.anlaeg : 'bolig', es = g.id ? this.enhederFor(g.id).filter(e => Number(e.effekt) > 0) : null;
       if (es && es.length <= 1) return { v:1, txt:'højst én belastning på gruppen' };
@@ -380,7 +399,7 @@ const APP_BEREGNING = () => ({
       f.effekt = Math.round(f.belEnh === 'kW' ? v * 1000 : f.belEnh === 'A' ? v * (this.tre(f) ? Math.sqrt(3) * 400 : 230) : v);
     },
     belTxt() {
-      const f = this.form, u = this.tre(f) ? '3 × 400 V' : '230 V' + (this.gruppe(f.gruppeId) ? '' : ' (ingen gruppe valgt)');
+      const f = this.form, u = this.tre(f) ? '3 × 400 V' : this.fase1(f) ? '230 V (' + this.fase1(f) + ' og nul)' : '230 V' + (this.gruppe(f.gruppeId) ? '' : ' (ingen gruppe valgt)');
       return f.belEnh === 'A' ? '= ' + this.fmt(f.effekt, 0) + ' W ved ' + u : '= ' + this.fmt(this.strom(f), 2) + ' A ved ' + u;
     },
     brugEffekt() { const x = this.effektForslag(this.form); if (!x) return; this.form.effekt = x.W; this.belFra(); this.eAuto = false; },

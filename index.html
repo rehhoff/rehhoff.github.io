@@ -14,8 +14,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=10.15.0">
-<link rel="stylesheet" href="css/tailwind.css?v=10.15.0">
+<link rel="stylesheet" href="css/app.css?v=10.16.0">
+<link rel="stylesheet" href="css/tailwind.css?v=10.16.0">
 </head>
 <body class="min-h-full">
 <p id="fail" hidden style="margin:16px;padding:12px;border:1px solid var(--crit);color:var(--crit)">Appen kunne ikke starte, fordi Alpine.js ikke blev indlæst. Genindlæs siden.</p>
@@ -234,6 +234,7 @@
                     <div class="num text-xs text-muted flex flex-wrap gap-x-3">
                       <span x-text="lokaleNavn(e.lokaleId)"></span><span x-text="kabelDim(e) + ' · ' + fmt(e.laengde) + ' m'"></span>
                       <span x-show="e.daaseId" x-text="'via ' + daaseTxt(e.daaseId)"></span>
+                      <span x-show="fase1(e)" x-text="faseTxt(e)"></span>
                       <span x-show="e.effekt" x-text="fmt(strom(e)) + ' A'"></span>
                       <span x-show="e.effekt" :class="duOver(e) && 'warn'" x-text="'ΔU ' + fmt(du(e), 2) + ' %'"></span>
                     </div>
@@ -604,7 +605,7 @@
           <select id="b-lag" class="inp" x-model="db.projekt.lag" @change="save()"><template x-for="(v, k) in LAG" :key="k"><option :value="k" :selected="db.projekt.lag===k" x-text="v.navn"></option></template></select></label>
         <span class="text-xs text-muted">Projektets standard for I<sub>z</sub>. Grupper og tilgangskabler kan overskrive den. Ved metode D1 og D2 bruges jordtemperaturen og tabellerne for samlet fremføring i jord.</span>
       </div>
-      <p class="text-xs text-muted mt-2">Vejledende: ρ = 0,0225 Ω·mm²/m, cos φ = 1, 230/400 V, gruppens last ganget med dens samtidighedsfaktor. ΔU-grænser 3 % lys og 5 % øvrige (DS/HD 60364-5-52, anneks G). Strømværdi I<sub>z</sub> for kobber efter DS/HD 60364-5-52 anneks B: tabelværdi for isolation (PVC 70 °C eller XLPE 90 °C), installationsmetode og antal belastede ledere, ganget med temperaturfaktor (B.52.14 luft, B.52.15 jord) og faktor for samlet fremføring (B.52.17–B.52.19). Jord: 2,5 K·m/W. Kontrollér altid mod gældende standard og faktiske forhold.</p>
+      <p class="text-xs text-muted mt-2">Vejledende: ρ = 0,0225 Ω·mm²/m, cos φ = 1, 230/400 V, gruppens last ganget med dens samtidighedsfaktor. ΔU-grænser 3 % for lys og for lys og stik, 5 % for øvrige (DS/HD 60364-5-52, anneks G). En brugsgenstand tilsluttet én fase og nul på en 3-faset gruppe regnes 1-faset ved 230 V og belaster kun sin fase. Et træk med skæv last regnes på den værst belastede fase med nulstrømmen. Strømværdi I<sub>z</sub> for kobber efter DS/HD 60364-5-52 anneks B: tabelværdi for isolation (PVC 70 °C eller XLPE 90 °C), installationsmetode og antal belastede ledere, ganget med temperaturfaktor (B.52.14 luft, B.52.15 jord) og faktor for samlet fremføring (B.52.17–B.52.19). Jord: 2,5 K·m/W. Kontrollér altid mod gældende standard og faktiske forhold.</p>
       <p class="text-xs text-muted mt-1">Kortslutning og selektivitet er også vejledende: I<sub>k,min</sub> = 0,95 · 230 V / (Z<sub>e</sub> + R<sub>fase</sub> + R<sub>PE</sub>) i gruppens yderste punkt, ledermodstand × 1,2 (PVC) eller 1,28 (XLPE og brandkabel), PE som faseleder. Z<sub>e</sub> og I<sub>k,maks</sub> angives på tavlen. Udkobling er OK, når I<sub>k,min</sub> ≥ I<sub>a</sub> (5/10/20 × I<sub>n</sub> for B/C/D). Brydeevnen (standard 6 kA) sammenlignes med I<sub>k,maks</sub>. Selektivitet: forsikring ≥ 1,6 × største efterfølgende sikring, og HPFI i serie kræver type S forrest med I<sub>Δn</sub> ≥ 3 × den bageste.</p>
     </div>
 
@@ -661,7 +662,8 @@
                   <td><button class="text-left hover:underline" @click="goGruppe(g.id)" x-text="g.navn"></button></td>
                   <td class="num" x-text="g.kar + g.In"></td>
                   <td>
-                    <template x-if="g.faser==3"><span class="ph F3">3F</span></template>
+                    <template x-if="g.faser==3"><span class="flex flex-col"><span class="ph F3">3F</span>
+                      <span x-show="harFase1(g.id)" class="num text-xs text-muted whitespace-nowrap" title="Gruppens strøm pr. fase med 1-fasede tilslutninger" x-text="['L1','L2','L3'].map(p => p + ' ' + fmt(gruppeFaser(g)[p])).join(' · ') + ' A'"></span></span></template>
                     <template x-if="g.faser!=3">
                       <select class="inp inp-s num" :aria-label="'Fase for gruppe ' + g.nr" @change="setFase(g.id, $event.target.value)">
                         <template x-for="p in ['L1','L2','L3']" :key="p"><option :value="p" :selected="g.fase===p" x-text="p"></option></template></select>
@@ -1289,6 +1291,9 @@
                   <template x-for="(l, k) in symNavn" :key="k"><option :value="k" :selected="(form.symbol || 'auto')===k" x-text="l"></option></template></select>
                 <span class="sld shrink-0" x-html="symIkon(symbolFor(form))"></span>
               </span></label>
+            <label class="f sm:col-span-2" for="m-fase" x-show="gruppe(form.gruppeId) && gruppe(form.gruppeId).faser == 3">Tilslutning
+              <select id="m-fase" class="inp num" x-model="form.fase" @change="belSync()"><option value="" :selected="!form.fase">Som gruppen (3 × 400 V)</option>
+                <template x-for="p in ['L1','L2','L3']" :key="p"><option :value="p" :selected="form.fase===p" x-text="p + ' og nul, 230 V (1-faset)'"></option></template></select></label>
             <div class="sm:col-span-2 grid gap-3 sm:grid-cols-2">
               <label class="f" for="m-effekt">Belastning
                 <span class="flex gap-2"><input id="m-effekt" class="inp num" type="number" min="0" step="any" x-model.number="form.belVal" @input="eAuto=false; belSync()">
@@ -1560,12 +1565,12 @@
   </div>
 </div>
 
-<script src="js/data.js?v=10.15.0"></script>
-<script src="js/beregning.js?v=10.15.0"></script>
-<script src="js/diagram.js?v=10.15.0"></script>
-<script src="js/lagring.js?v=10.15.0"></script>
-<script src="js/historik.js?v=10.15.0"></script>
-<script src="js/app.js?v=10.15.0"></script>
+<script src="js/data.js?v=10.16.0"></script>
+<script src="js/beregning.js?v=10.16.0"></script>
+<script src="js/diagram.js?v=10.16.0"></script>
+<script src="js/lagring.js?v=10.16.0"></script>
+<script src="js/historik.js?v=10.16.0"></script>
+<script src="js/app.js?v=10.16.0"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.14.1/cdn.min.js"></script>
 </body>
 </html>
