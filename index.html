@@ -14,8 +14,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=10.20.0">
-<link rel="stylesheet" href="css/tailwind.css?v=10.20.0">
+<link rel="stylesheet" href="css/app.css?v=10.21.0">
+<link rel="stylesheet" href="css/tailwind.css?v=10.21.0">
 </head>
 <body class="min-h-full">
 <p id="fail" hidden style="margin:16px;padding:12px;border:1px solid var(--crit);color:var(--crit)">Appen kunne ikke starte, fordi Alpine.js ikke blev indlæst. Genindlæs siden.</p>
@@ -733,7 +733,7 @@
 
   <!-- ============ LOKALER ============ -->
   <section x-show="view==='lokaler'" class="flex flex-col gap-3">
-    <div class="flex flex-wrap gap-2"><button class="btn" @click="openForm('lokale')">+ Lokale <kbd>L</kbd></button><button class="btn" @click="aabnSkabelon()">+ Lokale fra skabelon</button></div>
+    <div class="flex flex-wrap gap-2"><button class="btn" @click="openForm('lokale')">+ Lokale <kbd>L</kbd></button><button class="btn" @click="aabnSkabelon()">+ Lokale fra skabelon</button><button class="btn" @click="impAaben('lokale')">Importér fra regneark</button></div>
     <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
       <template x-for="l in db.lokaler.filter(l => !lokF || l.id === lokF)" :key="l.id">
         <article class="panel flex flex-col" :class="dragL && overL===l.id && dragL!==l.id && 'ring-2 ring-accent'" @dragover="dragL && ($event.preventDefault(), overL=l.id)" @drop="slipLokale(l.id, $event)">
@@ -805,6 +805,7 @@
       <div class="flex flex-wrap items-center gap-2">
         <h2 class="hd text-lg mr-auto">Materialeliste</h2>
         <button class="btn" @click="kopier(materialeTsv())">Kopiér materialeliste til regneark</button>
+        <button class="btn" @click="impAaben('enhed')">Importér fra regneark</button>
         <button class="btn" :aria-expanded="matOpen" @click="matOpen=!matOpen" x-text="matOpen ? 'Fold sammen' : 'Fold ud'"></button>
       </div>
       <div x-show="matOpen" x-cloak class="mt-2 grid gap-3 md:grid-cols-2 lg:grid-cols-3">
@@ -1614,6 +1615,60 @@
       </div>
     </div>
   </template>
+  <div x-show="imp.aaben" x-cloak class="fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto p-4" style="background:rgba(0,0,0,.6)" @click.self="imp.aaben=false">
+    <form class="panel w-full max-w-4xl mt-10 shadow-xl" role="dialog" aria-modal="true" aria-labelledby="imp-h" @submit.prevent="impGem()">
+      <header class="border-b border-line bg-raised px-4 py-3">
+        <h2 id="imp-h" class="hd text-xl">Importér fra regneark</h2>
+        <p class="text-xs text-muted">Markér cellerne i Excel, kopiér og indsæt dem her. Intet oprettes, før du har set forhåndsvisningen.</p>
+      </header>
+      <div class="grid gap-3 p-4">
+        <div class="flex flex-wrap items-center gap-4 text-sm">
+          <label class="flex items-center gap-2"><input type="radio" name="imp-type" value="enhed" :checked="imp.type==='enhed'" @change="impSkift('enhed')"> Brugsgenstande</label>
+          <label class="flex items-center gap-2"><input type="radio" name="imp-type" value="lokale" :checked="imp.type==='lokale'" @change="impSkift('lokale')"> Lokaler</label>
+        </div>
+        <label class="f" for="imp-tekst">Indsæt celler
+          <textarea id="imp-tekst" class="inp h-32 font-mono" x-model="imp.tekst" @input="impAnalyser()" placeholder="Navn&#9;Lokale&#9;Gruppe&#9;Effekt (kW)&#9;Kabel&#9;Længde (m)"></textarea></label>
+        <p class="text-xs text-muted" x-show="imp.type==='enhed'">Kendte overskrifter: navn, lokale, gruppe (nr. eller navn, evt. Tavle:nr), effekt, kW, A, kabel, ledere, tværsnit, længde, placering, højde. Tal med komma accepteres.</p>
+        <p class="text-xs text-muted" x-show="imp.type==='lokale'">Kendte overskrifter: navn og etage.</p>
+        <div class="flex flex-wrap items-center gap-4 text-sm" x-show="imp.raekker.length">
+          <label class="flex items-center gap-2"><input type="checkbox" id="imp-hdr" x-model="imp.hdr" @change="impHdrSkift()"> Første linje er overskrifter</label>
+          <label class="flex items-center gap-2" x-show="imp.type==='enhed'"><input type="checkbox" id="imp-lok" x-model="imp.opretLok" @change="impByg()"> Opret ukendte lokaler automatisk</label>
+        </div>
+        <div class="overflow-x-auto" x-show="imp.raekker.length">
+          <table class="w-full text-sm" aria-label="Forhåndsvisning af import">
+            <thead>
+              <tr class="text-left text-xs text-muted">
+                <th class="px-2 py-1">Række</th>
+                <th class="px-2 py-1 min-w-[16rem]">Resultat</th>
+                <template x-for="(k, c) in imp.map" :key="c">
+                  <th class="px-2 py-1"><select class="inp min-w-[8rem]" :id="'imp-k' + c" :aria-label="'Kolonne ' + (c + 1)" x-model="imp.map[c]" @change="impByg()">
+                    <option value="">Ignorér</option>
+                    <template x-for="f in impFelter()" :key="f[0]"><option :value="f[0]" :selected="imp.map[c]===f[0]" x-text="f[1]"></option></template></select></th>
+                </template>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-for="r in imp.fh" :key="r.nr">
+                <tr class="border-t border-line" :class="!r.ok && 'imp-fejl'">
+                  <td class="num px-2 py-1 text-muted" x-text="r.nr"></td>
+                  <td class="px-2 py-1">
+                    <span x-show="r.ok" class="text-xs"><span x-text="r.o.navn"></span><template x-if="imp.type==='enhed'"><span class="text-muted" x-text="' · ' + (r.lokTxt || 'uden lokale') + ' · ' + (r.o.gruppeId ? gruppeTxt(r.o.gruppeId) : 'uden gruppe') + ' · ' + fmt(r.o.effekt, 0) + ' W · ' + r.o.ledere + r.o.tv + ' ' + r.o.kabel + ' · ' + fmt(r.o.laengde) + ' m'"></span></template></span>
+                    <span x-show="!r.ok" class="text-xs font-semibold" style="color:var(--crit)" x-text="r.fejl.join('; ')"></span>
+                  </td>
+                  <template x-for="(k, c) in imp.map" :key="c"><td class="px-2 py-1" x-text="(imp.raekker[r.nr - 1] || [])[c]"></td></template>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+        <p class="text-sm" x-show="imp.raekker.length" id="imp-sum"><span x-text="impAntal()"></span> rækker kan importeres<span x-show="impFejlAntal()">, <span x-text="impFejlAntal()"></span> med fejl oprettes ikke</span>.</p>
+      </div>
+      <footer class="flex justify-end gap-2 border-t border-line px-4 py-3">
+        <button type="button" class="btn" @click="imp.aaben=false">Annuller</button>
+        <button type="submit" id="imp-gem" class="btn btn-primary" :disabled="!impAntal()" x-text="'Importér ' + impAntal() + ' rækker'"></button>
+      </footer>
+    </form>
+  </div>
   <div x-show="hurtig.aaben" class="fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto p-4" style="background:rgba(0,0,0,.6)" @click.self="hurtig.aaben=false">
     <form class="panel w-full max-w-md mt-16 shadow-xl" role="dialog" aria-modal="true" @submit.prevent="hurtigGem()">
       <header class="border-b border-line bg-raised px-4 py-3">
@@ -1663,15 +1718,16 @@
   </div>
 </div>
 
-<script src="js/data.js?v=10.20.0"></script>
-<script src="js/beregning.js?v=10.20.0"></script>
-<script src="js/diagram.js?v=10.20.0"></script>
-<script src="js/lagring.js?v=10.20.0"></script>
-<script src="js/historik.js?v=10.20.0"></script>
-<script src="js/billeder.js?v=10.20.0"></script>
-<script src="js/brand.js?v=10.20.0"></script>
-<script src="js/aflevering.js?v=10.20.0"></script>
-<script src="js/app.js?v=10.20.0"></script>
+<script src="js/data.js?v=10.21.0"></script>
+<script src="js/beregning.js?v=10.21.0"></script>
+<script src="js/diagram.js?v=10.21.0"></script>
+<script src="js/lagring.js?v=10.21.0"></script>
+<script src="js/historik.js?v=10.21.0"></script>
+<script src="js/billeder.js?v=10.21.0"></script>
+<script src="js/brand.js?v=10.21.0"></script>
+<script src="js/import.js?v=10.21.0"></script>
+<script src="js/aflevering.js?v=10.21.0"></script>
+<script src="js/app.js?v=10.21.0"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.14.1/cdn.min.js"></script>
 </body>
 </html>
