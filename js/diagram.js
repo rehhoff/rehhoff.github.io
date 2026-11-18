@@ -1,5 +1,6 @@
 /* Diagrammer: enstregsdiagram, sporing gennem installationen, afbrydere og tændingsdiagram. Metoderne samles i app() i js/app.js, så this er hele app-tilstanden. */
 const SLDP = new Map();
+let SLDT = null; /* tidsur for langt tryk, der starter et træk i enstregsdiagrammet */
 const APP_DIAGRAM = () => ({
     /* enstregsdiagram: SVG bygges ud fra projektets data */
     symbolFor(e) {
@@ -203,13 +204,19 @@ const APP_DIAGRAM = () => ({
       return `<svg xmlns="http://www.w3.org/2000/svg"${print ? ' class="ts"' : ''} viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">${css}${o.join('')}</svg>`;
     },
     sld(print) {
-      const dyb = Math.min(4, Math.max(0, ...this.db.daaser.map(d => { let n = 0, x = d; while (x && n < 6) { n++; x = this.daase(x.parentId); } return n; })));
+      /* dybde = antal mellemled (dåser og Tilgange i serie) før brugsgenstandene. Bestemmer, hvor langt til højre symbolerne står. */
+      const nivD = did => { let n = 0, x = this.daase(did); while (x && n < 6) { n++; x = this.daase(x.parentId); } return n; };
+      const erTilg = e => !this.enhed(e.fraEnhed) && this.symbolFor(e) === 'tilgang';
+      const dyb = Math.min(5, Math.max(0, ...this.db.daaser.map(d => nivD(d.id)), ...this.db.enheder.filter(erTilg).map(e => nivD(e.daaseId) + 1)));
       const ROW = 36, DX = 170, XB = 150, XR = 212, XS = 280, XG = 342, XL = 500, XE = 810 + DX * dyb, XA = XE - 40, W = 1280 + DX * dyb, sel = print ? null : this.sldSel, o = [];
       SLDW = W;
+      /* træk: gyldige slipmål fremhæves, målet under pointeren kraftigere (dnej = ugyldigt) */
+      const tk = print ? null : this.traek, tkT = tk ? key => this.flytTjek(tk.id, key) : null;
+      const dk = key => !tk ? '' : key === 'e:' + tk.id ? ' dkilde' : key === tk.maal ? (tk.ok ? ' dmaal' : ' dnej') : tkT(key).ok ? ' dok' : '';
       const ln = (x1, y1, x2, y2, c) => `<line class="l${c ? ' ' + c : ''}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`;
       const tx = (x, y, s, c, a) => `<text class="${c || 't'}" x="${x}" y="${y}"${a ? ' text-anchor="' + a + '"' : ''}>${esc(s)}</text>`;
       const kort = (s, n) => { s = String(s || ''); return s.length > n ? s.slice(0, n - 1) + '…' : s; };
-      const sporSet = new Set(print ? [] : this.spor(this.sldSel).map(x => x.key));
+      const sporSet = new Set(print || this.traek ? [] : this.spor(this.sldSel).map(x => x.key));
       /* afbrydere: tegnes i serie med hver lampe, de styrer. En afbryder uden tegnede lamper får sin egen række under gruppen. */
       const afbAf = new Map(), afbVist = new Set();
       for (const af of this.db.afbrydere) af.a.concat(af.art === 'krone' ? af.b : []).forEach(id => { if (!afbAf.has(id)) afbAf.set(id, af); });
@@ -221,7 +228,7 @@ const APP_DIAGRAM = () => ({
         lokSet = new Set(); const med = key => this.spor(key).forEach(x => lokSet.add(x.key)), i = x => x.lokaleId === this.lokF;
         this.db.enheder.filter(i).forEach(e => med('e:' + e.id)); this.db.daaser.filter(i).forEach(d => med('d:' + d.id)); this.db.links.filter(i).forEach(l => med('x:' + l.id)); this.db.racks.filter(i).forEach(r => med('k:' + r.id)); this.db.afbrydere.filter(i).forEach(x => med('a:' + x.id));
       }
-      const k = (key, cls, inner, x, y, w, ekstra) => `<g class="k ${cls}${sel === key ? ' on' : ''}${sporSet.has(key) ? ' tr' : ''}${lokSet && !lokSet.has(key) ? ' dim' : ''}" data-k="${key}"${ekstra || ''}><rect class="hit" x="${x}" y="${y - ROW / 2}" width="${w}" height="${ROW}"/>${inner}</g>`;
+      const k = (key, cls, inner, x, y, w, ekstra) => `<g class="k ${cls}${sel === key ? ' on' : ''}${dk(key)}${sporSet.has(key) ? ' tr' : ''}${lokSet && !lokSet.has(key) ? ' dim' : ''}" data-k="${key}"${ekstra || ''}><rect class="hit" x="${x}" y="${y - ROW / 2}" width="${w}" height="${ROW}"/>${inner}</g>`;
       const sw = (x, y) => `<circle class="l" cx="${x - 12}" cy="${y}" r="1.5"/>` + ln(x - 12, y, x + 9, y - 10);
       const mcb = (x, y) => sw(x, y) + ln(x + 8.5, y - 3.5, x + 15.5, y + 3.5) + ln(x + 8.5, y + 3.5, x + 15.5, y - 3.5);
       const rcdS = (x, y) => sw(x, y) + `<ellipse class="l" cx="${x + 26}" cy="${y}" rx="4" ry="9"/>`;
@@ -237,6 +244,7 @@ const APP_DIAGRAM = () => ({
         /* Kun rødder tegnes fra tavlen/dåsen. Sløjfer (fraEnhed) tegnes lige under den, de er sløjfet fra, og starter i en forgreningsprik på dens streg.
            Børn uden egne sløjfer først, så fire udtag med hver sin stikkontakt giver U1, S1, U2, S2 … */
         const es = this.db.enheder.filter(e => e.gruppeId === gr.id && (did ? e.daaseId === did : !this.daase(e.daaseId)) && !this.enhed(e.fraEnhed));
+        es.sort((a, b) => (erTilg(b) ? 1 : 0) - (erTilg(a) ? 1 : 0));
         const ds = this.db.daaser.filter(d => d.gruppeId === gr.id && (did ? d.parentId === did : !this.daase(d.parentId)) && !seen.has(d.id));
         let r = yy, last = yy;
         const cl = key => (sporSet.has(key) ? ' tr' : '') + (lokSet && !lokSet.has(key) ? ' dim' : '');
@@ -256,7 +264,19 @@ const APP_DIAGRAM = () => ({
           /* lodrette sløjfestreger: længste først, så en fremhævet kort streg ikke dækkes af en længere */
           stik.reverse().forEach(([cid, cy]) => o.push(`<g class="k sl${cl('e:' + cid)}">${ln(px, ry, px, cy)}</g>`));
         };
-        for (const e of es) { last = r; tegnE(e, bx, null, new Set()); }
+        /* Tilgang i serie: tegnes som et mellemled på linjen (som en dåse), og det, der er sløjfet fra den, udgår fra en skinne efter symbolet */
+        const tegnT = e => {
+          const eSet = new Set([e.id]), ry = r, xj = bx + DX - 22, xk = bx + DX, eb = (this.duOver(e) || this.izFejl(e)) ? 'bad' : '';
+          const kids = this.sloejfer(e.id);
+          kids.sort((a, b) => (this.sloejfer(a.id).length ? 1 : 0) - (this.sloejfer(b.id).length ? 1 : 0));
+          o.push(k('e:' + e.id, eb + ' tilg', ln(bx, r, xj - 10, r) + load('tilgang', xj, r) + ln(xj + 10, r, xk, r) +
+            tx(bx + 10, r - 6, e.ledere + this.fmt(e.tv) + ' ' + kort(e.kabel, 9) + ' | ' + this.fmt(e.laengde) + 'm') + tx(bx + 10, r + 14, kort(e.navn, 20), 'm'), bx + 3, r, DX - 6, ' data-fra="" data-tx="' + xj + '"'));
+          let lk = r;
+          for (const c of kids) { if (eSet.has(c.id)) continue; lk = r; tegnE(c, xk, e, eSet); }
+          if (r === ry) { o.push(tx(xk + 10, r + 4, 'ingen sløjfer', 'm')); r += ROW; }
+          else if (lk > ry) o.push(`<g class="k sl${cl('e:' + e.id)}">${ln(xk, ry, xk, lk, 'b2')}</g>`);
+        };
+        for (const e of es) { last = r; if (erTilg(e)) tegnT(e); else tegnE(e, bx, null, new Set()); }
         for (const af of (did ? [] : this.db.afbrydere.filter(x => x.gruppeId === gr.id && !afbVist.has(x.id)))) {
           last = r; const gab = afGab(af.art);
           o.push(k('a:' + af.id, '', ln(bx, r, XA - gab[0], r) + afSym(af.art, XA, r) + tx(bx + 10, r - 6, 'G' + gr.nr + ' | ' + gr.In + 'A | afbryder') +
@@ -406,20 +426,82 @@ const APP_DIAGRAM = () => ({
     /* Én pointer panorerer. To pointere (to fingre på touch) zoomer om midtpunktet og panorerer samtidig. SLDP holder de aktive pointere. */
     panStart(ev) {
       if (ev.button) return; SLDP.set(ev.pointerId, { x:ev.clientX, y:ev.clientY });
+      if (SLDP.size >= 2) this.traekStop();
       if (SLDP.size === 2) { this.pinchStart(); return; }
       if (SLDP.size > 2) return;
       this.pinch = null; this.pan = { x:ev.clientX, y:ev.clientY, ox:this.z.x, oy:this.z.y }; this.panMoved = false;
+      /* langt tryk på en brugsgenstand starter et træk (mus og touch). Flyttes pointeren før, er det en panorering. */
+      const el = ev.target.closest && ev.target.closest('[data-k^="e:"]');
+      if (el) { const id = el.getAttribute('data-k').slice(2), x = ev.clientX, y = ev.clientY; SLDT = setTimeout(() => { SLDT = null; this.traekStart(id, x, y); }, 400); }
+    },
+    traekStart(id, x, y) {
+      const e = this.enhed(id); if (!e || SLDP.size !== 1) return;
+      this.pan = null; this.panMoved = true; this.traek = { id, navn:e.navn, x, y, maal:'', ok:false, txt:'Slip på en brugsgenstand, en dåse eller gruppen' };
+      try { if (navigator.vibrate) navigator.vibrate(15); } catch (err) {}
+    },
+    traekStop() { clearTimeout(SLDT); SLDT = null; this.traek = null; },
+    traekFlyt(x, y) {
+      const t = this.traek; t.x = x; t.y = y;
+      const el = document.elementFromPoint(x, y), g = el && el.closest && el.closest('.sld [data-k]'), key = g ? g.getAttribute('data-k') : '';
+      if (key === t.maal) return;
+      const r = key ? this.flytTjek(t.id, key) : { ok:false, txt:'' };
+      t.maal = key; t.ok = r.ok; t.txt = r.ok ? t.navn + ' → ' + r.til : (r.txt || 'Slip på en brugsgenstand, en dåse eller gruppen');
+    },
+    sldMenu(ev) { if (this.traek || SLDT) ev.preventDefault(); },
+    /* Flyt en brugsgenstand: sløjfe fra en anden brugsgenstand (e:), tilslut en dåse (d:) eller direkte fra gruppen (g:). Samme gruppe, ingen kredse. */
+    flytTjek(eid, key) {
+      const e = this.enhed(eid), [a, id] = String(key || '').split(':'), nej = txt => ({ ok:false, txt });
+      if (!e) return nej('');
+      const g = this.gruppe(e.gruppeId), gn = g ? 'G' + g.nr : 'gruppen', anden = (navn, gid) => nej(navn + ' ligger på ' + (this.gruppe(gid) ? 'G' + this.gruppe(gid).nr : 'en anden gruppe') + ', ' + e.navn + ' på ' + gn + '. Flyt kun inden for samme gruppe; skift gruppe under Rediger.');
+      if (a === 'e') {
+        const m = this.enhed(id); if (!m || m.id === e.id) return nej('');
+        if (m.gruppeId !== e.gruppeId) return anden(m.navn, m.gruppeId);
+        if (this.erSloejfetUnder(m.id, e.id)) return nej(e.navn + ' kan ikke sløjfes fra ' + m.navn + ', for ' + m.navn + ' er selv sløjfet fra ' + e.navn + '.');
+        if (e.fraEnhed === m.id) return nej(e.navn + ' er allerede sløjfet fra ' + m.navn + '.');
+        return { ok:true, fra:m.id, daase:e.daaseId, til:m.navn, txt:e.navn + ' er nu sløjfet fra ' + m.navn + '.' };
+      }
+      if (a === 'd') {
+        const d = this.daase(id); if (!d) return nej('');
+        if (d.gruppeId !== e.gruppeId) return anden(d.type + ' ' + d.navn, d.gruppeId);
+        if (!this.enhed(e.fraEnhed) && e.daaseId === d.id) return nej(e.navn + ' er allerede tilsluttet ' + d.type + ' ' + d.navn + '.');
+        return { ok:true, fra:'', daase:d.id, til:d.type + ' ' + d.navn, txt:e.navn + ' er nu tilsluttet ' + d.type + ' ' + d.navn + '.' };
+      }
+      if (a === 'g') {
+        if (id !== e.gruppeId) return anden('Gruppen', id);
+        if (!this.enhed(e.fraEnhed) && !this.daase(e.daaseId)) return nej(e.navn + ' går allerede direkte fra ' + gn + '.');
+        return { ok:true, fra:'', daase:'', til:gn, txt:e.navn + ' går nu direkte fra ' + gn + '.' };
+      }
+      return nej('Slip på en brugsgenstand, en dåse eller gruppen');
+    },
+    flytEnhed(eid, key) {
+      const t = this.flytTjek(eid, key), e = this.enhed(eid);
+      if (!t.ok) { if (t.txt) this.say(t.txt, false, true); return false; }
+      this.mutate(() => { e.fraEnhed = t.fra; e.daaseId = t.daase; });
+      this.say(t.txt, true); return true;
+    },
+    /* Mål til "Flyt til …" i infopanelet: gruppen, dens dåser og de brugsgenstande, der kan sløjfes fra */
+    flytValg(eid) {
+      const e = this.enhed(eid); if (!e) return [];
+      const g = this.gruppe(e.gruppeId), ud = [];
+      if (g) ud.push({ key:'g:' + g.id, txt:'Direkte fra G' + g.nr + ' ' + g.navn });
+      this.db.daaser.filter(d => d.gruppeId === e.gruppeId).forEach(d => ud.push({ key:'d:' + d.id, txt:'Dåse: ' + d.type + ' ' + d.navn }));
+      this.db.enheder.filter(x => x.gruppeId === e.gruppeId).forEach(x => ud.push({ key:'e:' + x.id, txt:'Sløjfe fra ' + x.navn }));
+      return ud.filter(v => this.flytTjek(eid, v.key).ok);
     },
     pinchMaal() { const [a, b] = [...SLDP.values()], r = this.$refs.sldBox.getBoundingClientRect(); return { d:Math.hypot(a.x - b.x, a.y - b.y) || 1, cx:(a.x + b.x) / 2 - r.left, cy:(a.y + b.y) / 2 - r.top }; },
     pinchStart() { const m = this.pinchMaal(); this.pinch = Object.assign(m, { z:Object.assign({}, this.z) }); this.pan = null; this.panMoved = true; },
     panEnd(ev) {
       if (!SLDP.delete(ev.pointerId)) return;
+      clearTimeout(SLDT); SLDT = null;
+      if (this.traek) { const t = this.traek; this.traek = null; this.pan = null; if (ev.type === 'pointerup' && t.maal) this.flytEnhed(t.id, t.maal); return; }
       if (SLDP.size === 2) { this.pinchStart(); return; }
       if (SLDP.size === 1 && this.pinch) { const p = [...SLDP.values()][0]; this.pinch = null; this.pan = { x:p.x, y:p.y, ox:this.z.x, oy:this.z.y }; return; }
       if (!SLDP.size) { this.pan = null; this.pinch = null; }
     },
     panMove(ev) {
       if (SLDP.has(ev.pointerId)) SLDP.set(ev.pointerId, { x:ev.clientX, y:ev.clientY });
+      if (this.traek) { if (SLDP.has(ev.pointerId)) this.traekFlyt(ev.clientX, ev.clientY); return; }
+      if (SLDT && this.pan && Math.abs(ev.clientX - this.pan.x) + Math.abs(ev.clientY - this.pan.y) > 6) { clearTimeout(SLDT); SLDT = null; }
       if (this.pinch && SLDP.size >= 2) {
         const p = this.pinch, m = this.pinchMaal(), k = Math.min(4, Math.max(0.25, p.z.k * m.d / p.d));
         this.z = { x:m.cx - (p.cx - p.z.x) * k / p.z.k, y:m.cy - (p.cy - p.z.y) * k / p.z.k, k }; return;

@@ -304,10 +304,11 @@
           <button class="btn" @click="hent(filnavn('enstregsdiagram','svg'), sld(true))">Hent SVG</button>
         </div>
       </header>
-      <div x-ref="sldBox" class="sldbox" @pointerdown="panStart($event)" @pointermove.window="panMove($event)" @pointerup.window="panEnd($event)" @pointercancel.window="panEnd($event)" @wheel="hjul($event)" @click="sldClick($event)" @dblclick="sldDbl($event)">
+      <div class="traekmrk" :class="traek && traek.ok ? 'ok' : ''" x-show="traek" x-cloak :style="traek ? 'left:' + (traek.x + 14) + 'px;top:' + (traek.y + 14) + 'px' : ''" x-text="traek ? traek.txt : ''"></div>
+      <div x-ref="sldBox" class="sldbox" @pointerdown="panStart($event)" @pointermove.window="panMove($event)" @pointerup.window="panEnd($event)" @pointercancel.window="panEnd($event)" @wheel="hjul($event)" @click="sldClick($event)" @dblclick="sldDbl($event)" @contextmenu="sldMenu($event)">
         <div class="sld" :style="'transform:translate(' + z.x + 'px,' + z.y + 'px) scale(' + z.k + ');transform-origin:0 0'" x-html="view==='enstreg' ? sld(false) : ''"></div>
       </div>
-      <p class="px-3 py-2 text-xs text-muted border-t border-line">Træk for at panorere. Ctrl + musehjul, to fingre eller knapperne zoomer. Sløjfer tegnes under den brugsgenstand, de er sløjfet fra, med en prik, hvor de går fra. Klik viser detaljer, dobbeltklik åbner redigering. Afbrydere er vist på lederen foran de lamper, de styrer. Røde streger har en advarsel.</p>
+      <p class="px-3 py-2 text-xs text-muted border-t border-line">Træk for at panorere. Ctrl + musehjul, to fingre eller knapperne zoomer. Hold en brugsgenstand nede et øjeblik, og træk den hen på en anden brugsgenstand (sløjfe), en dåse eller gruppen for at flytte forbindelsen. Sløjfer tegnes under den brugsgenstand, de er sløjfet fra, med en prik, hvor de går fra. Klik viser detaljer, dobbeltklik åbner redigering. Afbrydere er vist på lederen foran de lamper, de styrer. Røde streger har en advarsel.</p>
     </div>
     <aside class="panel p-3 lg:sticky lg:top-3">
       <template x-if="!sldInfo()"><p class="text-sm text-muted">Klik på en komponent i diagrammet for at se detaljer.</p></template>
@@ -326,6 +327,11 @@
             <button class="btn btn-primary" @click="sldEdit()">Rediger</button>
             <button class="btn" x-show="sldInfo().gid" @click="goGruppe(sldInfo().gid)">Vis i tavle</button>
           </div>
+          <label class="flex flex-col gap-1 text-sm mt-1" x-show="sldInfo().type==='enhed' && flytValg(sldInfo().obj.id).length"><span class="text-xs text-muted">Flyt til …</span>
+            <select id="sld-flyt" class="inp" @change="if ($event.target.value) flytEnhed(sldInfo().obj.id, $event.target.value); $event.target.value=''">
+              <option value="">Vælg, hvor den skal gå fra</option>
+              <template x-for="v in (sldInfo().type==='enhed' ? flytValg(sldInfo().obj.id) : [])" :key="v.key"><option :value="v.key" x-text="v.txt"></option></template>
+            </select></label>
         </div>
       </template>
       <div class="border-t border-line mt-3 pt-2">
