@@ -5,13 +5,13 @@ function app() {
   return bland({
     view: 'tavle',
     fvIkke: false, gren: null, sfPop: null, fvRed: null, fvTmp: null,
-    views: [ { id:'tavle', l:'Tavle' }, { id:'enstreg', l:'Enstregsdiagram' }, { id:'taending', l:'Tændingsdiagram' }, { id:'samlepunkter', l:'Samlepunkter & dåser' }, { id:'foering', l:'Føringsvej' }, { id:'svag', l:'Svagstrøm' }, { id:'beregning', l:'Beregning' }, { id:'lokaler', l:'Lokaler' }, { id:'kabler', l:'Kabler' }, { id:'dokumentation', l:'Dokumentation' }, { id:'fejlfinder', l:'Fejlfinder' } ],
+    views: [ { id:'tavle', l:'Tavle' }, { id:'enstreg', l:'Enstregsdiagram' }, { id:'taending', l:'Tændingsdiagram' }, { id:'samlepunkter', l:'Samlepunkter & dåser' }, { id:'foering', l:'Føringsvej' }, { id:'svag', l:'Svagstrøm' }, { id:'beregning', l:'Beregning' }, { id:'lokaler', l:'Lokaler' }, { id:'kabler', l:'Kabler' }, { id:'dokumentation', l:'Dokumentation' }, { id:'fejlfinder', l:'Fejlfinder' }, { id:'brand', l:'Brandlukning' } ],
     db: tom(), hist: [], sel: null, drag: null, over: null,
     projekter: [], pid: '', pf: { navn:'', sagsnr:'', kunde:'', adresse:'' }, sldSel: null, z: { x:8, y:8, k:1 }, pan: null, pinch: null, panMoved: false,
     filter: { q:'', tavle:'', type:'', lokale:'' }, sort: { key:'gruppe', dir:1 },
     modal: null, form: {}, confirm: null, toasts: [], storageOk: true, tema: 'auto', qa: '', io: '',
     typeLabel: { lys:'Lys', lysstik:'Lys og stik', kraft:'Kraft', stik:'Stik', data:'Data og teknik' },
-    modalNavn: { afbryder:'afbryder', tavle:'tavle', rcd:'HPFI', lokale:'lokale', gruppe:'gruppe', enhed:'brugsgenstand', daase:'samlepunkt', rack:'rackskab', udstyr:'rackudstyr', link:'forbindelse' },
+    modalNavn: { afbryder:'afbryder', tavle:'tavle', rcd:'HPFI', lokale:'lokale', gruppe:'gruppe', enhed:'brugsgenstand', daase:'samlepunkt', rack:'rackskab', udstyr:'rackudstyr', link:'forbindelse', brand:'brandlukning' },
     udstArt: { patchpanel:'Patchpanel', switch:'Switch', router:'Router', nvr:'NVR (optager)', andet:'Andet udstyr' },
     daaseTyper: DAASER,
     rackTyper: ['19" vægskab', '19" gulvskab', '10" vægskab'],
@@ -21,6 +21,7 @@ function app() {
     online: navigator.onLine !== false, installPrompt: null, installeret: false, swOk: false,
     firma: { navn:'', cvr:'', adresse:'', telefon:'', logo:'' },
     historik: { liste:[], commits:null, i:0, henter:false, fejl:'', pid:'' },
+    brandIkke: false, billedTick: 0, billedArbejder: 0, billedOk: true, lysbillede: null,
     synk: null, synkTokenInput: '', synkKoerer: false, synkIgen: false, synkFejl: '', iSynk: false,
     tvs: TV, appVersion: APP_VERSION, backups: [], sidstBackup: '', persistent: false, lokF: '', q: '', soegAaben: false, sk: { key:'koekken', navn:'Køkken', tavleId:'' }, skabeloner: SKABELONER, anlaegNavn: ANLAEG,
     enhNavne: [...new Set(EFFEKT.map(x => x[2]))].sort((a, b) => a.localeCompare(b, 'da')), sim: {}, hurtig: { aaben:false, type:'lokale', felt:'', f:{} }, eAuto: true, faseFs: null, belEnhSidst: 'W', dragL: null, overL: null, mFilter: '', dAuto: { type:true, lok:true },
@@ -63,7 +64,7 @@ function app() {
       }
       this.save();
       this.sel = (this.gruppe('g7') || this.sorteredeGrupper()[0] || {}).id || null;
-      this.brugTema(); this.firma = this.firmaLaes();
+      this.brugTema(); this.firma = this.firmaLaes(); this.billedStart();
       const route = () => { const h = location.hash.slice(1); if (this.views.some(v => v.id === h)) { this.view = h; if (h === 'enstreg') this.$nextTick(() => this.tilpas()); } };
       route(); window.addEventListener('hashchange', route);
       this.backups = this.hentBackups();
@@ -78,7 +79,7 @@ function app() {
       window.addEventListener('storage', ev => {
         if (ev.key === PK(this.pid) && ev.newValue) {
           delete MEM[this.pid]; const d = this.laes(this.pid);
-          if (d) { this.db = d; this.hist = []; this.say('Projektet blev ændret i en anden fane og er indlæst igen.'); }
+          if (d) { this.db = d; this.hist = []; this.billedStart(); this.say('Projektet blev ændret i en anden fane og er indlæst igen.'); }
         } else if (ev.key === IDX && ev.newValue) {
           try { const x = JSON.parse(ev.newValue); if (Array.isArray(x.liste)) { this.projekter = x.liste; if (x.sidstBackup) this.sidstBackup = x.sidstBackup; } } catch (e) {}
         } else if (ev.key === SKEY) this.synk = this.synkLaes();
@@ -413,6 +414,7 @@ function app() {
         daase: { antal:1, navn:'', type:'Membrandåse', gruppeId:this.sel || '', parentId:'', lokaleId:'', hoejde:'', placering:'', trukket:false, note:'', kabel:'PVC', ledere:'3G', tv:1.5, laengde:5 },
         rack: { navn:'R' + (this.db.racks.length + 1), type:'19" vægskab', he:9, lokaleId:'', gruppeId:'' },
         udstyr: { rackId:(this.db.racks[0] || {}).id || '', navn:'', art:'switch', he:1, pos:1, porte:24, poe:false, poeBudget:0, effekt:20 },
+        brand: { nr:1, lokaleId:'', placering:'', beskrivelse:'', brandklasse:'', produkt:'', udfoert:false, maerkat:false, note:'', billeder:[] },
         link: { antal:1, art:'data', navn:'', lokaleId:'', kabel:'Cat6A', laengde:20, panelId:'', panelPort:0, switchId:'', switchPort:0, patch:0.5, poeW:0, kamType:'Dome', oploesning:'4 MP', nvrId:'' }
       }[type];
       this.form = item ? JSON.parse(JSON.stringify(item)) : Object.assign(std, pre || {});
@@ -426,6 +428,7 @@ function app() {
         this.form.fase = f.vals.slice().sort((a, b) => a.I - b.I)[0].p;
         this.form.rcdId = (this.rcdsFor(this.form.tavleId)[0] || {}).id || '';
       }
+      if (type === 'brand' && !item) this.form.nr = this.brandNaesteNr();
       if (type === 'udstyr' && !item) this.form.pos = this.udstyrFor(this.form.rackId).reduce((m, u) => Math.max(m, (Number(u.pos) || 0) + (Number(u.he) || 1) - 1), 0) + 1;
       if (type === 'link' && !item) {
         const f = this.form, cctv = f.art === 'cctv', U = this.db.udstyr;
@@ -436,8 +439,9 @@ function app() {
       this.confirm = null; this.modal = { type, id: item ? item.id : null };
       this.$nextTick(() => { const el = document.getElementById('m-navn'); if (el) el.focus(); });
     },
-    liste(type) { return { afbryder:'afbrydere', tavle:'tavler', rcd:'rcds', lokale:'lokaler', gruppe:'grupper', enhed:'enheder', daase:'daaser', rack:'racks', udstyr:'udstyr', link:'links' }[type]; },
+    liste(type) { return { afbryder:'afbrydere', tavle:'tavler', rcd:'rcds', lokale:'lokaler', gruppe:'grupper', enhed:'enheder', daase:'daaser', rack:'racks', udstyr:'udstyr', link:'links', brand:'brandlukninger' }[type]; },
     saveForm() {
+      if (this.modal.type === 'brand') return this.brandGem();
       if (this.modal.type === 'enhed') { this.belSync(); this.belEnhSidst = this.form.belEnh || 'W'; }
       const type = this.modal.type, liste = this.liste(type), rec = Object.assign({}, this.form);
       delete rec.belVal; delete rec.belEnh;
@@ -482,7 +486,9 @@ function app() {
     },
     delCurrent(txt) {
       const type = this.modal.type, id = this.modal.id, d = this.db;
+      if (type === 'brand' && !txt) { const b = d.brandlukninger.find(x => x.id === id); txt = 'Brandlukning ' + (b ? b.nr : '') + ' er slettet. Billederne er bevaret på enheden.'; }
       this.mutate(() => {
+        if (type === 'brand') d.brandlukninger = d.brandlukninger.filter(x => x.id !== id);
         if (type === 'enhed') { const x0 = this.enhed(id) || {}; d.enheder.forEach(e => { if (e.fraEnhed === id) e.fraEnhed = x0.fraEnhed || ''; }); d.afbrydere.forEach(a => { if (a.fraEnhed === id) { a.fraEnhed = x0.fraEnhed || ''; if (!a.fraEnhed) a.daaseId = x0.daaseId || ''; } });
           d.enheder = d.enheder.filter(e => e.id !== id); d.afbrydere.forEach(x => { x.a = x.a.filter(i => i !== id); x.b = x.b.filter(i => i !== id); }); }
         if (type === 'afbryder') d.afbrydere = d.afbrydere.filter(x => x.id !== id);
@@ -491,7 +497,7 @@ function app() {
         const ryd = ids => d.links.forEach(l => { if (ids.has(l.panelId)) { l.panelId = ''; l.panelPort = 0; } if (ids.has(l.switchId)) { l.switchId = ''; l.switchPort = 0; } if (ids.has(l.nvrId)) l.nvrId = ''; });
         if (type === 'udstyr') { ryd(new Set([id])); d.udstyr = d.udstyr.filter(u => u.id !== id); }
         if (type === 'rack') { ryd(new Set(d.udstyr.filter(u => u.rackId === id).map(u => u.id))); d.udstyr = d.udstyr.filter(u => u.rackId !== id); d.racks = d.racks.filter(r => r.id !== id); }
-        if (type === 'lokale') [d.daaser, d.racks, d.links, d.afbrydere].forEach(a => a.forEach(x => { if (x.lokaleId === id) x.lokaleId = ''; }));
+        if (type === 'lokale') [d.daaser, d.racks, d.links, d.afbrydere, d.brandlukninger].forEach(a => a.forEach(x => { if (x.lokaleId === id) x.lokaleId = ''; }));
         if (type === 'gruppe') d.tavler.forEach(t => { if (t.fraGruppe === id) t.fraGruppe = ''; });
         if (type === 'gruppe') [d.daaser, d.racks, d.afbrydere].forEach(a => a.forEach(x => { if (x.gruppeId === id) x.gruppeId = ''; }));
         if (type === 'lokale') { d.enheder.forEach(e => { if (e.lokaleId === id) e.lokaleId = ''; }); d.lokaler = d.lokaler.filter(l => l.id !== id); }
@@ -518,6 +524,7 @@ function app() {
     /* tastatur */
     key(ev) {
       if (ev.key === 'Escape' && this.sfPop) { this.sfPop = null; return; }
+      if (ev.key === 'Escape' && this.lysbillede) { this.lysbillede = null; return; }
       if (ev.key === 'Escape') { this.soegAaben = false; if (this.hurtig.aaben) { this.hurtig.aaben = false; return; } this.modal = null; if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); return; }
       const tag = (ev.target.tagName || '').toLowerCase();
       if (this.modal || tag === 'input' || tag === 'select' || tag === 'textarea') return;
@@ -568,6 +575,7 @@ function app() {
       d.racks.forEach(r => add('rack', 'Rackskab', r, r.navn, r.type + ' · ' + this.lokaleNavn(r.lokaleId), 'k:' + r.id));
       d.udstyr.forEach(u => add('udstyr', 'Rackudstyr', u, u.navn, this.udstArt[u.art] + ' · ' + this.rackNavn(u.rackId), 'u:' + u.id));
       d.links.forEach(l => add('link', l.art === 'cctv' ? 'Kamera' : 'PDS-udtag', l, l.navn, this.lokaleNavn(l.lokaleId) + ' · ' + l.kabel, this.udst(l.switchId) || this.udst(l.panelId) ? 'x:' + l.id : ''));
+      d.brandlukninger.forEach(b => add('brand', 'Brandlukning', b, 'Nr. ' + b.nr + ' ' + (b.placering || b.beskrivelse), [b.lokaleId ? this.lokaleNavn(b.lokaleId) : '', b.beskrivelse, b.brandklasse].filter(Boolean).join(' · '), ''));
       return out.slice(0, 40);
     },
     soegVaelg(r) {
@@ -732,5 +740,5 @@ function app() {
       return out;
     },
 
-  }, APP_BEREGNING(), APP_DIAGRAM(), APP_LAGRING(), APP_HISTORIK());
+  }, APP_BEREGNING(), APP_DIAGRAM(), APP_LAGRING(), APP_HISTORIK(), APP_BILLEDER(), APP_BRAND());
 }

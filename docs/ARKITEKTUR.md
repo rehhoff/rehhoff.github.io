@@ -14,6 +14,8 @@
 | `js/beregning.js` | `APP_BEREGNING()`: strøm, ΔU, I<sub>z</sub>, fasebalance, kabeltabel, samtidighed, tilgangskabel, effektforslag |
 | `js/diagram.js` | `APP_DIAGRAM()`: enstregsdiagram, sporing, afbrydere og tændingsdiagram |
 | `js/lagring.js` | `APP_LAGRING()`: projekter, eksport, import, backup, synkronisering |
+| `js/billeder.js` | `APP_BILLEDER()`: billeder til brandlukninger. Komprimering med canvas, IndexedDB (`tavleoversigt-billeder`), miniaturer, billedsynk til en separat Gist, billeder i backupfilen |
+| `js/brand.js` | `APP_BRAND()`: fanen Brandlukning (liste, filtre, optælling, formular) og afsnittet i dokumentationen |
 | `js/historik.js` | `APP_HISTORIK()`: tidligere versioner af det aktive projekt fra Gist'ens versionshistorik (`/gists/{id}/commits`), gendannes som kopi |
 | `js/app.js` | `app()`: tilstand, `init()` og resten af brugerfladen. `bland()` samler metoderne fra de tre filer ovenfor |
 | `CLAUDE.md` | Regler og hukommelse for Claude |
@@ -39,10 +41,13 @@ Faner i `views`: Tavle, Enstregsdiagram, Tændingsdiagram, Samlepunkter & dåser
 | `tavleoversigt.backups` | Op til tre automatiske backups `{ tid, grund, app, schema, idx, raw:{id:json} }` |
 | `tavleoversigt.firma` | Firmaoplysninger til dokumentationen: `{ navn, cvr, adresse, telefon, logo }` (logo som data-URL, højst 400 px bred). Gælder alle projekter og synkroniseres ikke |
 | `tavleoversigt.tema` | `auto`, `light` eller `dark` |
-| `tavleoversigt.sync` | Synkronisering: `{ token, gistId, login, base:{ id: hash }, sidst }`. Findes kun, når synkronisering er slået til |
+| `tavleoversigt.sync` | Synkronisering: `{ token, gistId, login, base:{ id: hash }, sidst, bGist, bSendt:[id] }`. `bGist` er denne enheds billed-Gist, og `bSendt` er de billed-id'er, der vides at ligge i en billed-Gist (skema 15). Findes kun, når synkronisering er slået til |
+| IndexedDB `tavleoversigt-billeder` | Version 1. Tabellen `billeder`: `{ id, data }` (JPEG som data-URL, længste side højst 1600 px, ca. 100–300 KB). Tabellen `mini`: `{ id, data, oprettet }` (miniature, 320 px). Billeder slettes aldrig automatisk |
 | `tavleoversigt.v1`, `.v2` | Gamle formater, migreres ved første start |
 
-`norm()` lægger standardværdier på og migrerer gamle felter, hver gang et projekt læses. Synkroniseringens Gist indeholder markøren `tavleoversigt.json` og én fil `tavleoversigt-<id>.json` pr. projekt. Markørens `schema` er det højeste skema, der har skrevet til Gist'en. En app med lavere `SCHEMA` afbryder synkroniseringen uden at læse eller skrive. `base` er hver projekts hash ved seneste synkronisering og bruges til tre-vejs fletning (se `docs/planer/2026-11-15-gist-synk.md`). Backupfilen har formatet `{ format:'tavleoversigt-backup', app, schema, eksporteret, aktiv, projekter:[{ id, data }] }`.
+`norm()` lægger standardværdier på og migrerer gamle felter, hver gang et projekt læses. Synkroniseringens Gist indeholder markøren `tavleoversigt.json` og én fil `tavleoversigt-<id>.json` pr. projekt. Markørens `schema` er det højeste skema, der har skrevet til Gist'en. En app med lavere `SCHEMA` afbryder synkroniseringen uden at læse eller skrive. `base` er hver projekts hash ved seneste synkronisering og bruges til tre-vejs fletning (se `docs/planer/2026-11-15-gist-synk.md`). Backupfilen har formatet `{ format:'tavleoversigt-backup', app, schema, eksporteret, aktiv, projekter:[{ id, data }], billeder:{ id: data-URL } }`. `billeder` (skema 15) har de billeder, projekterne bruger, og indlæses kun, hvis de mangler på enheden. Projekt-JSON og de automatiske backups i localStorage har kun billedernes id'er.
+
+Billeder synkroniseres til en separat hemmelig Gist, så projekt-Gist'en forbliver lille og aldrig når API'ets grænse på 300 filer. Den har markøren `tavleoversigt-billeder.json` (`{ format:'tavleoversigt-billeder', app, schema, opdateret }`, samme skemaregel) og én fil `tavleoversigt-billede-<id>.txt` med data-URL'en pr. billede. `billedSynk()` kører efter projekterne og kalder kun GitHub, når et billede mangler at blive sendt eller hentet. Listen over Gists (uden indhold) giver filnavne og `raw_url`, og billeder hentes altid via `raw_url`. Alle Gists med markøren læses, så billeder fra to enheder, der hver har oprettet en billed-Gist, findes begge steder (se `docs/planer/2026-11-18-brandlukning.md`).
 
 ## Datamodel for et projekt
 
@@ -59,6 +64,7 @@ Faner i `views`: Tavle, Enstregsdiagram, Tændingsdiagram, Samlepunkter & dåser
 | `racks` | `id, navn, type, he, lokaleId, gruppeId` |
 | `udstyr` | `id, rackId, navn, art, he, pos, porte, poe, poeBudget, effekt` |
 | `links` | `id, art (data, cctv), navn, lokaleId, kabel, laengde, panelId, panelPort, switchId, switchPort, patch, poeW, kamType, oploesning, nvrId` |
+| `brandlukninger` | Skema 15: `id, nr, lokaleId, placering, beskrivelse, brandklasse, produkt, udfoert, maerkat` (brandmærkat sat), `note`, `billeder[]` (billed-id'er; selve billederne ligger i IndexedDB) |
 
 Relationer: gruppe → tavle, gruppe → HPFI, brugsgenstand → gruppe, lokale og evt. samledåse eller en anden brugsgenstand (sløjfe), afbryder → evt. dåse eller brugsgenstand (træk), samledåse → gruppe og evt. overordnet dåse, undertavle → tavle og evt. gruppe (`fraGruppe`), link → patchpanel, switch og NVR.
 
@@ -73,6 +79,8 @@ Relationer: gruppe → tavle, gruppe → HPFI, brugsgenstand → gruppe, lokale 
 | Kabler | `materialer`, `materialeTsv` (materialeliste), `du`, `duLokal`, `duEget`, `duV` (ΔU i et træk ud fra strøm pr. fase), `duOp`, `daaseFaser`, `tavleDu`, `tilgDu`, `iz`, `izFejl`, `forslag`, `lmax`, `daaseIz`, `tilgIz` |
 | I<sub>z</sub> | `forhold` (gruppens eller tilgangskablets forhold med projektets standard), `izTabel`, `izBeregn`, `kTemp`, `kSamlet`, `korrektion`, `forholdTxt`. Tabeller i `js/data.js`: `IZT`, `METODER`, `ISO`, `TEMPS`, `K_TEMP`, `KREDSE`, `LAG`, `K_JORD_SAMLET`. `IZ` er et alias for PVC, metode C |
 | Føringsvej | `enhed`, `sloejfer`, `enhedNed`, `enhedFaser`, `enhedI` (største fasestrøm i trækket inkl. sløjfer), `enhedRod`, `enhedDaase`, `duSloejfe`, `sloejfeVej`, `foeringTrae`, `fvSaet`, `fvNy`, `fvOptael`, `grenKopier` (kopiér gren), `sloejfeValg`, `afbFraSaet`, `fvSlet`, `fvRedAabn`, `fvRedGem` (ret kabel i oversigten, tilstand i `fvRed`, `fvTmp`). Samtidighedsfaktor-pop-up: `sfListe`, `sfAabn`, `sfVaelg` (tilstand i `sfPop`) |
+| Brandlukning | `brandI`, `brandListe` (lokalefilter og "kun ikke udført / mangler mærkat"), `brandOptael`, `brandNaesteNr`, `brandNy`, `brandSaet`, `brandGem`, `brandDocHtml` |
+| Billeder | `billedStart`, `billedSrc`, `billedKomprimer`, `billedTegn`, `billedGem`, `billedData`, `billedFraFil`, `billedVis`, `brugteBilleder`, `billederTilBackup`, `billedImport`, `billedSynk`. Hjælpere `bdbAaben`, `bdbKoer`; globale `BMINI` (miniaturer i hukommelsen) og `BFULD` (id'er på enheden) |
 | Kontrol | `gruppeFejl`, `warnings`, `mangler`, `linkFejl`, `maalVurdering`, `zsMax`, `maalTal` |
 | Kortslutning og selektivitet | `ia` (I<sub>a</sub>), `kLeder`, `rSloejfe`, `tavleOp`, `tavleZe`, `tavleIkMaks`, `enhedR`, `ikMin`, `ikVis`, `ikTxt`, `brydeFejl`, `kortslutFejl`, `rcdForan`, `selektivitet`. Advarslernes nøgler begynder med `ik:`, `kb:`, `sf:`, `sg:` og `sr:` |
 | Forslag | `effektForslag`, `sfForslag`, `daaseParse`, `symbolFor` |

@@ -1,11 +1,14 @@
 /* Konstanter, lagernøgler, tabeller, norm() og eksempeldata. Indlæses først; alt her er globalt og bruges af de andre filer og markup. */
 const KEY = 'tavleoversigt.v2', OLD = 'tavleoversigt.v1', TKEY = 'tavleoversigt.tema', IDX = 'tavleoversigt.projekter';
 /* Versioner: APP_VERSION følger CHANGELOG.md. SCHEMA hæves kun, når datamodellen ændres, og udløser en automatisk backup før migrering. */
-const APP_VERSION = '10.17.0', SCHEMA = 14, BKEY = 'tavleoversigt.backups', BMAX = 3;
+const APP_VERSION = '10.18.0', SCHEMA = 15, BKEY = 'tavleoversigt.backups', BMAX = 3;
 const PK = id => 'tavleoversigt.p.' + id, MEM = {};
 /* Synkronisering: en hemmelig GitHub Gist med en markørfil og én fil pr. projekt. Se docs/planer/2026-11-15-gist-synk.md. */
 const SKEY = 'tavleoversigt.sync', GFIL = 'tavleoversigt.json', GP = id => 'tavleoversigt-' + id + '.json', GPRE = /^tavleoversigt-([A-Za-z0-9_-]+)\.json$/, GH = 'https://api.github.com';
 let SYNK_T = null;
+/* Billeder (skema 15): IndexedDB-databasen tavleoversigt-billeder og en separat hemmelig Gist med en markørfil og én fil pr. billede. Se docs/planer/2026-11-18-brandlukning.md. */
+const BDB = 'tavleoversigt-billeder', BFIL = 'tavleoversigt-billeder.json', BP = id => 'tavleoversigt-billede-' + id + '.txt', BPRE = /^tavleoversigt-billede-([A-Za-z0-9_-]+)\.txt$/, BID = /^[A-Za-z0-9_-]{1,40}$/;
+const BMINI = {}, BFULD = new Set();
 const hashTxt = s => {
   let h1 = 0xdeadbeef, h2 = 0x41c6ce57;
   for (let i = 0; i < s.length; i++) { const c = s.charCodeAt(i); h1 = Math.imul(h1 ^ c, 2654435761); h2 = Math.imul(h2 ^ c, 1597334677); }
@@ -126,7 +129,7 @@ const tal = s => Number(String(s).replace(',', '.')) || 0;
 const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' })[c]);
 const hostTema = document.documentElement.getAttribute('data-theme');
 
-const tom = () => ({ projekt:{ anlaeg:'bolig', navn:'', sagsnr:'', kunde:'', adresse:'', installatoer:'', dato:'', metode:'C', temp:30, jtemp:20, samlet:1, lag:'bundt' }, tavler:[], rcds:[], lokaler:[], grupper:[], enheder:[], daaser:[], afbrydere:[], racks:[], udstyr:[], links:[] });
+const tom = () => ({ projekt:{ anlaeg:'bolig', navn:'', sagsnr:'', kunde:'', adresse:'', installatoer:'', dato:'', metode:'C', temp:30, jtemp:20, samlet:1, lag:'bundt' }, tavler:[], rcds:[], lokaler:[], grupper:[], enheder:[], daaser:[], afbrydere:[], racks:[], udstyr:[], links:[], brandlukninger:[] });
 /* Gruppens eller tilgangskablets egne forhold: gyldig værdi eller '' (= projektets standard). Præfiks 't' giver tMetode, tTemp, tSamlet, tLag. */
 function forholdNorm(o, p) {
   const n = k => p ? p + k[0].toUpperCase() + k.slice(1) : k, s = Math.round(Number(o[n('samlet')]));
@@ -142,7 +145,7 @@ function norm(d) {
   /* Skema 10: forhold for Iz. Projektets standard, som grupper og tilgangskabler kan overskrive (tom = standard). */
   { const p = o.projekt; p.metode = METODER[p.metode] ? p.metode : 'C'; p.temp = TEMPS.includes(Number(p.temp)) ? Number(p.temp) : 30; p.jtemp = TEMPS.includes(Number(p.jtemp)) ? Number(p.jtemp) : 20;
     p.samlet = Math.round(Number(p.samlet)) >= 1 && Math.round(Number(p.samlet)) <= 20 ? Math.round(Number(p.samlet)) : 1; p.lag = LAG[p.lag] ? p.lag : 'bundt'; }
-  for (const k of ['tavler', 'rcds', 'lokaler', 'grupper', 'enheder', 'daaser', 'afbrydere', 'racks', 'udstyr', 'links']) if (!Array.isArray(o[k])) o[k] = [];
+  for (const k of ['tavler', 'rcds', 'lokaler', 'grupper', 'enheder', 'daaser', 'afbrydere', 'racks', 'udstyr', 'links', 'brandlukninger']) if (!Array.isArray(o[k])) o[k] = [];
   o.tavler.forEach(t => { t.forsikring = Number(t.forsikring) || 35; t.fra = t.fra || ''; t.tilgang = t.tilgang || ''; t.hovedafbryder = Number(t.hovedafbryder) || 0; t.tKabel = KABLER.includes(t.tKabel) ? t.tKabel : 'PVC'; t.tLedere = t.tLedere || '5G'; t.tTv = Number(t.tTv) || 6; t.tLaengde = Number(t.tLaengde) || 0; forholdNorm(t, 't');
     /* skema 12: netimpedans Ze (Ω) og prospektiv Ik,maks (kA) ved tavlen. 0 = ukendt */ t.ze = Number(t.ze) > 0 ? Number(t.ze) : 0; t.ikMaks = Number(t.ikMaks) > 0 ? Number(t.ikMaks) : 0;
     /* skema 13: status for tilgangskablet */ t.tTrukket = !!t.tTrukket; t.tNote = String(t.tNote || ''); });
@@ -163,6 +166,11 @@ function norm(d) {
     /* skema 13: afbryderens eget træk fra en dåse eller en brugsgenstand (0 m = intet træk). Indgår ikke i ΔU */
     a.daaseId = a.daaseId || ''; a.fraEnhed = eid.has(a.fraEnhed) ? a.fraEnhed : ''; a.kabel = a.kabel ? kabMap(a.kabel) : 'PVC'; a.ledere = a.ledere || '3G'; a.tv = Number(a.tv) || 1.5; a.laengde = Number(a.laengde) || 0; traek(a);
     a.a = (Array.isArray(a.a) ? a.a : []).filter(x => eid.has(x)); a.b = (Array.isArray(a.b) ? a.b : []).filter(x => eid.has(x)); });
+  /* skema 15: brandlukninger. Billederne ligger i IndexedDB; projektet gemmer kun id'erne */
+  o.brandlukninger = o.brandlukninger.filter(b => b && typeof b === 'object');
+  o.brandlukninger.forEach((b, i) => { b.id = typeof b.id === 'string' && b.id ? b.id : 'bl' + (i + 1); b.nr = Math.round(Number(b.nr)) > 0 ? Math.round(Number(b.nr)) : i + 1; b.lokaleId = String(b.lokaleId || '');
+    for (const k of ['placering', 'beskrivelse', 'brandklasse', 'produkt', 'note']) b[k] = String(b[k] == null ? '' : b[k]);
+    b.udfoert = !!b.udfoert; b.maerkat = !!b.maerkat; b.billeder = [...new Set((Array.isArray(b.billeder) ? b.billeder : []).filter(x => typeof x === 'string' && BID.test(x)))]; });
   o.tavler.forEach(t => { const g = o.grupper.find(x => x.id === t.fraGruppe); if (g && g.tavleId !== t.id) t.fra = g.tavleId; else t.fraGruppe = ''; });
   return o;
 }

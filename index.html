@@ -14,8 +14,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=10.17.0">
-<link rel="stylesheet" href="css/tailwind.css?v=10.17.0">
+<link rel="stylesheet" href="css/app.css?v=10.18.0">
+<link rel="stylesheet" href="css/tailwind.css?v=10.18.0">
 </head>
 <body class="min-h-full">
 <p id="fail" hidden style="margin:16px;padding:12px;border:1px solid var(--crit);color:var(--crit)">Appen kunne ikke starte, fordi Alpine.js ikke blev indlæst. Genindlæs siden.</p>
@@ -474,6 +474,44 @@
     </div>
   </section>
 
+  <!-- ============ BRANDLUKNING ============ -->
+  <section x-show="view==='brand'" class="flex flex-col gap-3">
+    <div class="flex flex-wrap gap-2 items-center">
+      <button class="btn btn-primary" id="bl-ny" @click="brandNy()">+ Brandlukning</button>
+      <label class="flex items-center gap-2 text-sm" for="bl-ikke"><input type="checkbox" id="bl-ikke" x-model="brandIkke"> Kun ikke udført / mangler mærkat</label>
+      <span class="tag num" id="bl-udf" :class="brandOptael().udfoert < brandOptael().n && 'warn'" x-text="'Udført ' + brandOptael().udfoert + ' af ' + brandOptael().n"></span>
+      <span class="tag num" id="bl-maerk" :class="brandOptael().maerkat < brandOptael().n && 'warn'" x-text="'Mærkat ' + brandOptael().maerkat + ' af ' + brandOptael().n"></span>
+    </div>
+    <p class="text-xs text-muted">Registrér brandtætning af huller og gennemføringer ind i og igennem brandvægge og brandceller. Sæt flueben, når lukningen er udført, og når brandmærkatet sidder ved siden af. Billeder gemmes på enheden og sendes til GitHub, hvis synkronisering er slået til.</p>
+    <p x-show="!billedOk" class="panel p-3 text-sm warn">Browseren tillader ikke lagring af billeder (IndexedDB). Lukningerne gemmes, men billeder kan ikke tilføjes her.</p>
+    <p x-show="!db.brandlukninger.length" class="panel p-6 text-muted">Ingen brandlukninger endnu. Tryk på + Brandlukning.</p>
+    <p x-show="db.brandlukninger.length && !brandListe().length" class="panel p-6 text-muted">Ingen brandlukninger matcher filtrene.</p>
+    <div class="flex flex-col gap-2" id="bl-liste">
+      <template x-for="b in (view==='brand' ? brandListe() : [])" :key="b.id">
+        <article class="panel bl p-3 flex flex-wrap gap-x-4 gap-y-2 items-start" :id="'bl-' + b.id">
+          <div class="bl-nr num" x-text="b.nr"></div>
+          <div class="flex-1 min-w-0">
+            <div class="font-semibold" x-text="b.placering || 'Placering ikke angivet'"></div>
+            <div class="text-xs text-muted" x-text="[b.lokaleId ? lokaleNavn(b.lokaleId) : 'Lokale ikke angivet', b.brandklasse, b.produkt].filter(Boolean).join(' · ')"></div>
+            <p class="text-sm" x-show="b.beskrivelse" x-text="b.beskrivelse"></p>
+            <p class="text-xs text-muted" x-show="b.note" x-text="'Note: ' + b.note"></p>
+            <div class="flex flex-wrap gap-1 pt-1" x-show="b.billeder.length">
+              <template x-for="id in b.billeder" :key="id">
+                <button type="button" class="bl-mini" @click="billedVis(id)" :aria-label="'Vis billede af brandlukning ' + b.nr">
+                  <img x-show="billedSrc(id)" :src="billedSrc(id)" alt=""><span x-show="!billedSrc(id)" class="text-xs text-muted">Mangler</span></button>
+              </template>
+            </div>
+          </div>
+          <div class="bl-knap flex flex-wrap items-center gap-2">
+            <label class="bl-chk" :class="b.udfoert && 'on'"><input type="checkbox" class="bl-udf" :checked="b.udfoert" @change="brandSaet(b, 'udfoert', $event.target.checked)" :aria-label="'Udført: brandlukning ' + b.nr"> Udført</label>
+            <label class="bl-chk" :class="b.maerkat && 'on'"><input type="checkbox" class="bl-maerk" :checked="b.maerkat" @change="brandSaet(b, 'maerkat', $event.target.checked)" :aria-label="'Mærkat: brandlukning ' + b.nr"> Mærkat</label>
+            <button class="btn" @click="openForm('brand', b)">Rediger</button>
+          </div>
+        </article>
+      </template>
+    </div>
+  </section>
+
   <!-- ============ SVAGSTRØM ============ -->
   <section x-show="view==='svag'" class="flex flex-col gap-4">
     <div class="flex flex-wrap gap-2">
@@ -852,7 +890,7 @@
       </div>
       <div class="panel p-3 flex flex-col gap-2">
         <h2 class="hd text-lg">Datasikring</h2>
-        <p class="text-xs text-muted">Projekterne gemmes i denne browser på denne enhed. Opdateringer af appen sletter dem ikke, og der tages automatisk en backup i browseren, før data opgraderes. Ryddes browserdata, eller skifter du enhed, er en backupfil eller synkronisering via GitHub den eneste kopi.</p>
+        <p class="text-xs text-muted">Projekterne gemmes i denne browser på denne enhed. Opdateringer af appen sletter dem ikke, og der tages automatisk en backup i browseren, før data opgraderes. Backupfilen indeholder også billederne til brandlukninger; de automatiske backups i browseren gør ikke, men billederne bliver liggende på enheden. Ryddes browserdata, eller skifter du enhed, er en backupfil eller synkronisering via GitHub den eneste kopi.</p>
         <button class="btn justify-center btn-primary" @click="hentBackup()" x-text="'Hent backup af alle ' + projekter.length + ' projekter'"></button>
         <p class="text-xs num" :class="!sidstBackup && 'warn'" x-text="sidstBackup ? 'Seneste backupfil: ' + datoTxt(sidstBackup) : 'Der er ikke hentet en backupfil endnu.'"></p>
         <p class="text-xs text-muted" x-text="persistent ? 'Browseren har givet varig lagring, så data ryddes ikke automatisk ved pladsmangel.' : 'Browseren har ikke bekræftet varig lagring. Hent en backupfil jævnligt.'"></p>
@@ -921,6 +959,7 @@
           <p class="text-xs text-muted">Gemmes kun i denne browser, gælder alle projekter og synkroniseres ikke.</p>
         </div>
         <button class="btn justify-center" @click="hent(filnavn('projekt','json'), exportJson())">Hent projekt som JSON</button>
+        <p class="text-xs text-muted" x-show="db.brandlukninger.some(b => b.billeder.length)">Projekt-JSON indeholder ikke billederne, kun deres id'er. Backupfilen af alle projekter indeholder billederne.</p>
         <button class="btn justify-center" @click="kopier(exportJson())">Kopiér JSON</button>
         <button class="btn justify-center" @click="kopier(gruppeTsv())">Kopiér gruppeskema til regneark</button>
       </div>
@@ -1457,6 +1496,38 @@
             <label class="f" x-show="form.art === 'switch' && form.poe" for="m-ubud">PoE-budget (W)<input id="m-ubud" class="inp num" type="number" min="0" step="1" x-model.number="form.poeBudget"></label>
           </div>
         </template>
+        <template x-if="modal.type==='brand'">
+          <div class="contents">
+            <label class="f" for="m-bnr">Nummer<input id="m-bnr" class="inp num" type="number" min="1" step="1" x-model.number="form.nr" required></label>
+            <label class="f" for="m-blok">Lokale
+              <select id="m-blok" class="inp" x-model="form.lokaleId" @change="nyValg($event, 'lokale', 'lokaleId')"><option value="">Ikke angivet</option><option value="__ny">+ Opret nyt lokale …</option>
+                <template x-for="l in db.lokaler" :key="l.id"><option :value="l.id" :selected="form.lokaleId===l.id" x-text="l.navn"></option></template></select></label>
+            <label class="f sm:col-span-2" for="m-navn">Placering<input id="m-navn" class="inp" x-model="form.placering" placeholder="Væg mod trappe, 30 cm under loft"></label>
+            <label class="f sm:col-span-2" for="m-bbesk">Beskrivelse<textarea id="m-bbesk" class="inp" rows="2" x-model="form.beskrivelse" placeholder="3 kabler + 1 rør gennem EI60-væg"></textarea></label>
+            <label class="f" for="m-bklasse">Brandklasse<input id="m-bklasse" class="inp" x-model="form.brandklasse" list="bl-klasser" placeholder="EI60"></label>
+            <datalist id="bl-klasser"><template x-for="k in brandKlasser()" :key="k"><option :value="k"></option></template></datalist>
+            <label class="f" for="m-bprod">Produkt<input id="m-bprod" class="inp" x-model="form.produkt" list="bl-produkter" placeholder="Brandfugemasse, manchet …"></label>
+            <datalist id="bl-produkter"><template x-for="k in brandProdukter()" :key="k"><option :value="k"></option></template></datalist>
+            <label class="bl-chk" :class="form.udfoert && 'on'" for="m-budf"><input type="checkbox" id="m-budf" x-model="form.udfoert"> Udført</label>
+            <label class="bl-chk" :class="form.maerkat && 'on'" for="m-bmaerk"><input type="checkbox" id="m-bmaerk" x-model="form.maerkat"> Brandmærkat sat</label>
+            <label class="f sm:col-span-2" for="m-bnote">Note<input id="m-bnote" class="inp" x-model="form.note" placeholder="Venter på tømrer"></label>
+            <div class="sm:col-span-2 flex flex-col gap-2">
+              <span class="text-xs font-semibold uppercase tracking-wider text-muted">Billeder</span>
+              <div class="flex flex-wrap gap-2" x-show="(form.billeder || []).length">
+                <template x-for="(id, i) in (form.billeder || [])" :key="id">
+                  <span class="bl-mini bl-mini-f"><img x-show="billedSrc(id)" :src="billedSrc(id)" alt=""><span x-show="!billedSrc(id)" class="text-xs text-muted">Mangler</span>
+                    <button type="button" class="bl-fjern" @click="brandFjernBillede(i)" :aria-label="'Fjern billede ' + (i + 1)" title="Fjern billedet fra lukningen">×</button></span>
+                </template>
+              </div>
+              <div class="flex flex-wrap items-center gap-2" x-show="billedOk">
+                <label class="btn" for="bl-kamera">Tag billede<input type="file" id="bl-kamera" class="sr-only" accept="image/*" capture="environment" @change="billedFraFil($event)"></label>
+                <label class="btn" for="bl-galleri">Vælg billeder<input type="file" id="bl-galleri" class="sr-only" accept="image/*" multiple @change="billedFraFil($event)"></label>
+                <span x-show="billedArbejder" class="text-xs text-muted">Gør billedet klar …</span>
+              </div>
+              <p class="text-xs text-muted">Billederne gøres mindre (ca. 200 KB) og gemmes på enheden. Er synkronisering slået til, sendes de også til en hemmelig Gist på GitHub. Et fjernet billede slettes ikke fra enheden.</p>
+            </div>
+          </div>
+        </template>
         <template x-if="modal.type==='link'">
           <div class="contents">
             <label class="f" for="m-lart">Art
@@ -1497,12 +1568,19 @@
         <button type="button" x-show="mid() && kanDup(modal.type)" class="btn" @click="dupElem()">Duplikér</button>
         <span class="flex gap-2 ml-auto">
           <button type="button" class="btn" @click="modal=null">Annuller</button>
-          <button type="submit" class="btn btn-primary">Gem</button>
+          <button type="submit" class="btn btn-primary" :disabled="billedArbejder > 0">Gem</button>
         </span>
       </footer>
     </form>
     </template>
   </div>
+  <!-- Billede i fuld størrelse -->
+  <template x-if="lysbillede">
+    <div class="fixed inset-0 z-[80] flex items-center justify-center p-4" style="background:rgba(0,0,0,.85)" role="dialog" aria-modal="true" aria-label="Billede af brandlukning" @click="lysbillede=null">
+      <img x-show="lysbillede.src" :src="lysbillede.src" alt="Billede af brandlukning" class="bl-stor">
+      <button type="button" class="btn absolute top-3 right-3" @click.stop="lysbillede=null">Luk</button>
+    </div>
+  </template>
   <!-- Hurtig oprettelse fra dropdown -->
   <template x-if="sfPop">
     <div class="fixed inset-0 z-[70]" @click.self="sfPop=null">
@@ -1565,12 +1643,14 @@
   </div>
 </div>
 
-<script src="js/data.js?v=10.17.0"></script>
-<script src="js/beregning.js?v=10.17.0"></script>
-<script src="js/diagram.js?v=10.17.0"></script>
-<script src="js/lagring.js?v=10.17.0"></script>
-<script src="js/historik.js?v=10.17.0"></script>
-<script src="js/app.js?v=10.17.0"></script>
+<script src="js/data.js?v=10.18.0"></script>
+<script src="js/beregning.js?v=10.18.0"></script>
+<script src="js/diagram.js?v=10.18.0"></script>
+<script src="js/lagring.js?v=10.18.0"></script>
+<script src="js/historik.js?v=10.18.0"></script>
+<script src="js/billeder.js?v=10.18.0"></script>
+<script src="js/brand.js?v=10.18.0"></script>
+<script src="js/app.js?v=10.18.0"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.14.1/cdn.min.js"></script>
 </body>
 </html>
