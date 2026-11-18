@@ -254,6 +254,32 @@ async def main():
         r = await vindue.evaluate("[document.body.innerText.includes('Test El ApS'), document.body.innerText.includes('Underskrift'), document.querySelectorAll('img').length]")
         tjek('udskriv() åbner et vindue med dokumentationen', r == [True, True, 1], r)
         await vindue.close()
+        # Afleveringstjek (forslag 10) og tavlefortegnelse (forslag 11)
+        r = await pg.evaluate(f"""(()=>{{const a={A};const k=a.aflTjek();return {{kat:k.filter(x=>x.punkter.length).map(x=>x.k),n:a.aflAntal(),doc:a.docHtml().includes('Afleveringstjek: '+a.aflAntal()+' ')}}}})()""")
+        tjek('afleveringstjek viser kendte mangler i eksempelprojektet, og dokumentationen har en statuslinje', r['n'] > 0 and len(r['kat']) > 0 and r['doc'], r)
+        r = await pg.evaluate(f"""(async()=>{{const a={A};const T=n=>new Promise(f=>setTimeout(f,n));const gem=a.db, v=a.view;const o={{}};
+          try {{ a.db=norm(JSON.parse(JSON.stringify(gem)));const d=a.db;
+            d.enheder=[];d.daaser=[];d.afbrydere=[];d.links=[];d.racks=[];d.udstyr=[];d.brandlukninger=[];d.grupper=[];d.rcds=[];
+            d.tavler.forEach(t=>{{t.tTrukket=true;t.ze=0.3;if(t.fra&&!t.tilgang)t.tilgang='5G6'}});
+            o.n=a.aflAntal();o.doc=a.docHtml().includes('Afleveringstjek');a.view='fejlfinder';await T(150);
+            const e=document.getElementById('afl-klar');o.klar=!!e&&getComputedStyle(e).display!=='none';
+            d.tavler[0].ze=0;o.ze=a.aflTjek().find(x=>x.k==='tavle').punkter.length;
+          }} finally {{ a.db=gem;a.view=v }} return o}})()""")
+        tjek('afleveringstjek: "Klar til aflevering", når intet mangler; mangler Ze tæller med', r['n'] == 0 and r['klar'] and not r['doc'] and r['ze'] >= 1, r)
+        r = await pg.evaluate(f"""(async()=>{{const a={A};const T=n=>new Promise(f=>setTimeout(f,n));const o={{}};a.view='fejlfinder';await T(150);
+          const knap=document.querySelector('.afl-punkt');o.har=!!knap;o.foer=[a.view,!!a.modal];if(knap)knap.click();await T(150);o.efter=[a.view,!!a.modal];
+          if(a.modal&&a.closeModal)a.closeModal();else a.modal=null;
+          const g=a.sorteredeGrupper()[0];a.view='fejlfinder';a.aflGaa({{nav:{{g:g.id}}}});await T(100);o.g=[a.view,a.sel===g.id];return o}})()""")
+        tjek('afleveringstjek: et klik går til stedet (formular eller gruppe)', r['har'] and (r['efter'][0] != 'fejlfinder' or r['efter'][1]) and r['g'] == ['tavle', True], r)
+        r = await pg.evaluate(f"""(()=>{{const a={A};const t=a.db.tavler[0];const h=a.tavleFortegnelseHtml(t.id);return {{nr:a.grupperFor(t.id).every(g=>h.includes('<td class="n">'+g.nr+'</td>')),n:a.grupperFor(t.id).length,side:h.includes('@page'),navn:h.includes(t.navn)}}}})()""")
+        tjek('tavleFortegnelseHtml indeholder alle gruppenumre og @page', r['n'] > 0 and r['nr'] and r['side'] and r['navn'], r)
+        async with pg.expect_popup() as pop:
+            await pg.evaluate(f"{A}.udskrivFortegnelse({A}.db.tavler[0].id)")
+        vindue = await pop.value
+        await vindue.wait_for_load_state()
+        r = await vindue.evaluate("[document.body.textContent.includes('Betegnelse'), document.querySelectorAll('tbody tr').length]")
+        tjek('udskrivFortegnelse() åbner et vindue med tavlefortegnelsen', r[0] and r[1] > 0, r)
+        await vindue.close()
         await pg.evaluate(f"{A}.view={json.dumps(sidstVisning)}")
         await pg.evaluate(f"(()=>{{{A}.firma={{navn:'',cvr:'',adresse:'',telefon:'',logo:''}};localStorage.removeItem('tavleoversigt.firma')}})()")
 
@@ -394,7 +420,7 @@ async def main():
              {'navn': r['navn'], 'b': r['b'], 's': r['s'], 'std': r['std'], 'ik': r['ik'], 'kf': r['kf']} | ens)
 
         # 4e. Kortslutningsstrøm og selektivitet med kendte tal (aftalt 2026-11-16). Ændringerne gemmes ikke.
-        r = await pg.evaluate(f"""(()=>{{const a={A};const d=a.db, n={{t:d.tavler.length,g:d.grupper.length,r:d.rcds.length,e:d.enheder.length,d:d.daaser.length}}, o={{}};
+        r = await pg.evaluate(f"""async()=>{{const a={A};const d=a.db, n={{t:d.tavler.length,g:d.grupper.length,r:d.rcds.length,e:d.enheder.length,d:d.daaser.length}}, o={{}}, T=ms=>new Promise(f=>setTimeout(f,ms));
           const w=k=>a.warnings().some(x=>x.k===k), rd=x=>Math.round(x*1000)/1000;
           try {{
             d.tavler.push({{id:'tk',navn:'TK',placering:'',forsikring:25,hovedafbryder:0,fra:'',fraGruppe:'',tilgang:'',tKabel:'PVC',tLedere:'5G',tTv:6,tLaengde:0,ze:0,ikMaks:0}});
@@ -416,6 +442,7 @@ async def main():
             d.grupper.push({{id:'gu',tavleId:'tu',nr:1,navn:'U',type:'stik',kar:'B',In:10,faser:1,fase:'L1',rcdId:'ru',sf:1,brydeevne:6,maal:{{riso:'',zs:'',rcd:'',ok:false}},metode:'',temp:'',samlet:'',lag:''}});
             const gu=a.gruppe('gu'); t.ikMaks=10;
             o.under=[rd(a.tavleZe('tu')),a.tavleIkMaks('tu'),rd(a.ikMin(g).R)]; t.ikMaks=0;
+            o.zeTxt=[a.docHtml().includes('(beregnet fra forsynende tavle)'),a.zeBeregnet(a.tavle('tu')),a.zeBeregnet(a.tavle('tk'))]; const v0=a.view; a.go('beregning'); await T(150); o.zeDom=document.body.innerText.includes('(beregnet fra forsynende tavle)'); a.go(v0);
             o.sg1=!w('sg:gk'); gu.In=13; o.sg2=w('sg:gk'); gu.In=10; const tu=a.tavle('tu'); tu.forsikring=10; o.sfu=!w('sf:tu')&&!w('sf:tk'); tu.forsikring=16;
             o.hpfi1=w('sr:ru'); rk.selektiv=true; o.hpfi2=w('sr:ru'); rk.idn=100; o.hpfi3=!w('sr:ru'); rk.selektiv=false; o.hpfi4=w('sr:ru');
             t.forsikring=25; const doc=a.docHtml(); o.doc=doc.includes('Kortslutning og selektivitet')&&doc.includes('Selektivitet er ikke sikret')&&doc.includes('Ik,min (A)');
@@ -425,10 +452,10 @@ async def main():
           }}
           o.ryddet=d.tavler.length===n.t&&d.grupper.length===n.g&&d.rcds.length===n.r&&d.enheder.length===n.e&&d.daaser.length===n.d;
           const g0={{kar:'B',In:16}}; o.zs=[rd(a.zsMax(g0)),a.ia(g0),a.ia({{kar:'C',In:16}}),a.ia({{kar:'D',In:16}})];
-          return o}})()""")
+          return o}}""")
         tjek('kortslutning: Ik,min med kendte tal (PVC, XLPE, dåse, undertavle), Ia, brydeevne',
              r['uden'] and r['pvc'] == [0.72, 214.216, 80, True, False] and r['c25'] == [250, False, True, True] and r['xlpe'] == [0.768, 204.588] and r['daase'] == [0.936, 176.78]
-             and r['bryde0'] and r['bryde1'] and r['bryde2'] and r['under'] == [0.39, 10, 0.72] and r['zs'] == [1.917, 80, 160, 320] and r['ryddet'], r)
+             and r['bryde0'] and r['bryde1'] and r['bryde2'] and r['under'] == [0.39, 10, 0.72] and r['zeTxt'] == [True, True, False] and r['zeDom'] and r['zs'] == [1.917, 80, 160, 320] and r['ryddet'], r)
         tjek('kortslutning: Ik,min lige under Ia vises rundet ned (159,6 A står som 159 A, ikke 160 A)', r['afrund'] == [159.6, False, '159', True, True], r)
         tjek('selektivitet: forsikring under 1,6 × største sikring, gruppe foran undertavle, ingen dobbelt advarsel fra undertavlens egen forsikring, HPFI i serie med og uden type S, med i dokumentationen',
              r['sel1'] and r['sel2'] and r['sfu'] and r['sg1'] and r['sg2'] and r['hpfi1'] and r['hpfi2'] and r['hpfi3'] and r['hpfi4'] and r['doc'], r)
@@ -463,6 +490,9 @@ async def main():
             o.afbDu=rd(a.du(e1))===o.du[0]; o.afbRow=a.rows().some(x=>x.e.id==='aaf'&&x.e.laengde===3);
             const tr=a.foeringTrae(), ix=k=>tr.findIndex(x=>x.k===k), dep=k=>(tr[ix(k)]||{{}}).dep;
             o.trae=[dep('tavle:tf'),dep('gruppe:gf'),dep('enhed:f1'),dep('enhed:f2'),dep('afb:af')]; o.orden=ix('tavle:tf')<ix('gruppe:gf')&&ix('gruppe:gf')<ix('enhed:f1')&&ix('enhed:f1')<ix('enhed:f2');
+            const R=k=>tr[ix(k)]; o.linjer=[R('enhed:f1').sidst,R('enhed:f2').sidst,R('afb:af').sidst,JSON.stringify(R('enhed:f2').linjer),JSON.stringify(R('afb:af').linjer),R('enhed:f1').boern];
+            o.fraTxt=[R('enhed:f2').fra,R('afb:af').fra,R('enhed:f1').fra];
+            a.fvFold=new Set(['enhed:f1']); const tf=a.foeringTrae(); a.fvFold=new Set(); o.fold=[tf.some(x=>x.k==='enhed:f1'&&x.luk),tf.some(x=>x.k==='enhed:f2'),tf.some(x=>x.k==='afb:af'),a.foeringTrae().some(x=>x.k==='enhed:f2')];
             const m0=a.materialer(); o.ikkeFoer=!m0.some(x=>x.gruppe==='Kabler, heraf ikke trukket'&&x.linjer.length);
             a.fvSaet(tr[ix('enhed:f1')],'trukket',true); a.fvSaet(tr[ix('enhed:f2')],'note','venter på tømrer');
             o.status=[e1.trukket,e2.note]; o.ikkeEfter=a.materialer().some(x=>x.gruppe==='Kabler, heraf ikke trukket'&&x.linjer.length);
@@ -489,10 +519,10 @@ async def main():
           return o}})()""")
         tjek('føringsvej: sløjfe i ΔU og Ik, afbrydertræk uden ΔU, træ, trukket og note, ikke trukket i materialeliste, kopiér gren, kæde, sletning',
              r['du0'] == 0.07826 and r['du'] == [0.15652, 0.19565] and r['I'] == [2, 1] and r['R'] and r['afbDu'] and r['afbRow']
-             and r['trae'] == [0, 1, 2, 3, 3] and r['orden'] and r['ikkeFoer'] and r['status'] == [True, 'venter på tømrer'] and r['ikkeEfter'] and r['filter']
+             and r['trae'] == [0, 1, 2, 3, 3] and r['linjer'] == [True, False, True, '[false,false]', '[false,false]', 2] and r['fraTxt'] == ['sløjfe fra F1', 'fra F1', ''] and r['fold'] == [True, False, False, True] and r['orden'] and r['ikkeFoer'] and r['status'] == [True, 'venter på tømrer'] and r['ikkeEfter'] and r['filter']
              and r['kopier'] == 2 and r['gren'] == [4, 2, True, True, 3] and r['grenDu'] and r['kaede'] == ['', True] and r['kaedeKabel'] == ['PVC', 1.5, 4, 'XLPE', 2.5, 2, 'XLPE', 2] and r['slet'] == ['', ''] and r['vist'] and r['redAaben'] and r['red'] == ['XLPE', '5G', 4, 7.5, True] and r['slettet'] and r['fortrudt'] and r['ryddet'], r)
 
-        # 4h2. Enstregsdiagram: sløjfekæde (Tilgang → U1 → U2 …, stikkontakt efter sit eget udtag), forgreningsprikker, sporing og lokalefilter. Tilgang uden last
+        # 4h2. Enstregsdiagram: sløjfekæde (Tilgang i serie → U1 → U2 …, stikkontakt efter sit eget udtag), forgreningsprikker, sporing og lokalefilter. Tilgang uden last
         r = await pg.evaluate(f"""(async()=>{{const a={A};const d=a.db, n0=JSON.stringify([d.tavler.length,d.grupper.length,d.enheder.length]), o={{}}, lok=d.lokaler[0].id;
           const E=(id,navn,fra,sym)=>({{id,gruppeId:'gq',lokaleId:id==='S4'?lok:'',daaseId:'',fraEnhed:fra,navn,effekt:sym==='stik'?230:0,kabel:'PVC',ledere:'3G',tv:2.5,laengde:3,symbol:sym,hoejde:'',placering:'',trukket:false,note:''}});
           try {{
@@ -511,8 +541,8 @@ async def main():
             o.prikker=[...svg.querySelectorAll('circle.sp')].map(c=>c.getAttribute('data-sp')).filter(x=>mine.includes(x)).sort();
             const ln=id=>svg.querySelector('g[data-k="e:'+id+'"] line'), y=id=>Number(ln(id).getAttribute('y1')), x1=id=>Number(ln(id).getAttribute('x1'));
             const prik=id=>svg.querySelector('circle.sp[data-sp="'+id+'"]');
-            o.geo=['U1','S1','U2','S2','U3','S3','U4','S4'].every(c=>{{const p=a.enhed(c).fraEnhed, dot=prik(p);return dot&&Number(dot.getAttribute('cx'))===x1(c)&&Number(dot.getAttribute('cy'))===y(p)&&y(c)>y(p)}});
-            o.raekker=['TQ1','U1','S1','U2','S2','U3','S3','U4','S4'].map(y).every((v,i,l)=>!i||v>l[i-1]);
+            o.geo=['S1','U2','S2','U3','S3','U4','S4'].every(c=>{{const p=a.enhed(c).fraEnhed, dot=prik(p);return dot&&Number(dot.getAttribute('cx'))===x1(c)&&Number(dot.getAttribute('cy'))===y(p)&&y(c)>y(p)}});
+            o.raekker=y('TQ1')===y('U1')&&['U1','S1','U2','S2','U3','S3','U4','S4'].map(y).every((v,i,l)=>!i||v>l[i-1]);
             o.spor=a.spor('e:S4').map(x=>x.key).filter(k=>/^e:/.test(k));
             a.sldSel='e:S4'; a.lokF=lok; const lv=P(a.sld(false)); a.lokF=''; a.sldSel=null;
             const c=id=>lv.querySelector('g[data-k="e:'+id+'"]').getAttribute('class');
@@ -524,8 +554,60 @@ async def main():
           return o}})()""")
         tjek('enstreg: sløjfekæde i rækkefølge, forgreningsprikker, sporing gennem kæden, lokalefilter; Tilgang uden last og ikke talt som brugsgenstand',
              r['orden'] == ['TQ1', 'U1', 'S1', 'U2', 'S2', 'U3', 'S3', 'U4', 'S4'] and r['fra'] == ['', 'TQ1', 'U1', 'U1', 'U2', 'U2', 'U3', 'U3', 'U4']
-             and r['prikker'] == ['TQ1', 'U1', 'U2', 'U3', 'U4'] and r['geo'] and r['raekker'] and r['spor'] == ['e:TQ1', 'e:U1', 'e:U2', 'e:U3', 'e:U4', 'e:S4']
+             and r['prikker'] == ['U1', 'U2', 'U3', 'U4'] and r['geo'] and r['raekker'] and r['spor'] == ['e:TQ1', 'e:U1', 'e:U2', 'e:U3', 'e:U4', 'e:S4']
              and r['live'] == [True, False, False, True, False] and r['tilg'] == ['tilgang', 0, 0, 1] and r['taelling'] == [8, 8, False, 27] and r['ryddet'], r)
+
+        # 4h3. Enstreg: Tilgang i serie mellem gruppeafbryder og sløjfer; flyt forbindelse (sløjfe, dåse, gruppe), kreds og anden gruppe afvist, fortryd, træk med pointer events
+        r = await pg.evaluate(f"""(async()=>{{const a={A};const T=n=>new Promise(f=>setTimeout(f,n));const d=a.db, n0=JSON.stringify([d.tavler.length,d.grupper.length,d.enheder.length,d.daaser.length]), o={{}};
+          const E=(id,navn,fra,sym,g)=>({{id,gruppeId:g||'gt',lokaleId:'',daaseId:'',fraEnhed:fra,navn,effekt:sym==='stik'?230:0,kabel:'PVC',ledere:'3G',tv:2.5,laengde:3,symbol:sym,hoejde:'',placering:'',trukket:false,note:'',fase:''}});
+          const G=(id,nr)=>({{id,tavleId:'tt',nr,navn:'T'+nr,type:'stik',kar:'B',In:13,faser:1,fase:'L1',rcdId:'',sf:1,brydeevne:6,maal:{{riso:'',zs:'',rcd:'',ok:false}},metode:'',temp:'',samlet:'',lag:''}});
+          try {{
+            a.mutate(()=>{{d.tavler.push({{id:'tt',navn:'TT',placering:'',forsikring:35,hovedafbryder:0,fra:'',fraGruppe:'',tilgang:'',tKabel:'PVC',tLedere:'5G',tTv:6,tLaengde:0,ze:0,ikMaks:0,tTrukket:false,tNote:''}});
+              d.grupper.push(G('gt',1),G('gt2',2));
+              d.daaser.push({{id:'DT',gruppeId:'gt',parentId:'',lokaleId:'',type:'PL-dåse',navn:'PL1',kabel:'PVC',ledere:'3G',tv:2.5,laengde:4,trukket:false,note:''}});
+              d.enheder.push(E('V1','Vægudtag 1','TT1','gen'),E('A1','Stik A1','V1','stik'),E('V2','Vægudtag 2','V1','gen'),E('A2','Stik A2','V2','stik'),E('V3','Vægudtag 3','V2','gen'),E('A3','Stik A3','V3','stik'),
+                E('V4','Vægudtag 4','V3','gen'),E('A4','Stik A4','V4','stik'),E('TT1','Tilgang','','auto'),E('L1','Lampe','','lys'),E('Y1','Anden','','stik','gt2'));
+              d.enheder.find(x=>x.id==='L1').daaseId='DT';}});
+            const P=h=>new DOMParser().parseFromString(h,'image/svg+xml'), svg=P(a.sld(true)), ln=id=>svg.querySelector('g[data-k="'+id+'"] line'), num=(el,k)=>Number(el.getAttribute(k));
+            const gl=ln('g:gt'), tg=svg.querySelector('g[data-k="e:TT1"]'), tx=num(tg,'data-tx'), xMcb=num(gl,'x2')+12;
+            const kids=['V1','A1','V2','A2','V3','A3','V4','A4'].map(id=>num(ln('e:'+id),'x1'));
+            o.serie=[xMcb<tx, num(ln('e:TT1'),'y1')===num(gl,'y1'), kids.every(x=>x>tx), num(ln('e:V1'),'x1')===Math.max(...[...tg.querySelectorAll('line')].map(l=>num(l,'x2'))), /tilg/.test(tg.getAttribute('class')),
+              tg.querySelector('path').getAttribute('d').startsWith('M '+(tx-10)+' ')];
+            const f=id=>a.enhed(id);
+            o.tilEnhed=[a.flytEnhed('A4','e:TT1'), f('A4').fraEnhed]; o.besked=a.toasts.some(t=>t.txt==='Stik A4 er nu sløjfet fra Tilgang.'&&t.undo);
+            o.tilDaase=[a.flytEnhed('A4','d:DT'), f('A4').fraEnhed, f('A4').daaseId];
+            o.tilGruppe=[a.flytEnhed('A4','g:gt'), f('A4').fraEnhed, f('A4').daaseId];
+            o.kreds=[a.flytEnhed('V1','e:A2'), f('V1').fraEnhed, a.toasts.some(t=>t.fejl&&/sløjfet fra Vægudtag 1/.test(t.txt))];
+            o.anden=[a.flytEnhed('A1','e:Y1'), f('A1').fraEnhed, a.flytTjek('A1','g:gt2').ok];
+            a.flytEnhed('A3','e:V1'); o.foer=f('A3').fraEnhed; a.undo(); o.fortryd=a.enhed('A3').fraEnhed;
+            o.valg=a.flytValg('A2').map(v=>v.key).sort().join(',');
+            a.toasts.slice().forEach(t=>a.lukToast(t.id));
+            /* træk i den levende visning: langt tryk på Stik A2, flyt hen på Stik A1 og så på Tilgang, slip */
+            a.go('enstreg'); await T(200); const box=a.$refs.sldBox; box.scrollIntoView(); await T(50);
+            const q=k=>document.querySelector('.sld g[data-k="'+k+'"] .hit'), bb=q('e:A2').getBBox(), bt=q('e:TT1').getBBox();
+            a.z={{x:8-bt.x+40,y:box.clientHeight/2-bb.y,k:1}}; await T(80);
+            const c=el=>{{const r=el.getBoundingClientRect();return [r.left+Math.min(60,r.width/2),r.top+r.height/2]}}, p0=c(q('e:A2')), p1=c(q('e:TT1')), p2=c(q('e:A1'));
+            const PE=(type,x,y,el)=>(el||window).dispatchEvent(new PointerEvent(type,{{pointerId:7,clientX:x,clientY:y,bubbles:true,pointerType:'mouse',button:0,isPrimary:true}}));
+            PE('pointerdown',p0[0],p0[1],q('e:A2')); await T(500); o.startet=!!a.traek;
+            PE('pointermove',p2[0],p2[1]); await T(80); const cls=k=>document.querySelector('.sld g[data-k="'+k+'"]').getAttribute('class');
+            o.fremh=[/dmaal/.test(cls('e:A1')), /dok/.test(cls('e:TT1')), /dok/.test(cls('g:gt')), /dkilde/.test(cls('e:A2')), !/dok/.test(cls('e:Y1')), /dok/.test(cls('e:V4'))];
+            PE('pointermove',p1[0],p1[1]); await T(80); o.mrk=document.querySelector('.traekmrk').textContent; o.maal=a.traek&&a.traek.maal;
+            PE('pointerup',p1[0],p1[1]); await T(80); o.traek=[a.enhed('A2').fraEnhed, a.traek, SLDP.size];
+            a.undo(); await T(50); o.traekFortryd=a.enhed('A2').fraEnhed;
+            /* kort tryk og træk panorerer stadig */
+            const z0=a.z.x; PE('pointerdown',p0[0],p0[1],q('e:A2')); PE('pointermove',p0[0]+60,p0[1]); await T(450); PE('pointerup',p0[0]+60,p0[1]); await T(50);
+            o.pan=[a.z.x-z0, a.traek, a.enhed('A2').fraEnhed];
+          }} finally {{
+            const d=a.db; d.enheder=d.enheder.filter(x=>!['gt','gt2'].includes(x.gruppeId)); d.daaser=d.daaser.filter(x=>x.id!=='DT'); d.grupper=d.grupper.filter(x=>!['gt','gt2'].includes(x.id)); d.tavler=d.tavler.filter(x=>x.id!=='tt'); a.save();
+          }}
+          o.ryddet=JSON.stringify([a.db.tavler.length,a.db.grupper.length,a.db.enheder.length,a.db.daaser.length])===n0;
+          return o}})()""")
+        tjek('enstreg: Tilgang i serie, flyt forbindelse til sløjfe/dåse/gruppe, kreds og anden gruppe afvist, fortryd, træk med langt tryk og fremhævning, kort træk panorerer',
+             r['serie'] == [True] * 6 and r['tilEnhed'] == [True, 'TT1'] and r['besked'] and r['tilDaase'] == [True, '', 'DT'] and r['tilGruppe'] == [True, '', '']
+             and r['kreds'] == [False, 'TT1', True] and r['anden'] == [False, 'V1', False] and r['foer'] == 'V1' and r['fortryd'] == 'V3'
+             and r['valg'] == 'd:DT,e:A1,e:A3,e:A4,e:L1,e:TT1,e:V1,e:V3,e:V4,g:gt'
+             and r['startet'] and r['fremh'] == [True] * 6 and r['maal'] == 'e:TT1' and r['mrk'] == 'Stik A2 → Tilgang' and r['traek'] == ['TT1', None, 0]
+             and r['traekFortryd'] == 'V2' and r['pan'] == [60, None, 'V2'] and r['ryddet'], r)
 
         # 4i. Pop-up med typiske samtidighedsfaktorer: åbnes fra Beregning, viser forslag og tabellen, valg sætter gruppens faktor
         r = await pg.evaluate(f"""(async()=>{{const a={A};const T=n=>new Promise(f=>setTimeout(f,n));const g=a.db.grupper.find(x=>x.type==='stik'), sf0=g.sf, o={{}};
@@ -688,6 +770,43 @@ async def main():
         tjek('brandlukning: sletning kan fortrydes, og billederne bliver på enheden', r['slet'] == [1, True] and r['fortryd'] == [2, True, True] and r['fjernBil'] == [2, True], r)
         tjek('dokumentation: brandlukninger med status, optælling og små billeder', r['docOk'] == [True, True, 2, True], r['docOk'])
 
+        # 4b. Import fra regneark (forslag 16)
+        await pg.evaluate(f"{A}.go('kabler')")
+        await pg.click('text=Importér fra regneark >> visible=true')
+        g0 = await pg.evaluate(f"(()=>{{const a={A},g=a.db.grupper[0];return {{id:g.id,txt:a.tavleNavn(g.tavleId)+':'+g.nr}}}})()")
+        tekst = ('Navn\tLokale\tGruppe\tEffekt (kW)\tKabel\tLængde (m)\tTværsnit\n'
+                 f'Testovn\tImportrum\t{g0["txt"]}\t2,5\txlpe\t7,5\t2,5\n'
+                 f'Fejlrække\t\t{g0["txt"]}\t1\tGummi\t3\t\n'
+                 'Tomrække\t\t\t\t\t\t\n'
+                 'Ugruppe\t\t99:99\t1\t\t\t\n')
+        await pg.fill('#imp-tekst', tekst)
+        await pg.wait_for_timeout(150)
+        r = await pg.evaluate(f"""async()=>{{const a={A},T=n=>new Promise(f=>setTimeout(f,n));const o={{}};
+          o.hdr=a.imp.hdr; o.map=a.imp.map.join(','); o.ok=a.impAntal(); o.fejl=a.imp.fh.filter(x=>!x.ok).map(x=>x.fejl.join('|'));
+          o.knap=document.getElementById('imp-gem').textContent.trim(); o.rader=document.querySelectorAll('[aria-label="Forhåndsvisning af import"] tbody tr').length;
+          o.foer=[a.db.enheder.length,a.db.lokaler.length]; document.getElementById('imp-gem').click(); await T(100);
+          const e=a.db.enheder.find(x=>x.navn==='Testovn'), t=a.db.enheder.find(x=>x.navn==='Tomrække');
+          o.efter=[a.db.enheder.length,a.db.lokaler.length]; o.lukket=!a.imp.aaben;
+          o.ovn=e&&[e.effekt,e.kabel,e.tv,e.laengde,a.lokaleNavn(e.lokaleId),e.gruppeId===a.db.grupper[0].id];
+          o.tom=t&&[t.effekt,t.kabel,t.ledere,t.tv,t.laengde,t.lokaleId,t.symbol];
+          o.ingenFejl=!a.db.enheder.some(x=>x.navn==='Fejlrække'||x.navn==='Ugruppe');
+          o.besked=a.toasts.some(x=>x.undo&&/2 brugsgenstande oprettet \(og 1 nye lokaler\)/.test(x.txt));
+          a.undo(); await T(60); o.fortrudt=[a.db.enheder.length,a.db.lokaler.length];
+          a.impAaben('lokale'); a.imp.tekst='Navn;Etage\\nImpLok;1. sal\\nImpLok2;\\n'+a.db.lokaler[0].navn+';2'; a.impAnalyser();
+          o.lok=[a.imp.hdr,a.impAntal(),a.imp.fh[2].fejl.join()]; a.impGem(); await T(60);
+          o.lokNy=a.db.lokaler.filter(l=>/^ImpLok/.test(l.navn)).map(l=>l.navn+'/'+l.etage);
+          a.undo(); await T(60); o.lokFort=a.db.lokaler.some(l=>/^ImpLok/.test(l.navn));
+          a.impAaben('enhed'); a.imp.tekst='Brugsgenstand;kabel;A\\nSpot;PVC;10'; a.impAnalyser(); o.amp=a.imp.fh[0].o.effekt; a.imp.aaben=false;
+          return o}}""")
+        tjek('import fra regneark: overskrifter, kW og komma-decimaler, nyt lokale, standardværdier; fejlrækker oprettes ikke',
+             r['hdr'] is True and r['map'] == 'navn,lokale,gruppe,kw,kabel,laengde,tv' and r['ok'] == 2 and r['knap'] == 'Importér 2 rækker' and r['rader'] == 4
+             and r['fejl'] == ['Ukendt kabeltype "Gummi"', 'Ukendt tavle "99"'] and r['efter'] == [r['foer'][0] + 2, r['foer'][1] + 1] and r['lukket']
+             and r['ovn'] == [2500, 'XLPE', 2.5, 7.5, 'Importrum', True] and r['tom'][:5] == [0, 'PVC', '3G', 1.5, 10] and r['tom'][6] == 'auto'
+             and r['ingenFejl'] and r['amp'] == 2300, r)
+        tjek('import fra regneark: kan fortrydes i ét trin, og import af lokaler virker (semikolon, dublet afvises)',
+             r['besked'] and r['fortrudt'] == r['foer'] and r['lok'][:2] == [True, 2] and 'findes allerede' in r['lok'][2]
+             and r['lokNy'] == ['ImpLok/1. sal', 'ImpLok2/'] and r['lokFort'] is False, r)
+
         # 4n. Skema 16 (forslag 15): opgradering fra skema 15, billeder på tavle, lokale og samlepunkt, liste, dokumentation og lageradvarsel
         r0 = await pg.evaluate("""(()=>{const i=JSON.parse(localStorage.getItem('tavleoversigt.projekter'));i.schema=15;const id=i.aktiv;
           const p=JSON.parse(localStorage.getItem('tavleoversigt.p.'+id));for(const k of ['tavler','lokaler','daaser']) p[k].forEach(x=>delete x.billeder);p.projekt.navn='Skema 15-projekt';
@@ -729,6 +848,7 @@ async def main():
              r['tavle'] == 1 and r['lokaler'] == 1 and r['samlepunkter'] == 1 and r['dup'] == 0, r)
         tjek('dokumentation: afsnit Billeder med små billeder af tavle, lokale og samlepunkt, manglende billede vises som tekst', r['doc'] == [True, 3, True, True] and r['mangler'], r['doc'])
         tjek('lageradvarsel (navigator.storage.estimate) over 80 % vises under Datasikring, ellers ikke', r['lager'] == [True, True], r['lager'])
+
         await pg.evaluate(f"{A}.go('tavle')")
 
         # 5. Backupfil kan hentes og indlæses uden at overskrive. Den indeholder billederne

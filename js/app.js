@@ -4,10 +4,10 @@ function bland(...dele) { const r = {}; for (const d of dele) Object.definePrope
 function app() {
   return bland({
     view: 'tavle',
-    fvIkke: false, gren: null, sfPop: null, fvRed: null, fvTmp: null,
+    fvIkke: false, fvFold: new Set(), fvHi: '', fvAnc: [], fvBlink: '', gren: null, sfPop: null, fvRed: null, fvTmp: null,
     views: [ { id:'tavle', l:'Tavle' }, { id:'enstreg', l:'Enstregsdiagram' }, { id:'taending', l:'Tændingsdiagram' }, { id:'samlepunkter', l:'Samlepunkter & dåser' }, { id:'foering', l:'Føringsvej' }, { id:'svag', l:'Svagstrøm' }, { id:'beregning', l:'Beregning' }, { id:'lokaler', l:'Lokaler' }, { id:'kabler', l:'Kabler' }, { id:'dokumentation', l:'Dokumentation' }, { id:'fejlfinder', l:'Fejlfinder' }, { id:'brand', l:'Brandlukning' } ],
     db: tom(), hist: [], sel: null, drag: null, over: null,
-    projekter: [], pid: '', pf: { navn:'', sagsnr:'', kunde:'', adresse:'' }, sldSel: null, z: { x:8, y:8, k:1 }, pan: null, pinch: null, panMoved: false,
+    projekter: [], pid: '', pf: { navn:'', sagsnr:'', kunde:'', adresse:'' }, sldSel: null, z: { x:8, y:8, k:1 }, pan: null, pinch: null, panMoved: false, traek: null,
     filter: { q:'', tavle:'', type:'', lokale:'' }, sort: { key:'gruppe', dir:1 },
     modal: null, form: {}, confirm: null, toasts: [], storageOk: true, tema: 'auto', qa: '', io: '',
     typeLabel: { lys:'Lys', lysstik:'Lys og stik', kraft:'Kraft', stik:'Stik', data:'Data og teknik' },
@@ -24,7 +24,7 @@ function app() {
     brandIkke: false, billedTick: 0, billedArbejder: 0, billedOk: true, lysbillede: null, opryd: null, lager: null,
     synk: null, synkTokenInput: '', synkKoerer: false, synkIgen: false, synkFejl: '', iSynk: false,
     tvs: TV, appVersion: APP_VERSION, backups: [], sidstBackup: '', persistent: false, lokF: '', q: '', soegAaben: false, sk: { key:'koekken', navn:'Køkken', tavleId:'' }, skabeloner: SKABELONER, anlaegNavn: ANLAEG,
-    enhNavne: [...new Set(EFFEKT.map(x => x[2]))].sort((a, b) => a.localeCompare(b, 'da')), sim: {}, hurtig: { aaben:false, type:'lokale', felt:'', f:{} }, eAuto: true, faseFs: null, belEnhSidst: 'W', dragL: null, overL: null, mFilter: '', dAuto: { type:true, lok:true },
+    enhNavne: [...new Set(EFFEKT.map(x => x[2]))].sort((a, b) => a.localeCompare(b, 'da')), sim: {}, hurtig: { aaben:false, type:'lokale', felt:'', f:{} }, imp: { aaben:false, type:'enhed', tekst:'', hdr:true, hdrRoert:false, map:[], raekker:[], fh:[], opretLok:true }, eAuto: true, faseFs: null, belEnhSidst: 'W', dragL: null, overL: null, mFilter: '', dAuto: { type:true, lok:true },
     manglerKat: { gruppe:'Uden gruppe', tilgang:'Dåse uden tilgang', afgang:'Dåse uden afgang', port:'Mangler port i rack' },
     afbArt: { enpolet:'Enpolet afbryder', krone:'Kroneafbryder', korr:'Korrespondanceafbryder', kryds:'Krydsafbryder', kip:'Kiprelæ med tryk', trappe:'Trappeautomat med tryk', sensor:'Sensor (PIR)' },
     afbPrincip: {
@@ -210,20 +210,31 @@ function app() {
       const harKabel = n => n.kind === 'tavle' ? Number(n.o.tLaengde) > 0 : n.kind !== 'gruppe' && Number(n.o.laengde) > 0;
       const match = n => n.kind !== 'tavle' && n.kind !== 'gruppe' && (!lok || n.o.lokaleId === lok) && (!ikke || (harKabel(n) && !n.o.trukket));
       const out = [];
-      const flad = (n, dep) => {
-        const plads = out.length; out.push(null); let vis = !filt || match(n);
-        for (const k of n.kids) if (flad(k, dep + 1)) vis = true;
+      const flad = (n, dep, par, anc) => {
+        const plads = out.length; out.push(null); let vis = !filt || match(n), ant = 0; const k = n.kind + ':' + n.o.id;
+        for (const b of n.kids) if (flad(b, dep + 1, k, anc.concat(k))) { vis = true; ant++; }
         if (!vis) { out.length = plads; return false; }
-        out[plads] = { k:n.kind + ':' + n.o.id, kind:n.kind, o:n.o, dep, dim:filt && n.kind !== 'tavle' && n.kind !== 'gruppe' && !match(n), kabel:harKabel(n) };
+        out[plads] = { k, kind:n.kind, o:n.o, dep, par, anc, boern:ant, dim:filt && n.kind !== 'tavle' && n.kind !== 'gruppe' && !match(n), kabel:harKabel(n) };
         return true;
       };
       for (const t of this.db.tavler) {
         const tn = this.fvNode('tavle', t, this.grupperFor(t.id).slice().sort((a, b) => a.nr - b.nr).map(g => this.fvNode('gruppe', g,
           this.db.daaser.filter(d => d.gruppeId === g.id && !this.daase(d.parentId)).map(d => this.fvDaase(d, seen)).filter(Boolean)
             .concat(this.db.enheder.filter(e => e.gruppeId === g.id && !this.daase(e.daaseId) && !this.enhed(e.fraEnhed)).map(e => this.fvEnhed(e, seen)).filter(Boolean)))));
-        flad(tn, 0);
+        flad(tn, 0, '', []);
       }
-      return out;
+      /* trælinjer: sidst = ingen senere række med samme forælder; linjer[i] = om forfaderen på niveau i+1 har søskende efter sig */
+      const set = new Set(); for (let i = out.length - 1; i >= 0; i--) { out[i].sidst = !set.has(out[i].par); set.add(out[i].par); }
+      const vej = []; for (const r of out) { r.linjer = vej.slice(1, r.dep); vej[r.dep] = !r.sidst; vej.length = r.dep + 1; }
+      const byK = {}; out.forEach(r => { byK[r.k] = r; });
+      out.forEach(r => { const p = byK[r.par]; r.fra = !p || p.kind === 'gruppe' || p.kind === 'tavle' ? '' : (r.kind === 'enhed' && p.kind === 'enhed' ? 'sløjfe fra ' : 'fra ') + this.fvNavn(p); r.luk = this.fvFold.has(r.k); });
+      return out.filter(r => !r.anc.some(a => this.fvFold.has(a)));
+    },
+    fvToggle(r) { const f = new Set(this.fvFold); if (f.has(r.k)) f.delete(r.k); else f.add(r.k); this.fvFold = f; },
+    fvHover(r) { this.fvHi = r ? r.k : ''; this.fvAnc = r ? r.anc : []; },
+    fvGaa(k) {
+      const el = document.getElementById('fv-' + k.replace(':', '-')); if (!el) return;
+      el.scrollIntoView({ block:'center', behavior:'smooth' }); this.fvBlink = k; setTimeout(() => { if (this.fvBlink === k) this.fvBlink = ''; }, 1400);
     },
     fvTrukket(r) { return r.kind === 'tavle' ? !!r.o.tTrukket : !!r.o.trukket; },
     fvNote(r) { return (r.kind === 'tavle' ? r.o.tNote : r.o.note) || ''; },
@@ -525,6 +536,7 @@ function app() {
 
     /* tastatur */
     key(ev) {
+      if (ev.key === 'Escape' && this.imp.aaben) { this.imp.aaben = false; return; }
       if (ev.key === 'Escape' && this.sfPop) { this.sfPop = null; return; }
       if (ev.key === 'Escape' && this.lysbillede) { this.lysbillede = null; return; }
       if (ev.key === 'Escape') { this.soegAaben = false; if (this.hurtig.aaben) { this.hurtig.aaben = false; return; } this.modal = null; if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); return; }
@@ -742,5 +754,5 @@ function app() {
       return out;
     },
 
-  }, APP_BEREGNING(), APP_DIAGRAM(), APP_LAGRING(), APP_HISTORIK(), APP_BILLEDER(), APP_BRAND());
+  }, APP_BEREGNING(), APP_DIAGRAM(), APP_LAGRING(), APP_HISTORIK(), APP_BILLEDER(), APP_BRAND(), APP_AFLEVERING(), APP_IMPORT());
 }

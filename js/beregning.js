@@ -139,6 +139,7 @@ const APP_BEREGNING = () => ({
       const op = this.tavleOp(t); if (!op || !(Number(t.tLaengde) > 0)) return null;
       const z = this.tavleZe(op, (n || 0) + 1); return z == null ? null : z + this.rSloejfe(t.tKabel, t.tLaengde, t.tTv);
     },
+    zeBeregnet(t) { return !(Number(t.ze) > 0) && this.tavleZe(t.id) != null; },
     tavleIkMaks(tid, n) { const t = this.tavle(tid); if (!t || n > 8) return 0; if (Number(t.ikMaks) > 0) return Number(t.ikMaks); const op = this.tavleOp(t); return op ? this.tavleIkMaks(op, (n || 0) + 1) : 0; },
     enhedR(e) { let r = this.rSloejfe(e.kabel, e.laengde, e.tv) + this.sloejfeVej(e).reduce((s, p) => s + this.rSloejfe(p.kabel, p.laengde, p.tv), 0), d = this.daase(this.enhedDaase(e)), n = 0; while (d && n++ < 20) { r += this.rSloejfe(d.kabel, d.laengde, d.tv); d = this.daase(d.parentId); } return r; },
     ikMin(g) {
