@@ -76,7 +76,7 @@ Relationer: gruppe → tavle, gruppe → HPFI, brugsgenstand → gruppe, lokale 
 | Kontrol | `gruppeFejl`, `warnings`, `mangler`, `linkFejl`, `maalVurdering`, `zsMax`, `maalTal` |
 | Kortslutning og selektivitet | `ia` (I<sub>a</sub>), `kLeder`, `rSloejfe`, `tavleOp`, `tavleZe`, `tavleIkMaks`, `enhedR`, `ikMin`, `ikVis`, `ikTxt`, `brydeFejl`, `kortslutFejl`, `rcdForan`, `selektivitet`. Advarslernes nøgler begynder med `ik:`, `kb:`, `sf:`, `sg:` og `sr:` |
 | Forslag | `effektForslag`, `sfForslag`, `daaseParse`, `symbolFor` |
-| Diagrammer | `sld` (enstreg, viser også afbrydere med nøglen `a:<id>`), `taendSvg(af, print)` (tænding; `print` giver den statiske udgave til dokumentationen), `simStd`, `simFor`, `lit`, `krydsLeder`, `afbSti` (symboler efter DS/EN 60617), `afbFor`, `spor`, `sporTil` |
+| Diagrammer | `sld` (enstreg, viser også afbrydere med nøglen `a:<id>`; sløjfer tegnes under den brugsgenstand, de er sløjfet fra: rækken har `data-fra=<id>`, forgreningsprikken `circle.sp[data-sp=<id>]`), symbolet `tilgang` (Tilgang, ingen last, tælles ikke som brugsgenstand), pinch-zoom `panStart`, `panMove`, `panEnd`, `pinchStart`, `pinchMaal` (aktive pointere i `SLDP`), `taendSvg(af, print)` (tænding; `print` giver den statiske udgave til dokumentationen), `simStd`, `simFor`, `lit`, `krydsLeder`, `afbSti` (symboler efter DS/EN 60617), `afbFor`, `spor`, `sporTil` |
 | Dokumentation | `docHtml` (inkl. Tændingsdiagrammer, firmahoved og underskriftsfelt), `udskriv`, `firmaLaes`, `firmaGem`, `firmaLogo`, `gruppeTsv`, `exportJson`, `hent` |
 
 ## Test

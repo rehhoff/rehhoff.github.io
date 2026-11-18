@@ -2,6 +2,16 @@
 
 Nyeste øverst. Versionsnummeret står også i appen som `APP_VERSION`. Hver version siger, hvilken model der lavede den.
 
+## 10.16.0 · 2026-11-18 · Claude Opus
+
+Plan: `docs/planer/2026-11-18-enstreg-sloejfer.md`.
+
+- Enstregsdiagram: sløjfer vises, som de er trukket. En brugsgenstand sløjfet fra en anden tegnes lige under den, med en prik på stregen, hvor sløjfen går fra. Fire udtag, der hver er sløjfet videre og ned til sin egen stikkontakt, vises som udtag 1, stik 1, udtag 2, stik 2 … Sporing og lokalefilter følger sløjfekæden. Gælder også diagrammet i dokumentationen.
+- Ny brugsgenstand **Tilgang** (symbol: rombe med prik). Navnet "Tilgang …" giver symbolet automatisk, og effektforslaget er 0 W. Andre brugsgenstande sløjfes fra den. Den tælles ikke som brugsgenstand i nøgletal og materialeliste, men kablet tælles med.
+- Enstregsdiagram på mobil: zoom og panorér med to fingre. Knapperne − og + er uændrede.
+- Touchskærme: alle felter har mindst 16 px skrift uanset bredde, så iPhone ikke zoomer ind ved indtastning. `maximum-scale` er ikke brugt, så siden stadig kan zoomes.
+- Ingen ændring af datamodellen. `SCHEMA` er uændret 13.
+
 ## 10.15.0 · 2026-11-17 · Claude Opus
 
 - Føringsvej: knappen **Slet** på brugsgenstande og afbrydere. Sløjfer efter en slettet brugsgenstand forsynes derefter fra den, den selv var sløjfet fra. Sletningen kan fortrydes.

@@ -443,6 +443,41 @@ async def main():
              and r['trae'] == [0, 1, 2, 3, 3] and r['orden'] and r['ikkeFoer'] and r['status'] == [True, 'venter på tømrer'] and r['ikkeEfter'] and r['filter']
              and r['kopier'] == 2 and r['gren'] == [4, 2, True, True, 3] and r['grenDu'] and r['kaede'] == ['', True] and r['kaedeKabel'] == ['PVC', 1.5, 4, 'XLPE', 2.5, 2, 'XLPE', 2] and r['slet'] == ['', ''] and r['vist'] and r['redAaben'] and r['red'] == ['XLPE', '5G', 4, 7.5, True] and r['slettet'] and r['fortrudt'] and r['ryddet'], r)
 
+        # 4h2. Enstregsdiagram: sløjfekæde (Tilgang → U1 → U2 …, stikkontakt efter sit eget udtag), forgreningsprikker, sporing og lokalefilter. Tilgang uden last
+        r = await pg.evaluate(f"""(async()=>{{const a={A};const d=a.db, n0=JSON.stringify([d.tavler.length,d.grupper.length,d.enheder.length]), o={{}}, lok=d.lokaler[0].id;
+          const E=(id,navn,fra,sym)=>({{id,gruppeId:'gq',lokaleId:id==='S4'?lok:'',daaseId:'',fraEnhed:fra,navn,effekt:sym==='stik'?230:0,kabel:'PVC',ledere:'3G',tv:2.5,laengde:3,symbol:sym,hoejde:'',placering:'',trukket:false,note:''}});
+          try {{
+            d.tavler.push({{id:'tq',navn:'TQ',placering:'',forsikring:35,hovedafbryder:0,fra:'',fraGruppe:'',tilgang:'',tKabel:'PVC',tLedere:'5G',tTv:6,tLaengde:0,ze:0,ikMaks:0,tTrukket:false,tNote:''}});
+            d.grupper.push({{id:'gq',tavleId:'tq',nr:1,navn:'Q',type:'stik',kar:'B',In:13,faser:1,fase:'L1',rcdId:'',sf:1,brydeevne:6,maal:{{riso:'',zs:'',rcd:'',ok:false}},metode:'',temp:'',samlet:'',lag:''}});
+            const st0=a.stats().find(x=>x.l==='Brugsgenstande').v, bg=()=>((a.materialer().find(x=>x.gruppe==='Brugsgenstande')||{{linjer:[]}}).linjer);
+            const m0=bg().reduce((s,l)=>s+l.antal,0), k0=a.materialer().find(x=>x.gruppe==='Kabler').linjer.reduce((s,l)=>s+l.antal,0);
+            d.enheder.push(E('S4','Stik 4','U4','stik'),E('U3','Udtag 3','U2','gen'),E('S1','Stik 1','U1','stik'),E('U1','Udtag 1','TQ1','gen'),E('U4','Udtag 4','U3','gen'),
+              E('S2','Stik 2','U2','stik'),E('U2','Udtag 2','U1','gen'),E('S3','Stik 3','U3','stik'),E('TQ1','Tilgang køkken','','auto'));
+            o.tilg=[a.symbolFor(a.enhed('TQ1')),a.effektForslag({{navn:'Tilgang',symbol:'auto'}}).W,a.effektForslag({{navn:'Stik',symbol:'tilgang'}}).W,a.symNavn.tilgang?1:0];
+            o.taelling=[a.stats().find(x=>x.l==='Brugsgenstande').v-st0, bg().reduce((s,l)=>s+l.antal,0)-m0, bg().some(l=>/Tilgang/.test(l.tekst)),
+              a.materialer().find(x=>x.gruppe==='Kabler').linjer.reduce((s,l)=>s+l.antal,0)-k0];
+            const P=html=>new DOMParser().parseFromString(html,'image/svg+xml'), mine=['TQ1','U1','U2','U3','U4','S1','S2','S3','S4'];
+            const svg=P(a.sld(true)), rk=[...svg.querySelectorAll('g[data-k^="e:"]')].filter(g=>mine.includes(g.getAttribute('data-k').slice(2)));
+            o.orden=rk.map(g=>g.getAttribute('data-k').slice(2)); o.fra=rk.map(g=>g.getAttribute('data-fra'));
+            o.prikker=[...svg.querySelectorAll('circle.sp')].map(c=>c.getAttribute('data-sp')).filter(x=>mine.includes(x)).sort();
+            const ln=id=>svg.querySelector('g[data-k="e:'+id+'"] line'), y=id=>Number(ln(id).getAttribute('y1')), x1=id=>Number(ln(id).getAttribute('x1'));
+            const prik=id=>svg.querySelector('circle.sp[data-sp="'+id+'"]');
+            o.geo=['U1','S1','U2','S2','U3','S3','U4','S4'].every(c=>{{const p=a.enhed(c).fraEnhed, dot=prik(p);return dot&&Number(dot.getAttribute('cx'))===x1(c)&&Number(dot.getAttribute('cy'))===y(p)&&y(c)>y(p)}});
+            o.raekker=['TQ1','U1','S1','U2','S2','U3','S3','U4','S4'].map(y).every((v,i,l)=>!i||v>l[i-1]);
+            o.spor=a.spor('e:S4').map(x=>x.key).filter(k=>/^e:/.test(k));
+            a.sldSel='e:S4'; a.lokF=lok; const lv=P(a.sld(false)); a.lokF=''; a.sldSel=null;
+            const c=id=>lv.querySelector('g[data-k="e:'+id+'"]').getAttribute('class');
+            o.live=[/ tr/.test(c('U2')),/ tr/.test(c('S1')),/dim/.test(c('U1')),/dim/.test(c('S1')),/dim/.test(c('S4'))];
+          }} finally {{
+            const d=a.db; d.enheder=d.enheder.filter(x=>x.gruppeId!=='gq'); d.grupper=d.grupper.filter(x=>x.id!=='gq'); d.tavler=d.tavler.filter(x=>x.id!=='tq'); a.save();
+          }}
+          o.ryddet=JSON.stringify([a.db.tavler.length,a.db.grupper.length,a.db.enheder.length])===n0;
+          return o}})()""")
+        tjek('enstreg: sløjfekæde i rækkefølge, forgreningsprikker, sporing gennem kæden, lokalefilter; Tilgang uden last og ikke talt som brugsgenstand',
+             r['orden'] == ['TQ1', 'U1', 'S1', 'U2', 'S2', 'U3', 'S3', 'U4', 'S4'] and r['fra'] == ['', 'TQ1', 'U1', 'U1', 'U2', 'U2', 'U3', 'U3', 'U4']
+             and r['prikker'] == ['TQ1', 'U1', 'U2', 'U3', 'U4'] and r['geo'] and r['raekker'] and r['spor'] == ['e:TQ1', 'e:U1', 'e:U2', 'e:U3', 'e:U4', 'e:S4']
+             and r['live'] == [True, False, False, True, False] and r['tilg'] == ['tilgang', 0, 0, 1] and r['taelling'] == [8, 8, False, 27] and r['ryddet'], r)
+
         # 4i. Pop-up med typiske samtidighedsfaktorer: åbnes fra Beregning, viser forslag og tabellen, valg sætter gruppens faktor
         r = await pg.evaluate(f"""(async()=>{{const a={A};const T=n=>new Promise(f=>setTimeout(f,n));const g=a.db.grupper.find(x=>x.type==='stik'), sf0=g.sf, o={{}};
           a.go('beregning'); await T(150); const b=document.querySelector('#sf-'+g.id).nextElementSibling; b.click(); await T(150);
@@ -538,6 +573,32 @@ async def main():
                   skrift:parseFloat(getComputedStyle(document.getElementById('gs')).fontSize)}}}}""")
         tjek('mobil: ingen vandret rulning, fuld bredde til navnet, faner på én række, måleskema som kort, 16 px i felter',
              not r['bred'] and r['navn'] >= 330 and r['faneRaekker'] == 1 and r['kortSynligt'] and r['tabelSkjult'] and r['gemt'] == '0,5' and r['skrift'] >= 16, r)
+        r = await pm.evaluate(f"""async()=>{{const a={A};const T=n=>new Promise(f=>setTimeout(f,n));const smaa=new Set(), groft=matchMedia('(pointer:coarse)').matches;
+          const tjekF=sted=>document.querySelectorAll('input,select,textarea').forEach(el=>{{if(el.offsetParent===null||['checkbox','radio','range','color','file','hidden'].includes(el.type))return;
+            const fs=parseFloat(getComputedStyle(el).fontSize); if(fs<16) smaa.add(sted+': '+(el.id||el.className||el.tagName)+' '+fs);}});
+          for (const v of a.views.map(v=>v.id)) {{ a.go(v); await T(120); tjekF(v); }}
+          for (const t of ['tavle','rcd','gruppe','enhed','daase','lokale','afbryder','rack','udstyr','link']) {{ a.openForm(t); await T(120); tjekF('form '+t); a.modal=null; await T(30); }}
+          a.go('enstreg'); await T(200); const box=a.$refs.sldBox, rb=box.getBoundingClientRect(), k0=a.z.k;
+          const P=(type,id,x,y)=>box.dispatchEvent(new PointerEvent(type,{{pointerId:id,clientX:rb.left+x,clientY:rb.top+y,bubbles:true,pointerType:'touch',isPrimary:id===1}}));
+          P('pointerdown',1,100,100); P('pointerdown',2,150,100); P('pointermove',2,200,100); await T(50); const k1=a.z.k;
+          P('pointerup',2,200,100); P('pointermove',1,120,100); await T(30); P('pointerup',1,120,100); await T(30);
+          const bred=document.documentElement.scrollWidth>innerWidth;
+          return {{smaa:[...smaa], groft, zoom:Math.round(k1/k0*100)/100, pan:a.pinch===null&&a.pan===null&&SLDP.size===0, bred}}}}""")
+        tjek('mobil (touch): ingen felter under 16 px i faner og formularer, pinch med to fingre zoomer diagrammet',
+             r['groft'] and not r['smaa'] and r['zoom'] == 2 and r['pan'] and not r['bred'], r)
+        await ctx.close()
+        # Tablet med touch: 16 px gælder uanset bredde (pointer:coarse), ikke kun under 640 px
+        ctx = await b.new_context(viewport={'width': 1024, 'height': 1366}, is_mobile=True, has_touch=True)
+        await ctx.route('**/*', route)
+        pm = await ctx.new_page()
+        await pm.goto(URL); await pm.wait_for_timeout(500)
+        r = await pm.evaluate(f"""async()=>{{const a={A};const T=n=>new Promise(f=>setTimeout(f,n));const smaa=new Set();
+          const tjekF=sted=>document.querySelectorAll('input,select,textarea').forEach(el=>{{if(el.offsetParent===null||['checkbox','radio','range','color','file','hidden'].includes(el.type))return;
+            const fs=parseFloat(getComputedStyle(el).fontSize); if(fs<16) smaa.add(sted+': '+(el.id||el.className||el.tagName)+' '+fs);}});
+          for (const v of a.views.map(v=>v.id)) {{ a.go(v); await T(120); tjekF(v); }}
+          for (const t of ['tavle','gruppe','enhed','afbryder','link']) {{ a.openForm(t); await T(120); tjekF('form '+t); a.modal=null; await T(30); }}
+          return {{smaa:[...smaa], groft:matchMedia('(pointer:coarse)').matches, bred:innerWidth}}}}""")
+        tjek('tablet (touch, 1024 px): ingen felter under 16 px', r['groft'] and r['bred'] >= 1000 and not r['smaa'], r)
         await ctx.close()
 
         # 7. Offline-app: service worker på localhost (kræver https eller localhost)

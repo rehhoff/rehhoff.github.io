@@ -7,7 +7,7 @@ function app() {
     fvIkke: false, gren: null, sfPop: null, fvRed: null, fvTmp: null,
     views: [ { id:'tavle', l:'Tavle' }, { id:'enstreg', l:'Enstregsdiagram' }, { id:'taending', l:'Tændingsdiagram' }, { id:'samlepunkter', l:'Samlepunkter & dåser' }, { id:'foering', l:'Føringsvej' }, { id:'svag', l:'Svagstrøm' }, { id:'beregning', l:'Beregning' }, { id:'lokaler', l:'Lokaler' }, { id:'kabler', l:'Kabler' }, { id:'dokumentation', l:'Dokumentation' }, { id:'fejlfinder', l:'Fejlfinder' } ],
     db: tom(), hist: [], sel: null, drag: null, over: null,
-    projekter: [], pid: '', pf: { navn:'', sagsnr:'', kunde:'', adresse:'' }, sldSel: null, z: { x:8, y:8, k:1 }, pan: null, panMoved: false,
+    projekter: [], pid: '', pf: { navn:'', sagsnr:'', kunde:'', adresse:'' }, sldSel: null, z: { x:8, y:8, k:1 }, pan: null, pinch: null, panMoved: false,
     filter: { q:'', tavle:'', type:'', lokale:'' }, sort: { key:'gruppe', dir:1 },
     modal: null, form: {}, confirm: null, toasts: [], storageOk: true, tema: 'auto', qa: '', io: '',
     typeLabel: { lys:'Lys', kraft:'Kraft', stik:'Stik', data:'Data og teknik' },
@@ -43,7 +43,7 @@ function app() {
       kip: ['Fase og impulsleder til hvert tryk', 'Tændt leder fra relæet, nul og jord'], trappe: ['Fase og impulsleder til hvert tryk', 'Tændt leder fra relæet, nul og jord']
     },
     symNavn: { auto:'Automatisk ud fra navnet', lys:'Lampe', stik:'Stikkontakt', koel:'Køleskab', frys:'Fryser', ovn:'Ovn', koge:'Kogeplade', mikro:'Mikroovn', opvask:'Opvaskemaskine',
-      vask:'Vaskemaskine', toerre:'Tørretumbler', emhaette:'Emhætte', vvb:'Vandvarmer', varme:'Elvarme', vp:'Varmepumpe', motor:'Motor', ev:'Ladeboks', it:'IT-udstyr', gen:'Andet' },
+      vask:'Vaskemaskine', toerre:'Tørretumbler', emhaette:'Emhætte', vvb:'Vandvarmer', varme:'Elvarme', vp:'Varmepumpe', motor:'Motor', ev:'Ladeboks', it:'IT-udstyr', tilgang:'Tilgang (ingen last)', gen:'Andet' },
 
     init() {
       window.__alpineOk = true;
