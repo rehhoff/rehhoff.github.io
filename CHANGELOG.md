@@ -2,6 +2,16 @@
 
 Nyeste øverst. Versionsnummeret står også i appen som `APP_VERSION`. Hver version siger, hvilken model der lavede den.
 
+## 10.22.0 · 2026-11-18 · Claude Opus
+
+Enstregsdiagram: træk for at flytte en forbindelse, og Tilgang i serie. Plan: `docs/planer/2026-11-18-enstreg-traek.md`.
+
+- **Træk for at flytte en forbindelse:** hold en brugsgenstand nede et øjeblik (mus eller finger), og træk den hen på en anden brugsgenstand (så bliver den sløjfet derfra), en dåse eller gruppen (direkte fra gruppen). Mens man trækker, er de mulige mål stiplet, målet under pointeren er fremhævet, og et mærke viser fx "Stik A1 → Tilgang". Kredse og andre grupper afvises med en forklaring. Ændringen kan fortrydes, fx "Stik A1 er nu sløjfet fra Tilgang."
+- Et almindeligt træk panorerer stadig, og to fingre zoomer stadig. En finger nummer to afbryder et træk.
+- **Flyt til …** i infopanelet for en valgt brugsgenstand gør det samme uden træk, til små skærme.
+- **Tilgang i serie:** Tilgangens symbol sidder nu på linjen mellem gruppeafbryderen og brugsgenstandene, som et mellemled ligesom en dåse. Det, der er sløjfet fra Tilgangen, udgår fra skinnen efter symbolet.
+- Ingen ændring af datamodellen (skema 15).
+
 ## 10.21.0 · 2026-11-18 · Claude Sonnet
 
 Afleveringstjek og tavlefortegnelse (forslag 10 og 11). Plan: `docs/planer/2026-11-18-aflevering-fortegnelse.md`. Ingen ændring af datamodellen (`SCHEMA` uændret).
