@@ -10,7 +10,6 @@ const APP_BRAND = () => ({
     brandKlasser() { return BRANDKLASSER; },
     brandNy() { this.openForm('brand', null, { lokaleId:this.lokF || '' }); },
     brandSaet(b, felt, v) { if (b[felt] === v) return; this.mutate(() => { b[felt] = v; }); },
-    brandFjernBillede(i) { this.form.billeder.splice(i, 1); },
     brandGem() {
       if (this.billedArbejder) { this.say('Vent, til billederne er gjort klar.'); return; }
       const f = this.form, id = this.modal.id, t = k => String(f[k] == null ? '' : f[k]).trim();

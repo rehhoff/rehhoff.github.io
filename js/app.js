@@ -21,7 +21,7 @@ function app() {
     online: navigator.onLine !== false, installPrompt: null, installeret: false, swOk: false,
     firma: { navn:'', cvr:'', adresse:'', telefon:'', logo:'' },
     historik: { liste:[], commits:null, i:0, henter:false, fejl:'', pid:'' },
-    brandIkke: false, billedTick: 0, billedArbejder: 0, billedOk: true, lysbillede: null,
+    brandIkke: false, billedTick: 0, billedArbejder: 0, billedOk: true, lysbillede: null, opryd: null, lager: null,
     synk: null, synkTokenInput: '', synkKoerer: false, synkIgen: false, synkFejl: '', iSynk: false,
     tvs: TV, appVersion: APP_VERSION, backups: [], sidstBackup: '', persistent: false, lokF: '', q: '', soegAaben: false, sk: { key:'koekken', navn:'Køkken', tavleId:'' }, skabeloner: SKABELONER, anlaegNavn: ANLAEG,
     enhNavne: [...new Set(EFFEKT.map(x => x[2]))].sort((a, b) => a.localeCompare(b, 'da')), sim: {}, hurtig: { aaben:false, type:'lokale', felt:'', f:{} }, imp: { aaben:false, type:'enhed', tekst:'', hdr:true, hdrRoert:false, map:[], raekker:[], fh:[], opretLok:true }, eAuto: true, faseFs: null, belEnhSidst: 'W', dragL: null, overL: null, mFilter: '', dAuto: { type:true, lok:true },
@@ -304,7 +304,7 @@ function app() {
       this.mutate(() => {
         for (; n < antal; n++) {
           const m = {}; dele.ds.concat(dele.es, dele.as).forEach(x => { m[x.id] = uid(); });
-          const fx = (x, liste, extra) => { const c = Object.assign(kopi(x), { id:m[x.id], navn:this.naeste(x.navn, d[liste]), trukket:false, note:'' }, extra); if (placering) c.placering = placering; d[liste].push(c); };
+          const fx = (x, liste, extra) => { const c = Object.assign(kopi(x), { id:m[x.id], navn:this.naeste(x.navn, d[liste]), trukket:false, note:'' }, extra); if (Array.isArray(c.billeder)) c.billeder = []; if (placering) c.placering = placering; d[liste].push(c); };
           dele.ds.forEach(x => fx(x, 'daaser', { parentId:m[x.parentId] || x.parentId }));
           dele.es.forEach(x => fx(x, 'enheder', { daaseId:m[x.daaseId] || x.daaseId, fraEnhed:m[x.fraEnhed] || x.fraEnhed }));
           dele.as.forEach(x => fx(x, 'afbrydere', { daaseId:m[x.daaseId] || x.daaseId, fraEnhed:m[x.fraEnhed] || x.fraEnhed, a:x.a.map(i => m[i] || i), b:x.b.map(i => m[i] || i) }));
@@ -416,13 +416,13 @@ function app() {
     openForm(type, item, pre) {
       const cur = this.sg(), t0 = (cur && cur.tavleId) || (this.db.tavler[0] || {}).id || '';
       const std = {
-        tavle: { navn:'', placering:'', forsikring:35, hovedafbryder:0, fra:'', fraGruppe:'', tilgang:'', tKabel:(this.db.projekt.sidst || {}).kabel || 'PVC', tLedere:'5G', tTv:6, tLaengde:0, ze:0, ikMaks:0, tTrukket:false, tNote:'' },
+        tavle: { navn:'', placering:'', forsikring:35, hovedafbryder:0, fra:'', fraGruppe:'', tilgang:'', tKabel:(this.db.projekt.sidst || {}).kabel || 'PVC', tLedere:'5G', tTv:6, tLaengde:0, ze:0, ikMaks:0, tTrukket:false, tNote:'', billeder:[] },
         rcd: { navn:'HPFI ' + (this.rcdsFor((pre && pre.tavleId) || t0).length + 1), tavleId:t0, type:'A', In:40, idn:30, selektiv:false },
-        lokale: { navn:'', etage:'' },
+        lokale: { navn:'', etage:'', billeder:[] },
         afbryder: { navn:'', art:'enpolet', daaseId:'', fraEnhed:'', kabel:'PVC', ledere:'3G', tv:1.5, laengde:0, hoejde:'', placering:'', trukket:false, note:'', gruppeId:(cur && LYS_TYPER.includes(cur.type) ? cur.id : (this.sorteredeGrupper().find(g => LYS_TYPER.includes(g.type)) || {}).id) || '', lokaleId:'', steder:2, tid:3, a:[], b:[] },
         gruppe: { tavleId:t0, nr:1, navn:'', type:'stik', kar:'B', In:13, faser:1, fase:'L1', rcdId:'', brydeevne:6, sf:this.sfForslag({ type:'stik' }).v },
         enhed: { antal:1, navn:'', gruppeId:this.sel || '', lokaleId:'', daaseId:'', fraEnhed:'', fase:'', hoejde:'', placering:'', trukket:false, note:'', symbol:'auto', effekt:0, kabel:'PVC', ledere:'3G', tv:1.5, laengde:10 },
-        daase: { antal:1, navn:'', type:'Membrandåse', gruppeId:this.sel || '', parentId:'', lokaleId:'', hoejde:'', placering:'', trukket:false, note:'', kabel:'PVC', ledere:'3G', tv:1.5, laengde:5 },
+        daase: { antal:1, navn:'', type:'Membrandåse', gruppeId:this.sel || '', parentId:'', lokaleId:'', hoejde:'', placering:'', trukket:false, note:'', kabel:'PVC', ledere:'3G', tv:1.5, laengde:5, billeder:[] },
         rack: { navn:'R' + (this.db.racks.length + 1), type:'19" vægskab', he:9, lokaleId:'', gruppeId:'' },
         udstyr: { rackId:(this.db.racks[0] || {}).id || '', navn:'', art:'switch', he:1, pos:1, porte:24, poe:false, poeBudget:0, effekt:20 },
         brand: { nr:1, lokaleId:'', placering:'', beskrivelse:'', brandklasse:'', produkt:'', udfoert:false, maerkat:false, note:'', billeder:[] },
@@ -452,6 +452,7 @@ function app() {
     },
     liste(type) { return { afbryder:'afbrydere', tavle:'tavler', rcd:'rcds', lokale:'lokaler', gruppe:'grupper', enhed:'enheder', daase:'daaser', rack:'racks', udstyr:'udstyr', link:'links', brand:'brandlukninger' }[type]; },
     saveForm() {
+      if (this.billedArbejder) { this.say('Vent, til billederne er gjort klar.'); return; }
       if (this.modal.type === 'brand') return this.brandGem();
       if (this.modal.type === 'enhed') { this.belSync(); this.belEnhSidst = this.form.belEnh || 'W'; }
       const type = this.modal.type, liste = this.liste(type), rec = Object.assign({}, this.form);
@@ -470,6 +471,7 @@ function app() {
       if (type === 'enhed' && rec.fraEnhed && (rec.fraEnhed === id || (id && this.erSloejfetUnder(rec.fraEnhed, id)))) rec.fraEnhed = '';
       if (type === 'enhed' || type === 'daase' || type === 'afbryder') { rec.hoejde = Number(rec.hoejde) > 0 ? Number(rec.hoejde) : ''; rec.trukket = !!rec.trukket; rec.note = String(rec.note || ''); rec.placering = String(rec.placering || '').trim(); }
       if (type === 'tavle') rec.tTrukket = !!rec.tTrukket;
+      if (this.billedFelt(type)) rec.billeder = bIdListe(rec.billeder);  /* skema 16 */
       if (type === 'daase' && (rec.parentId === id || (id && this.erUnder(rec.parentId, id)))) rec.parentId = '';
       if (type === 'link' && rec.art !== 'cctv') rec.nvrId = '';
       if (type === 'udstyr') rec.poe = rec.art === 'switch' && !!rec.poe;
@@ -483,7 +485,7 @@ function app() {
         else if (antal > 1) {
           serie = this.serie(rec.navn, this.db[liste], antal);
           let forrige = null;
-          serie.forEach(nv => { const c = JSON.parse(JSON.stringify(rec)); c.id = uid(); c.navn = nv; if (type === 'link') this.givPorte(c); if (type === 'enhed' && kaede && forrige) Object.assign(c, { fraEnhed:forrige }, kk); forrige = c.id; this.db[liste].push(c); });
+          serie.forEach((nv, i) => { const c = JSON.parse(JSON.stringify(rec)); c.id = uid(); c.navn = nv; if (i && c.billeder) c.billeder = []; if (type === 'link') this.givPorte(c); if (type === 'enhed' && kaede && forrige) Object.assign(c, { fraEnhed:forrige }, kk); forrige = c.id; this.db[liste].push(c); });
         }
         else { rec.id = uid(); this.db[liste].push(rec); }
         if (type === 'enhed' || type === 'daase') this.db.projekt.sidst = { kabel:rec.kabel, ledere:rec.ledere, tv:rec.tv };
@@ -703,7 +705,7 @@ function app() {
     },
     dupElem() {
       const type = this.modal.type, liste = this.liste(type), src = this.db[liste].find(x => x.id === this.modal.id); if (!src) return;
-      const c = JSON.parse(JSON.stringify(src)); c.id = uid(); c.navn = this.naeste(src.navn, this.db[liste]); if ('trukket' in c) { c.trukket = false; c.note = ''; }
+      const c = JSON.parse(JSON.stringify(src)); c.id = uid(); c.navn = this.naeste(src.navn, this.db[liste]); if ('trukket' in c) { c.trukket = false; c.note = ''; } if (Array.isArray(c.billeder)) c.billeder = [];  /* billeder kopieres ikke */
       this.mutate(() => { if (type === 'link') this.givPorte(c); this.db[liste].push(c); });
       this.modal = null; this.say(c.navn + ' oprettet som kopi af ' + src.navn + '.', true);
     },
@@ -714,7 +716,7 @@ function app() {
       ds.forEach(x => { dm[x.id] = uid(); }); const em = {}; es.forEach(e => { em[e.id] = uid(); });
       this.mutate(() => {
         d.lokaler.push(ny);
-        ds.forEach(x => d.daaser.push(Object.assign(kopi(x), { id:dm[x.id], lokaleId:ny.id, parentId:dm[x.parentId] || x.parentId, navn:this.naeste(x.navn, d.daaser), trukket:false, note:'' })));
+        ds.forEach(x => d.daaser.push(Object.assign(kopi(x), { id:dm[x.id], lokaleId:ny.id, parentId:dm[x.parentId] || x.parentId, navn:this.naeste(x.navn, d.daaser), trukket:false, note:'', billeder:[] })));
         es.forEach(e => d.enheder.push(Object.assign(kopi(e), { id:em[e.id], lokaleId:ny.id, daaseId:dm[e.daaseId] || e.daaseId, fraEnhed:em[e.fraEnhed] || e.fraEnhed, trukket:false, note:'' })));
         ls.forEach(l => { const c = Object.assign(kopi(l), { id:uid(), lokaleId:ny.id, navn:this.naeste(l.navn, d.links) }); this.givPorte(c); d.links.push(c); });
       });

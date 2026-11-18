@@ -14,6 +14,7 @@ ROD = Path(__file__).resolve().parent.parent
 TYPER = {'.html': 'text/html', '.js': 'application/javascript', '.css': 'text/css', '.json': 'application/json'}
 ALPINE = ROD / 'node_modules' / 'alpinejs' / 'dist' / 'cdn.min.js'
 URL = 'http://app.test/'
+SKEMA = 16  # SCHEMA i js/data.js
 fejl, kontrol = [], []
 # Tidsgrænser, så en test, der hænger, fejler med en besked i stedet for at vente (forslag 17).
 TRIN_MS = int(os.environ.get('SMOKE_TRIN_MS', '15000'))   # pr. Playwright-handling (klik, navigation, popup …)
@@ -43,8 +44,11 @@ A = "Alpine.$data(document.querySelector('[x-data]'))"
 
 # Falsk GitHub-API til synkroniseringstesten: én hemmelig Gist delt mellem to "enheder".
 GIST = {}
-BGIST = {}       # billed-Gist g2 (skema 15)
-BPATCH = []      # filnavne i hver PATCH til g2
+BGISTS = {'g2': {}}  # billed-Gists (skema 15). Den første hedder g2, de næste g3, g4 … (forslag 21)
+BGIST = BGISTS['g2']
+BPATCH = []      # filnavne i hver PATCH til en billed-Gist
+PGISTS = {}      # andre projekt-Gists på kontoen, fx fra en anden enhed (oprydning, forslag 20)
+RAW_FEJL = set() # raw_url-stier, der svarer med fejl
 BFIL = 'tavleoversigt-billeder.json'
 VERSIONER = []  # [(sha, tid, kopi af GIST)], ældste først, som GitHub gemmer dem
 CORS = {'access-control-allow-origin': '*', 'access-control-allow-headers': 'authorization, content-type, accept',
@@ -60,15 +64,16 @@ def gist_json(filer=None, gid='g1'):
 def gist_liste():
     # som GitHub: listen har filnavne, størrelse og raw_url, men ikke indholdet
     ud = []
-    for gid, filer in (('g1', GIST), ('g2', BGIST)):
+    for gid, filer in [('g1', GIST)] + list(BGISTS.items()) + list(PGISTS.items()):
         if filer: ud.append({'id': gid, 'files': {n: {'filename': n, 'size': len(c), 'raw_url': 'https://gist.test/raw/' + gid + '/' + n} for n, c in filer.items()}})
     return ud
 
 
 async def gist_raw(r):
     gid, navn = r.request.url.split('/raw/', 1)[1].split('/', 1)
-    filer = {'g1': GIST, 'g2': BGIST}.get(gid, {})
-    if navn in filer: await r.fulfill(status=200, headers=CORS, content_type='text/plain', body=filer[navn])
+    filer = ({'g1': GIST} | BGISTS | PGISTS).get(gid, {})
+    if gid + '/' + navn in RAW_FEJL: await r.fulfill(status=500, headers=CORS, body='')
+    elif navn in filer: await r.fulfill(status=200, headers=CORS, content_type='text/plain', body=filer[navn])
     else: await r.fulfill(status=404, headers=CORS, body='')
 
 
@@ -91,8 +96,9 @@ async def github(r):
     if sti == '/gists' and req.method == 'POST':
         filer = json.loads(req.post_data)['files']
         if BFIL in filer:
-            BGIST.update({n: f['content'] for n, f in filer.items()})
-            return await svar(gist_json(BGIST, 'g2'), 201)
+            gid = 'g2' if not BGISTS['g2'] else 'g%d' % (len(BGISTS) + 2)
+            BGISTS.setdefault(gid, {}).update({n: f['content'] for n, f in filer.items()})
+            return await svar(gist_json(BGISTS[gid], gid), 201)
         GIST.update({n: f['content'] for n, f in filer.items()})
         ny_version()
         return await svar(gist_json(), 201)
@@ -104,13 +110,16 @@ async def github(r):
             else: GIST[n] = f['content']
         ny_version()
         return await svar(gist_json())
-    if sti == '/gists/g2' and req.method == 'PATCH':
-        filer = json.loads(req.post_data)['files']
+    m = re.fullmatch(r'/gists/(g\d+)', sti)
+    if m and m[1] in BGISTS and req.method == 'PATCH':
+        filer, bg = json.loads(req.post_data)['files'], BGISTS[m[1]]
         BPATCH.append(sorted(filer))
         for n, f in filer.items():
-            if f is None: BGIST.pop(n, None)
-            else: BGIST[n] = f['content']
-        return await svar(gist_json(BGIST, 'g2'))
+            if f is None: bg.pop(n, None)
+            else: bg[n] = f['content']
+        return await svar(gist_json(bg, m[1]))
+    if m and m[1] in PGISTS and req.method == 'GET':
+        return await svar(gist_json(PGISTS[m[1]], m[1]))
     if sti.startswith('/gists/g1/commits'):
         return await svar([{'version': v, 'committed_at': t} for v, t, _ in reversed(VERSIONER)])
     for v, t, filer in VERSIONER:
@@ -375,7 +384,7 @@ async def main():
             enheder:JSON.stringify(a.db.enheder), daaser:JSON.stringify(a.db.daaser), ng:g.length, nt:t.length,
             bak:(JSON.parse(localStorage.getItem('tavleoversigt.backups'))||[]).length}}}})()""")
         tjek('opgradering fra skema 9: backup, standardforhold og data intakte',
-             r['navn'] == 'Skema 9-projekt' and r['b'] >= 1 and r['s'] == 15 and r['std'] == ['C', 30, 20, 1, 'bundt'] and r['g'] and r['t']
+             r['navn'] == 'Skema 9-projekt' and r['b'] >= 1 and r['s'] == SKEMA and r['std'] == ['C', 30, 20, 1, 'bundt'] and r['g'] and r['t']
              and r['ng'] == r0['ng'] and r['nt'] == r0['nt'] and r['enheder'] == r0['enheder'] and r['daaser'] == r0['daaser'],
              {k: v for k, v in r.items() if k not in ('enheder', 'daaser')} | {'enheder ens': r['enheder'] == r0['enheder'], 'daaser ens': r['daaser'] == r0['daaser']})
 
@@ -388,7 +397,7 @@ async def main():
         r = await pg.evaluate(f"""(()=>{{const a={A};return {{navn:a.db.projekt.navn, b:a.backups.length, s:JSON.parse(localStorage.getItem('tavleoversigt.projekter')).schema,
             afb:JSON.stringify(a.db.afbrydere), enheder:JSON.stringify(a.db.enheder), svg:a.db.afbrydere.every(x=>a.taendSvg(x).length>500&&a.taendSvg(x,true).length>500)}}}})()""")
         tjek('opgradering fra skema 10: backup taget, afbrydere og brugsgenstande intakte',
-             r['navn'] == 'Skema 10-projekt' and r['b'] >= 1 and r['s'] == 15 and r['afb'] == r0['afb'] and r['enheder'] == r0['enheder'] and r['svg']
+             r['navn'] == 'Skema 10-projekt' and r['b'] >= 1 and r['s'] == SKEMA and r['afb'] == r0['afb'] and r['enheder'] == r0['enheder'] and r['svg']
              and r0['n'] >= 6 and r0['arter'] == ['enpolet', 'kip', 'korr', 'krone', 'sensor', 'trappe'],
              {'navn': r['navn'], 'b': r['b'], 's': r['s'], 'afb ens': r['afb'] == r0['afb'], 'enheder ens': r['enheder'] == r0['enheder'], 'n': r0['n'], 'arter': r0['arter']})
 
@@ -407,7 +416,7 @@ async def main():
             ik:d.grupper.every(g=>a.ikMin(g)===null), kf:a.kortslutFejl().length}}}})()""")
         ens = {k: r[k] == r0[k] for k in ('enheder', 'daaser', 'g', 't', 'r')}
         tjek('opgradering fra skema 11: backup taget, data intakte, nye felter med standardværdier, ingen Ik uden Ze',
-             r['navn'] == 'Skema 11-projekt' and r['b'] >= 1 and r['s'] == 15 and all(ens.values()) and r['std'] and r['ik'] and r['kf'] == 0,
+             r['navn'] == 'Skema 11-projekt' and r['b'] >= 1 and r['s'] == SKEMA and all(ens.values()) and r['std'] and r['ik'] and r['kf'] == 0,
              {'navn': r['navn'], 'b': r['b'], 's': r['s'], 'std': r['std'], 'ik': r['ik'], 'kf': r['kf']} | ens)
 
         # 4e. Kortslutningsstrøm og selektivitet med kendte tal (aftalt 2026-11-16). Ændringerne gemmes ikke.
@@ -465,7 +474,7 @@ async def main():
             std:d.enheder.concat(d.daaser).every(x=>x.trukket===false&&x.note===''&&x.placering===''&&x.hoejde==='')&&d.enheder.every(e=>e.fraEnhed==='')&&d.afbrydere.every(x=>x.laengde===0&&x.daaseId===''&&x.fraEnhed==='')&&d.tavler.every(t=>t.tTrukket===false&&t.tNote==='')}}}})()""")
         ens = {k: r[k] == r0[k] for k in ('e', 'd', 'a')}
         tjek('opgradering fra skema 12: backup taget, data intakte, føringsvejens felter tomme',
-             r['navn'] == 'Skema 12-projekt' and r['b'] >= 1 and r['s'] == 15 and all(ens.values()) and r['std'], {'b': r['b'], 's': r['s'], 'std': r['std']} | ens)
+             r['navn'] == 'Skema 12-projekt' and r['b'] >= 1 and r['s'] == SKEMA and all(ens.values()) and r['std'], {'b': r['b'], 's': r['s'], 'std': r['std']} | ens)
 
         # 4h. Føringsvej: sløjfer i ΔU og Ik, afbrydertræk, kopiér gren, kæde, trukket og note. Ryddes op bagefter
         r = await pg.evaluate(f"""(async()=>{{const a={A};const T=n=>new Promise(f=>setTimeout(f,n));const d=a.db, n0=JSON.stringify([d.tavler.length,d.grupper.length,d.enheder.length,d.afbrydere.length]), sel0=a.sel, o={{}}, rd=x=>Math.round(x*100000)/100000;
@@ -633,7 +642,7 @@ async def main():
           a.save(); return {{navn:d.projekt.navn, b:a.backups.length, s:JSON.parse(localStorage.getItem('tavleoversigt.projekter')).schema, e:k(d.enheder), g:JSON.stringify(d.grupper.map(g=>[g.id,g.type,g.faser,g.fase,g.sf])),
             fase:d.enheder.every(e=>e.fase===''), gemt:JSON.parse(localStorage.getItem('tavleoversigt.p.'+a.pid)||'{{}}').enheder.every(e=>e.fase==='')}}}})()""")
         tjek('opgradering fra skema 13: backup taget, brugsgenstande og grupper intakte, fase sat til som gruppen',
-             r['navn'] == 'Skema 13-projekt' and r['b'] >= 1 and r['s'] == 15 and r['e'] == r0['e'] and r['g'] == r0['g'] and r['fase'] and r['gemt'] and r0['n'] > 0,
+             r['navn'] == 'Skema 13-projekt' and r['b'] >= 1 and r['s'] == SKEMA and r['e'] == r0['e'] and r['g'] == r0['g'] and r['fase'] and r['gemt'] and r0['n'] > 0,
              {k: r[k] for k in ('navn', 'b', 's', 'fase', 'gemt')} | {'e': r['e'] == r0['e'], 'g': r['g'] == r0['g']})
 
         # 4k. 1-faset tilslutning på 3-faset gruppe med kendte tal, samt gruppetypen Lys og stik. Ryddes op bagefter
@@ -698,7 +707,7 @@ async def main():
           return {{navn:projekt.navn, b:a.backups.length, s:JSON.parse(localStorage.getItem('tavleoversigt.projekter')).schema, rest:JSON.stringify(rest), bl:brandlukninger,
             gemt:JSON.parse(localStorage.getItem('tavleoversigt.p.'+a.pid)).brandlukninger}}}})()""")
         tjek('opgradering fra skema 14: backup taget, data intakte, brandlukninger tom liste',
-             r['navn'] == 'Skema 14-projekt' and r['b'] >= 1 and r['s'] == 15 and r['rest'] == r0['rest'] and r['bl'] == [] and r['gemt'] == [] and r0['n'] > 0,
+             r['navn'] == 'Skema 14-projekt' and r['b'] >= 1 and r['s'] == SKEMA and r['rest'] == r0['rest'] and r['bl'] == [] and r['gemt'] == [] and r0['n'] > 0,
              {k: r[k] for k in ('navn', 'b', 's', 'bl', 'gemt')} | {'rest ens': r['rest'] == r0['rest']})
         r = await pg.evaluate("""(()=>{const d=norm({tavler:[],brandlukninger:[{nr:'x',udfoert:1,billeder:['ok1','ok1','../x',5]},null,{id:'b2',nr:7,placering:3}]});
           return d.brandlukninger.map(b=>[b.id,b.nr,b.udfoert,b.maerkat,b.billeder,b.placering,b.note])})()""")
@@ -760,6 +769,7 @@ async def main():
              and r['ikkeNr'] == ['2'] and r['lok'] == ['Udført 0 af 1', 'Mærkat 0 af 1', 1] and r['soeg'] == 1, r)
         tjek('brandlukning: sletning kan fortrydes, og billederne bliver på enheden', r['slet'] == [1, True] and r['fortryd'] == [2, True, True] and r['fjernBil'] == [2, True], r)
         tjek('dokumentation: brandlukninger med status, optælling og små billeder', r['docOk'] == [True, True, 2, True], r['docOk'])
+
         # 4b. Import fra regneark (forslag 16)
         await pg.evaluate(f"{A}.go('kabler')")
         await pg.click('text=Importér fra regneark >> visible=true')
@@ -796,6 +806,49 @@ async def main():
         tjek('import fra regneark: kan fortrydes i ét trin, og import af lokaler virker (semikolon, dublet afvises)',
              r['besked'] and r['fortrudt'] == r['foer'] and r['lok'][:2] == [True, 2] and 'findes allerede' in r['lok'][2]
              and r['lokNy'] == ['ImpLok/1. sal', 'ImpLok2/'] and r['lokFort'] is False, r)
+
+        # 4n. Skema 16 (forslag 15): opgradering fra skema 15, billeder på tavle, lokale og samlepunkt, liste, dokumentation og lageradvarsel
+        r0 = await pg.evaluate("""(()=>{const i=JSON.parse(localStorage.getItem('tavleoversigt.projekter'));i.schema=15;const id=i.aktiv;
+          const p=JSON.parse(localStorage.getItem('tavleoversigt.p.'+id));for(const k of ['tavler','lokaler','daaser']) p[k].forEach(x=>delete x.billeder);p.projekt.navn='Skema 15-projekt';
+          localStorage.setItem('tavleoversigt.p.'+id,JSON.stringify(p));localStorage.setItem('tavleoversigt.projekter',JSON.stringify(i));localStorage.removeItem('tavleoversigt.backups');
+          return {p:JSON.stringify(p), n:[p.tavler.length,p.lokaler.length,p.daaser.length], bl:p.brandlukninger.map(b=>b.billeder.length)}})()""")
+        await pg.goto(URL); await pg.wait_for_timeout(500)
+        r = await pg.evaluate(f"""(()=>{{const a={A};const d=JSON.parse(JSON.stringify(a.db)), p=JSON.parse({json.dumps(r0['p'])});
+          const tomme=['tavler','lokaler','daaser'].every(k=>d[k].every(x=>Array.isArray(x.billeder)&&!x.billeder.length));
+          a.save();
+          return {{navn:d.projekt.navn, b:a.backups.length, s:JSON.parse(localStorage.getItem('tavleoversigt.projekter')).schema, tomme,
+            ens:['tavler','lokaler','daaser','grupper','enheder','brandlukninger'].every(k=>p[k].length===d[k].length&&p[k].every((x,n)=>Object.keys(x).every(f=>JSON.stringify(x[f])===JSON.stringify(d[k][n][f])))),
+            bl:a.db.brandlukninger.map(b=>b.billeder.length)}}}})()""")
+        tjek('opgradering fra skema 15: backup taget, data og brandlukningernes billeder intakte, billeder tom liste på tavler, lokaler og dåser',
+             r['navn'] == 'Skema 15-projekt' and r['b'] >= 1 and r['s'] == SKEMA and r['tomme'] and r['ens'] and r['bl'] == r0['bl'] and sum(r0['n'][1:]) > 0 and r0['n'][0] > 0, (r, r0['n'], r0['bl']))
+        r = await pg.evaluate("""(()=>{const d=norm({tavler:[{id:'t',billeder:['a1','a1','../x',3]}],lokaler:[{id:'l'}],daaser:[{id:'d',billeder:'x'}]});
+          return [d.tavler[0].billeder,d.lokaler[0].billeder,d.daaser[0].billeder,[...billedIds({...d,brandlukninger:[{billeder:['b1']}]})].sort()]})()""")
+        tjek('norm(): billeder på tavler, lokaler og dåser får standardværdi, ugyldige id\'er fjernes, billedIds samler alle', r == [['a1'], [], [], ['a1', 'b1']], r)
+        hvor = {}
+        for typ, liste in (('tavle', 'tavler'), ('lokale', 'lokaler'), ('daase', 'daaser')):
+            await pg.evaluate(f"(()=>{{const a={A};a.openForm({json.dumps(typ)}, a.db.{liste}[0])}})()"); await pg.wait_for_timeout(120)
+            synlig = await pg.evaluate("[!!document.querySelector('#bl-felt'), document.querySelector('#bl-kamera').getAttribute('capture'), document.querySelector('#bl-galleri').multiple]")
+            await pg.set_input_files('#bl-kamera', files=[{'name': typ + '.png', 'mimeType': 'image/png', 'buffer': png}])
+            await pg.wait_for_function(f"{A}.form.billeder.length===1 && !{A}.billedArbejder", timeout=15000)
+            await pg.click('footer button[type=submit]'); await pg.wait_for_timeout(120)
+            hvor[typ] = synlig + await pg.evaluate(f"(()=>{{const a={A};const x=a.db.{liste}[0];return [x.billeder.length, BFULD.has(x.billeder[0]), !!BMINI[x.billeder[0]], JSON.parse(localStorage.getItem('tavleoversigt.p.'+a.pid)).{liste}[0].billeder.length, a.modal]}})()")
+        tjek('billeder på tavle, lokale og samlepunkt via formularen (kamera og galleri), gemt i IndexedDB og i projektet som id',
+             all(v == [True, 'environment', True, 1, True, True, 1, None] for v in hvor.values()), hvor)
+        r = await pg.evaluate(f"""async()=>{{const a={A};const T=n=>new Promise(f=>setTimeout(f,n));const o={{}};
+          for (const v of ['tavle','lokaler','samlepunkter']) {{ a.go(v); await T(120); o[v]=[...document.querySelectorAll('.bl-mini-s img')].filter(i=>i.offsetParent&&i.src.startsWith('data:image/jpeg')).length; }}
+          const dup=a.db.daaser[0]; a.openForm('daase',dup); await T(60); a.dupElem(); await T(60); o.dup=a.db.daaser[a.db.daaser.length-1].billeder.length; a.undo(); await T(60);
+          const doc=a.docHtml(), i=doc.indexOf('<h1>Billeder</h1>'), j=doc.indexOf('</section>', i);
+          o.doc=[i>0, (doc.slice(i,j).match(/<img class="bl" src="data:image[/]jpeg/g)||[]).length, doc.slice(i,j).includes('<h2>Tavler</h2>')&&doc.slice(i,j).includes('<h2>Lokaler</h2>')&&doc.slice(i,j).includes('<h2>Samlepunkter</h2>'), i<doc.indexOf('<h1>Brandlukninger</h1>')];
+          a.db.lokaler[1].billeder=['mangler9']; o.mangler=a.docHtml().includes('billede mangler på denne enhed'); a.db.lokaler[1].billeder=[];
+          const lag=v=>Object.defineProperty(navigator,'storage',{{configurable:true,value:{{estimate:async()=>v}}}}); lag({{usage:95e6,quota:100e6}}); await a.billedLager(); a.go('dokumentation'); await T(80);
+          const el=document.querySelector('#lager-adv'); o.lager=[!!el&&el.offsetParent!==null&&/ved at være fuldt: 91 MB af 95 MB/.test(el.textContent)];
+          lag({{usage:5e6,quota:100e6}}); await a.billedLager(); await T(40); o.lager.push(a.lagerTxt()===''); delete navigator.storage; a.lager=null; a.go('tavle');
+          return o}}""")
+        tjek('billeder: miniaturer i listerne Tavler, Lokaler og Samlepunkter, duplikering kopierer ikke billeder',
+             r['tavle'] == 1 and r['lokaler'] == 1 and r['samlepunkter'] == 1 and r['dup'] == 0, r)
+        tjek('dokumentation: afsnit Billeder med små billeder af tavle, lokale og samlepunkt, manglende billede vises som tekst', r['doc'] == [True, 3, True, True] and r['mangler'], r['doc'])
+        tjek('lageradvarsel (navigator.storage.estimate) over 80 % vises under Datasikring, ellers ikke', r['lager'] == [True, True], r['lager'])
+
         await pg.evaluate(f"{A}.go('tavle')")
 
         # 5. Backupfil kan hentes og indlæses uden at overskrive. Den indeholder billederne
@@ -803,8 +856,8 @@ async def main():
             await pg.evaluate(f"{A}.hentBackup()")
         fil = await (await dl.value).path()
         bak = json.loads(Path(fil).read_text(encoding='utf-8'))
-        r = await pg.evaluate(f"{A}.db.brandlukninger[0].billeder")
-        tjek('backupfilen indeholder billederne til brandlukninger', sorted(bak.get('billeder', {})) == sorted(r) and len(r) == 2
+        r = await pg.evaluate(f"[...billedIds({A}.db)]")
+        tjek('backupfilen indeholder billederne til brandlukninger, tavler, lokaler og samlepunkter', sorted(bak.get('billeder', {})) == sorted(r) and len(r) == 5
              and all(v.startswith('data:image/jpeg;base64,') for v in bak['billeder'].values()), (sorted(bak.get('billeder', {})), r))
         n0 = await pg.evaluate(f"{A}.projekter.length")
         await pg.evaluate(f"{A}.importJson({json.dumps(Path(fil).read_text(encoding='utf-8'))}, true)")
@@ -829,7 +882,7 @@ async def main():
         await pa.evaluate(f"(async()=>{{const a={A};await a.synkNu();a.synk.bSendt=[];a.synkGem();await a.synkNu();}})()")
         tjek('billedsynk: billedet sendes én gang til en separat billed-Gist, projekt-Gist\'en har ingen billeder',
              BFIL in BGIST and bnavn in BGIST and BGIST[bnavn].startswith('data:image/jpeg;base64,') and [p for p in BPATCH if bnavn in p] == [[bnavn, BFIL]]
-             and len(BPATCH) == foer_bp and not any('billede' in n for n in GIST) and json.loads(BGIST[BFIL])['schema'] == 15,
+             and len(BPATCH) == foer_bp and not any('billede' in n for n in GIST) and json.loads(BGIST[BFIL])['schema'] == SKEMA,
              (sorted(BGIST), BPATCH, sorted(GIST)))
         tjek('synk: nyt projekt sendes, eksempler gør ikke', projekter_i_gist() == ['Synkprojekt'], projekter_i_gist())
         await pb.evaluate(f"""async()=>{{const a={A};a.synkTokenInput='test-token';await a.synkForbind();}}""")
@@ -843,10 +896,11 @@ async def main():
         BGIST[BFIL] = json.dumps({'format': 'tavleoversigt-billeder', 'schema': 999})
         r = await pb.evaluate(f"""async()=>{{const a={A};BFULD.delete({json.dumps(bid)});await a.synkNu();const f=a.synkFejl;BFULD.add({json.dumps(bid)});return f}}""")
         tjek('billedsynk: nyere skema i billed-Gist\'en afvises', 'nyere version' in r, r)
-        BGIST[BFIL] = json.dumps({'format': 'tavleoversigt-billeder', 'schema': 15})
+        BGIST[BFIL] = json.dumps({'format': 'tavleoversigt-billeder', 'schema': SKEMA})
         await pb.evaluate(f"(async()=>{{const a={A};a.synkFejl='';await a.synkNu();}})()")
         r = await pb.evaluate(f"(()=>{{const a={A};return {{t:a.toasts.map(t=>t.txt),h:a.synkTxt()}}}})()")
         tjek('synk: ingen rutinebesked, tid vises i hovedet', not any('Synkroniseret:' in t for t in r['t']) and 'synkroniseret kl.' in r['h'], r)
+
         await pb.evaluate(f"""async()=>{{const a={A};a.skift(a.projekter.find(p=>p.navn==='Synkprojekt').id);a.mutate(()=>{{a.db.projekt.kunde='Rettet på B'}});await a.synkNu();}}""")
         r = await pa.evaluate(f"""async()=>{{const a={A};await a.synkNu();return a.db.projekt.kunde}}""")
         tjek('synk: ændring på B når frem til A (aktivt projekt genindlæst)', r == 'Rettet på B', r)
@@ -876,6 +930,70 @@ async def main():
         tjek('historik: ændrede versioner vises én gang, den nuværende markeres, gendan som kopi, aktivt projekt urørt, nyere skema afvises',
              len(r['L']) >= 3 and len(set(r['L'])) == len(r['L']) and r['nu'] == 0 and r['nuEfter'] == [False, True] + [False] * (len(r['L']) - 2) and r['ny'] and r['gammelKunde'] == r['L'][-1]
              and r['aktiv'] and r['antal'][1] == r['antal'][0] + 1 and r['antal'][2] == r['antal'][1] and r['fejl'], r)
+        # 6b. Skema 16: billeder på tavle, lokale og samlepunkt synkes via billed-Gist'en (forslag 15)
+        LAV = """const lav=async(id,farve,alder)=>{const c=document.createElement('canvas');c.width=60;c.height=40;const x=c.getContext('2d');x.fillStyle=farve;x.fillRect(0,0,60,40);
+          const d=c.toDataURL('image/jpeg',0.6);await a.billedGem(id,d,d);if(alder)await bdbKoer(['mini'],'readwrite',tx=>tx.objectStore('mini').put({id,data:d,oprettet:new Date(Date.now()-alder).toISOString()}));return d;};"""
+        await pa.evaluate(f"""async()=>{{const a={A};{LAV}
+          a.skift(a.projekter.find(p=>p.navn==='Synkprojekt').id);
+          await lav('s16t','#a33'); await lav('s16l','#3a3'); await lav('s16d','#33a');
+          a.mutate(()=>{{a.db.tavler.push({{id:'st1',navn:'ST',billeder:['s16t']}}); a.db.lokaler.push({{id:'sl1',navn:'Kælder',billeder:['s16l']}});
+            a.db.daaser.push({{id:'sd1',navn:'Skjult dåse',type:'Underlag',billeder:['s16d']}});}}); await a.synkNu();}}""")
+        g2 = lambda i: 'tavleoversigt-billede-' + i + '.txt'
+        r = await pb.evaluate(f"""async()=>{{const a={A};await a.synkNu();const p=a.projekter.map(p=>a.laes(p.id)).find(d=>d&&d.tavler.some(t=>t.id==='st1'));
+          return {{har:['s16t','s16l','s16d'].map(i=>BFULD.has(i)&&!!BMINI[i]), felter:[p.tavler.find(t=>t.id==='st1').billeder,p.lokaler.find(l=>l.id==='sl1').billeder,p.daaser.find(d=>d.id==='sd1').billeder], f:a.synkFejl}}}}""")
+        tjek('billedsynk: billeder på tavle, lokale og samlepunkt sendes til billed-Gist\'en og hentes på enhed 2',
+             all(g2(i) in BGIST for i in ('s16t', 's16l', 's16d')) and r['har'] == [True] * 3 and r['felter'] == [['s16t'], ['s16l'], ['s16d']] and not r['f'] and not any('billede' in n for n in GIST),
+             (r, sorted(BGIST)))
+
+        # 6c. Ny billed-Gist ved grænsen (forslag 21). Grænsen sættes til 2 billeder pr. billed-Gist
+        foer_g = set(BGISTS)
+        r = await pa.evaluate(f"""async()=>{{const a={A};{LAV} BMAKS=2;
+          for (const i of ['m1','m2','m3']) await lav(i,'#888');
+          a.mutate(()=>{{a.db.tavler.find(t=>t.id==='st1').billeder.push('m1','m2','m3');}}); await a.synkNu(); const o={{f:a.synkFejl,bGist:a.synk.bGist,sendt:['m1','m2','m3'].every(i=>a.synk.bSendt.includes(i))}}; BMAKS=250; return o}}""")
+        nye = sorted(set(BGISTS) - foer_g)
+        fordelt = [sorted(n for n in BGISTS[g] if n != BFIL) for g in nye]
+        tjek('billed-Gist: ved grænsen oprettes nye billed-Gists med markør, højst 2 billeder i hver',
+             len(nye) == 2 and fordelt == [[g2('m1'), g2('m2')], [g2('m3')]] and all(BFIL in BGISTS[g] for g in nye) and r['bGist'] == nye[-1] and r['sendt'] and not r['f'],
+             (r, nye, fordelt))
+        r = await pb.evaluate(f"""async()=>{{const a={A};await a.synkNu();return {{har:['m1','m2','m3'].map(i=>BFULD.has(i)), f:a.synkFejl}}}}""")
+        tjek('billed-Gist: enhed 2 henter billeder fra alle billed-Gists', r['har'] == [True] * 3 and not r['f'], r)
+        # svaret på upload læses ikke (udenSvar), og et brugt billede, som mangler i alle billed-Gists, sendes igen ved første synk i en ny session
+        del BGIST[g2('s16l')]
+        r = await pa.evaluate(f"""async()=>{{const a={A};BTJEKKET=false;await a.synkNu();return a.synkFejl}}""")
+        tjek('billedsynk: kontrol pr. session sender et brugt billede igen, hvis det mangler på GitHub', any(g2('s16l') in f for f in BGISTS.values()) and not r, (r, sorted(BGIST)))
+
+        # 6d. Oprydning (forslag 20): kun ubrugte billeder slettes. Intet, der bruges i en backup eller på en anden enhed
+        DAG = 2 * 24 * 3600 * 1000
+        r = await pa.evaluate(f"""async()=>{{const a={A};{LAV}
+          const x1=await lav('ox1','#f00',{DAG}); await lav('ox2','#0f0',{DAG}); await lav('ox4','#00f',0);
+          const bl=JSON.parse(localStorage.getItem('tavleoversigt.backups')||'[]'); bl.push({{tid:new Date().toISOString(),grund:'test',app:'x',schema:{SKEMA},navne:[],idx:{{}},raw:{{zz:JSON.stringify({{tavler:[{{id:'t',navn:'T',billeder:['ox2']}}]}})}}}});
+          localStorage.setItem('tavleoversigt.backups',JSON.stringify(bl)); return x1}}""")
+        BGIST[g2('ox1')] = r; BGIST[g2('ox3')] = r; BGISTS[nye[0]][g2('ox5')] = r
+        PGISTS['g9'] = {'tavleoversigt.json': json.dumps({'format': 'tavleoversigt-sync', 'schema': SKEMA}), 'tavleoversigt-andet.json': '{'}
+        brugte = await pa.evaluate(f"[...{A}.brugteBilleder()]")
+        r = await pa.evaluate(f"""async()=>{{const a={A};await a.billedOprydAabn();return {{f:a.opryd.fejl,fund:a.opryd.fund,dlg:!!document.querySelector('#opryd')}}}}""")
+        tjek('oprydning: en projekt-Gist, der ikke kan læses (anden enhed), stopper oprydningen, og intet kan slettes',
+             'Intet er slettet' in r['f'] and r['fund'] is None and r['dlg'] and g2('ox1') in BGIST, r)
+        PGISTS['g9']['tavleoversigt-andet.json'] = json.dumps({'tavler': [{'id': 't9', 'navn': 'Fra anden enhed', 'billeder': ['ox3']}]})
+        r = await pa.evaluate(f"""async()=>{{const a={A};const T=n=>new Promise(f=>setTimeout(f,n));await a.billedOprydAabn();await T(80);const f=a.opryd.fund;
+          return {{f:a.opryd.fejl, lokal:f&&f.lokal.map(x=>x.id).sort(), gh:f&&f.gh.map(x=>x.id).sort(), nye:f&&f.nye, synk:f&&f.synk,
+            tekst:[document.querySelector('#opryd-lokal').textContent, document.querySelector('#opryd-gh').textContent]}}}}""")
+        tjek('oprydning: finder kun ubrugte billeder (ikke i projekter, backups, andre enheder eller nyere end 24 timer) og viser antal og størrelse',
+             not r['f'] and r['lokal'] == ['ox1'] and r['gh'] == ['ox1', 'ox5'] and r['nye'] >= 1 and r['synk']
+             and re.search(r'På enheden: 1 billeder, \d+ KB', r['tekst'][0]) and re.search(r'På GitHub: 2 billeder, \d+ KB', r['tekst'][1]), r)
+        await pa.click('#opryd-slet'); await pa.wait_for_timeout(80)
+        mellem = await pa.evaluate(f"[{A}.opryd.slettet, BFULD.has('ox1')]")
+        await pa.click('#opryd-slet')
+        await pa.wait_for_function(f"{A}.opryd && {A}.opryd.slettet && !{A}.opryd.henter", timeout=15000)
+        r = await pa.evaluate(f"""async()=>{{const a={A};const keys=await bdbKoer(['billeder'],'readonly',tx=>tx.objectStore('billeder').getAllKeys()), mk=await bdbKoer(['mini'],'readonly',tx=>tx.objectStore('mini').getAllKeys());
+          const brugte={json.dumps(brugte)};
+          return {{s:a.opryd.slettet, ox:['ox1','ox2','ox4'].map(i=>keys.includes(i)&&mk.includes(i)), mem:[BFULD.has('ox1'),!!BMINI['ox1']], brugte:brugte.every(i=>keys.includes(i)), f:a.opryd.fejl, sendt:a.synk.bSendt.includes('ox1')}}}}""")
+        alle_gh = set().union(*[set(f) for f in BGISTS.values()])
+        tjek('oprydning: sletter først efter bekræftelse, kun ubrugte billeder på enheden og i billed-Gists; backup, anden enhed og nye billeder røres ikke',
+             mellem == [None, True] and r['s']['lokal'] == 1 and r['s']['gh'] == 2 and r['ox'] == [False, True, True] and r['mem'] == [False, False] and r['brugte'] and not r['f'] and not r['sendt']
+             and g2('ox1') not in alle_gh and g2('ox5') not in alle_gh and g2('ox3') in BGIST and all(g2(i) in alle_gh for i in brugte) and all(BFIL in f for f in BGISTS.values() if f),
+             (r, mellem, sorted(alle_gh)))
+        await pa.evaluate(f"{A}.modal=null"); PGISTS.clear()
         r = await pb.evaluate(f"""async()=>{{const a={A};Object.defineProperty(navigator,'onLine',{{configurable:true,get:()=>false}});
           a.synkFejl='';await a.synkNu();const r={{f:a.synkFejl,t:a.synkTxt()}};delete navigator.onLine;a.online=true;return r}}""")
         tjek('synk: uden net ingen fejl, status viser offline', r['f'] == '' and 'offline' in r['t'], r)

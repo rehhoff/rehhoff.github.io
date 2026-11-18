@@ -196,6 +196,7 @@ button.din-item{cursor:pointer}
 .bl-chk.on{border-color:var(--accent);color:var(--accent)}
 .bl-mini{position:relative;width:4rem;height:4rem;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:3px;background:var(--raised);overflow:hidden;padding:0;cursor:pointer}
 .bl-mini img{width:100%;height:100%;object-fit:cover}
+.bl-mini-s{width:2.5rem;height:2.5rem}
 .bl-mini-f{width:5rem;height:5rem;overflow:visible;cursor:default}
 .bl-mini-f img{border-radius:3px}
 .bl-fjern{position:absolute;top:-.5rem;right:-.5rem;width:1.75rem;height:1.75rem;border-radius:50%;border:1px solid var(--line);background:var(--raised);color:var(--crit);font-size:1rem;line-height:1;cursor:pointer}

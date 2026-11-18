@@ -1,7 +1,7 @@
 /* Konstanter, lagernøgler, tabeller, norm() og eksempeldata. Indlæses først; alt her er globalt og bruges af de andre filer og markup. */
 const KEY = 'tavleoversigt.v2', OLD = 'tavleoversigt.v1', TKEY = 'tavleoversigt.tema', IDX = 'tavleoversigt.projekter';
 /* Versioner: APP_VERSION følger CHANGELOG.md. SCHEMA hæves kun, når datamodellen ændres, og udløser en automatisk backup før migrering. */
-const APP_VERSION = '10.22.0', SCHEMA = 15, BKEY = 'tavleoversigt.backups', BMAX = 3;
+const APP_VERSION = '10.23.0', SCHEMA = 16, BKEY = 'tavleoversigt.backups', BMAX = 3;
 const PK = id => 'tavleoversigt.p.' + id, MEM = {};
 /* Synkronisering: en hemmelig GitHub Gist med en markørfil og én fil pr. projekt. Se docs/planer/2026-11-15-gist-synk.md. */
 const SKEY = 'tavleoversigt.sync', GFIL = 'tavleoversigt.json', GP = id => 'tavleoversigt-' + id + '.json', GPRE = /^tavleoversigt-([A-Za-z0-9_-]+)\.json$/, GH = 'https://api.github.com';
@@ -9,6 +9,9 @@ let SYNK_T = null;
 /* Billeder (skema 15): IndexedDB-databasen tavleoversigt-billeder og en separat hemmelig Gist med en markørfil og én fil pr. billede. Se docs/planer/2026-11-18-brandlukning.md. */
 const BDB = 'tavleoversigt-billeder', BFIL = 'tavleoversigt-billeder.json', BP = id => 'tavleoversigt-billede-' + id + '.txt', BPRE = /^tavleoversigt-billede-([A-Za-z0-9_-]+)\.txt$/, BID = /^[A-Za-z0-9_-]{1,40}$/;
 const BMINI = {}, BFULD = new Set();
+const bIdListe = v => [...new Set((Array.isArray(v) ? v : []).filter(x => typeof x === 'string' && BID.test(x)))];
+/* alle billed-id'er, et projekt bruger (brandlukninger og skema 16: tavler, lokaler, samledåser). Ny billedliste tilføjes kun her */
+const billedIds = d => { const ud = new Set(); if (d) for (const k of ['brandlukninger', 'tavler', 'lokaler', 'daaser']) (Array.isArray(d[k]) ? d[k] : []).forEach(x => { if (x && Array.isArray(x.billeder)) x.billeder.forEach(i => { if (typeof i === 'string' && BID.test(i)) ud.add(i); }); }); return ud; };
 const hashTxt = s => {
   let h1 = 0xdeadbeef, h2 = 0x41c6ce57;
   for (let i = 0; i < s.length; i++) { const c = s.charCodeAt(i); h1 = Math.imul(h1 ^ c, 2654435761); h2 = Math.imul(h2 ^ c, 1597334677); }
@@ -170,7 +173,9 @@ function norm(d) {
   o.brandlukninger = o.brandlukninger.filter(b => b && typeof b === 'object');
   o.brandlukninger.forEach((b, i) => { b.id = typeof b.id === 'string' && b.id ? b.id : 'bl' + (i + 1); b.nr = Math.round(Number(b.nr)) > 0 ? Math.round(Number(b.nr)) : i + 1; b.lokaleId = String(b.lokaleId || '');
     for (const k of ['placering', 'beskrivelse', 'brandklasse', 'produkt', 'note']) b[k] = String(b[k] == null ? '' : b[k]);
-    b.udfoert = !!b.udfoert; b.maerkat = !!b.maerkat; b.billeder = [...new Set((Array.isArray(b.billeder) ? b.billeder : []).filter(x => typeof x === 'string' && BID.test(x)))]; });
+    b.udfoert = !!b.udfoert; b.maerkat = !!b.maerkat; b.billeder = bIdListe(b.billeder); });
+  /* skema 16: billeder på tavler, lokaler og samledåser (forslag 15). Kun id'erne; billederne ligger i IndexedDB */
+  for (const k of ['tavler', 'lokaler', 'daaser']) o[k].forEach(x => { x.billeder = bIdListe(x.billeder); });
   o.tavler.forEach(t => { const g = o.grupper.find(x => x.id === t.fraGruppe); if (g && g.tavleId !== t.id) t.fra = g.tavleId; else t.fraGruppe = ''; });
   return o;
 }

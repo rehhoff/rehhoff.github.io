@@ -53,7 +53,7 @@ const APP_LAGRING = () => ({
     /* backupfilen indeholder også billederne (skema 15) som billeder: { id: data-URL } */
     async hentBackup() {
       this.save(); let txt = this.backupJson(), mangler = 0;
-      const d = JSON.parse(txt), ids = new Set(); d.projekter.forEach(p => (p.data.brandlukninger || []).forEach(b => b.billeder.forEach(i => ids.add(i))));
+      const d = JSON.parse(txt), ids = new Set(); d.projekter.forEach(p => billedIds(p.data).forEach(i => ids.add(i)));
       if (ids.size) { const r = await this.billederTilBackup(ids); mangler = r.mangler; d.billeder = r.billeder; txt = JSON.stringify(d, null, 2); }
       await this.hent('tavleoversigt-backup-' + new Date().toISOString().slice(0, 10) + '.json', txt);
       if (mangler) this.say(mangler + ' billeder findes ikke på denne enhed og er ikke med i backupfilen.');
@@ -104,6 +104,8 @@ const APP_LAGRING = () => ({
           : r.status === 403 || r.status === 429 ? 'GitHub afviste forespørgslen (manglende adgang eller for mange kald). Prøv igen om lidt.' : 'GitHub svarede med fejl ' + r.status + '.');
         e.status = r.status; throw e;
       }
+      /* udenSvar (forslag 21): svaret på PATCH af en billed-Gist er hele Gist'en med alle billeder. Kun statuskoden bruges, og resten af svaret afbrydes */
+      if (o.udenSvar) { try { if (r.body) r.body.cancel(); } catch (e) {} return null; }
       return r.status === 204 ? null : r.json();
     },
     async synkForbind() {
@@ -293,7 +295,7 @@ const APP_LAGRING = () => ({
         '.k{border:1px solid #b3204f;color:#b3204f;padding:4px 6px;margin:4px 0;font-weight:bold}.s{page-break-after:always;break-after:page}.m{color:#555}' +
         '.fa{display:flex;align-items:center;gap:14px;border-bottom:2px solid #111;padding-bottom:8px;margin-bottom:12px}.fa img{max-height:60px;max-width:200px}.fa b{font-size:15px}' +
         '.sig{break-inside:avoid;margin-top:28px}.sig .sb{display:flex;gap:30px}.sig .sb div{flex:1}.sig .l{border-bottom:1px solid #111;height:34px}.sig .t{font-size:10px;color:#555;margin:2px 0 8px}' +
-        'img.bl{height:22mm;max-width:32mm;object-fit:cover;border:1px solid #999;margin:1px}.bl-st{white-space:nowrap}@media print{body{margin:0}}</style></head><body>';
+        'img.bl{height:22mm;max-width:32mm;object-fit:cover;border:1px solid #999;margin:1px}.bd{break-inside:avoid;margin:0 0 6px}.bd p{margin:2px 0}.bl-st{white-space:nowrap}@media print{body{margin:0}}</style></head><body>';
       const fl = [f.cvr && 'CVR ' + f.cvr, f.adresse, f.telefon && 'Tlf. ' + f.telefon].filter(Boolean);
       if (f.navn || fl.length || f.logo) h += '<div class="fa">' + (/^data:image\//.test(f.logo || '') ? '<img src="' + esc(f.logo) + '" alt="Logo">' : '') + '<div>' + (f.navn ? '<b>' + esc(f.navn) + '</b><br>' : '') + esc(fl.join(' · ')) + '</div></div>';
       h += '<section class="s"><h1>' + esc(p.navn || 'Projekt') + '</h1><table class="st"><tr><th>Sagsnr.</th>' + td(p.sagsnr) + '<th>Kunde</th>' + td(p.kunde) + '</tr><tr><th>Adresse</th>' + td(p.adresse) + '<th>Installatør</th>' + td(p.installatoer) + '</tr><tr><th>Dato</th>' + td(p.dato) +
@@ -340,7 +342,7 @@ const APP_LAGRING = () => ({
           '<p>' + esc((a.art === 'krone' ? 'Tænding 1: ' : 'Lamper: ') + (this.afbLamper(a, 'a') || 'ingen valgt') + (a.art === 'krone' ? ' · Tænding 2: ' + (this.afbLamper(a, 'b') || 'ingen valgt') : '')) + '</p></div>';
         h += '</section>';
       }
-      h += this.brandDocHtml();
+      h += this.billedDocHtml() + this.brandDocHtml();
       const blok = t => '<div><b>' + t + '</b><div class="l"></div><div class="t">Navn</div><div class="l"></div><div class="t">Dato</div><div class="l"></div><div class="t">Underskrift</div></div>';
       h += '<section class="sig"><h2>Underskrift</h2><div class="sb">' + blok('Montør') + blok('Ansvarlig for kvalitetsledelsessystem (KLS)') + '</div></section>';
       return h + '</body></html>';

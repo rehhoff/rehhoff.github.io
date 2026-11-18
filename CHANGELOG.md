@@ -2,6 +2,19 @@
 
 Nyeste øverst. Versionsnummeret står også i appen som `APP_VERSION`. Hver version siger, hvilken model der lavede den.
 
+## 10.23.0 · 2026-11-18 · Claude Opus
+
+Billeder på tavler, lokaler og samledåser, oprydning af billeder og mange billeder (forslag 15, 20 og 21). Plan: `docs/planer/2026-11-18-billeder.md`. **Skema 16.**
+
+- **Billeder på tavler, lokaler og samlepunkter** (fx placeringen af en skjult dåse): "Tag billede" og "Vælg billeder" i formularerne, som ved brandlukning. Formularerne bruger nu ét fælles billedfelt. Miniaturer i tavlens hoved, på lokalets kort og i listen over samlepunkter. Tryk viser billedet i fuld størrelse. Duplikering og serier kopierer ikke billeder.
+- Dokumentationen får afsnittet **Billeder** med små billeder pr. tavle, lokale og samlepunkt.
+- Billederne synkroniseres og kommer med i backupfilen som brandlukningernes billeder.
+- **Mange billeder:** højst 250 billeder pr. billed-Gist. Derefter oprettes en ny. Svaret på en upload læses ikke længere, så billederne ikke hentes ned igen. Første synkronisering i en session kontrollerer listen og sender et brugt billede igen, hvis det mangler på GitHub.
+- **Lageradvarsel**, når browserens lager er over 80 % fuldt eller har under 50 MB tilbage (`navigator.storage.estimate`). Vises ved billedfeltet, på fanen Brandlukning og under Datasikring.
+- **Find ubrugte billeder …** under Datasikring: finder billeder på enheden og i billed-Gists, som intet projekt i browseren, ingen automatisk backup, fortryd-listen og intet projekt i kontoens projekt-Gists (andre enheder) bruger. Viser antal og størrelse og sletter først efter bekræftelse. Kan noget ikke læses, slettes intet. Billeder på enheden, der er nyere end 24 timer, røres ikke. Gist'ens historik tjekkes ikke, og det står i dialogen.
+- Datamodel: `billeder[]` på `tavler`, `lokaler` og `daaser`. Første start tager automatisk en backup. Ingen eksisterende felter er ændret.
+- Røgtesten har nye tjek for opgradering fra skema 15, billeder i formularer, lister og dokumentation, synk, nye billed-Gists ved grænsen, lageradvarsel og oprydning.
+
 ## 10.22.0 · 2026-11-18 · Claude Opus
 
 Enstregsdiagram: træk for at flytte en forbindelse, og Tilgang i serie. Plan: `docs/planer/2026-11-18-enstreg-traek.md`.
