@@ -1,9 +1,11 @@
 /* Diagrammer: enstregsdiagram, sporing gennem installationen, afbrydere og tændingsdiagram. Metoderne samles i app() i js/app.js, så this er hele app-tilstanden. */
+const SLDP = new Map();
 const APP_DIAGRAM = () => ({
     /* enstregsdiagram: SVG bygges ud fra projektets data */
     symbolFor(e) {
       if (e.symbol && e.symbol !== 'auto' && this.symNavn[e.symbol]) return e.symbol;
       const n = String(e.navn || '').toLowerCase(), t = this.typeOf(e);
+      if (/^\s*tilgang/.test(n)) return 'tilgang';
       if (/stik/.test(n)) return 'stik';
       if (/lade/.test(n)) return 'ev';
       if (/frys/.test(n)) return 'frys';
@@ -42,6 +44,7 @@ const APP_DIAGRAM = () => ({
         case 'opvask': return R + ln(x - 9, y + 9, x + 17, y - 9) + ring(cx - 7, y - 4, 2) + ring(cx + 7, y + 4, 2);
         case 'vask': return R + ring(cx, y, 6);
         case 'toerre': return R + ring(cx, y, 6) + ring(cx, y, 1.8, 'dot');
+        case 'tilgang': return `<path class="l f" d="M ${x - 10} ${y} L ${x} ${y - 10} L ${x + 10} ${y} L ${x} ${y + 10} Z"/>` + ring(x, y, 3.6, 'dot');
         case 'emhaette': return `<path class="l f" d="M ${x - 9} ${y + 8} L ${x + 17} ${y + 8} L ${x + 10} ${y - 8} L ${x - 2} ${y - 8} Z"/>` + ln(x - 5, y + 3, x + 13, y + 3);
         default: return `<rect class="l f" x="${x - 9}" y="${y - 8}" width="26" height="16"/>` + tx(cx, ({ ev:'EV', it:'IT', rk:'RK', rj:'RJ', sw:'SW', nvr:'NVR', rt:'RT', vvb:'VVB', vp:'VP', ut:'UT' })[kind] || '');
       }
@@ -59,7 +62,7 @@ const APP_DIAGRAM = () => ({
       const opGruppe = (gid, n) => { const g = this.gruppe(gid); if (!g) return []; const r = this.rcd(g); return opTavle(g.tavleId, n).concat(r ? [{ key:'r:' + r.id, txt:r.navn }] : [], [{ key:'g:' + g.id, txt:'G' + g.nr + ' ' + g.navn }]); };
       const opDaase = did => { const ks = []; let x = this.daase(did), n = 0; while (x && n++ < 20) { ks.unshift({ key:'d:' + x.id, txt:x.type + ' ' + x.navn }); x = this.daase(x.parentId); } return ks; };
       const opRack = rid => { const r = this.rack(rid); return r ? opGruppe(r.gruppeId).concat([{ key:'k:' + r.id, txt:'Rack ' + r.navn }]) : []; };
-      if (a === 'e' && (o = d.enheder.find(e => e.id === id))) { const af = this.afbFor(id); return opGruppe(o.gruppeId).concat(opDaase(o.daaseId), af ? [{ key:'a:' + af.id, txt:af.navn }] : [], [{ key:sel, txt:o.navn }]); }
+      if (a === 'e' && (o = d.enheder.find(e => e.id === id))) { const af = this.afbFor(id); return opGruppe(o.gruppeId).concat(opDaase(this.enhedDaase(o)), this.sloejfeVej(o).reverse().map(p => ({ key:'e:' + p.id, txt:p.navn })), af ? [{ key:'a:' + af.id, txt:af.navn }] : [], [{ key:sel, txt:o.navn }]); }
       if (a === 'a' && (o = d.afbrydere.find(x => x.id === id))) return opGruppe(o.gruppeId).concat([{ key:sel, txt:o.navn }]);
       if (a === 'd' && (o = this.daase(id))) return opGruppe(o.gruppeId).concat(opDaase(id));
       if (a === 'g') return opGruppe(id);
@@ -218,7 +221,7 @@ const APP_DIAGRAM = () => ({
         lokSet = new Set(); const med = key => this.spor(key).forEach(x => lokSet.add(x.key)), i = x => x.lokaleId === this.lokF;
         this.db.enheder.filter(i).forEach(e => med('e:' + e.id)); this.db.daaser.filter(i).forEach(d => med('d:' + d.id)); this.db.links.filter(i).forEach(l => med('x:' + l.id)); this.db.racks.filter(i).forEach(r => med('k:' + r.id)); this.db.afbrydere.filter(i).forEach(x => med('a:' + x.id));
       }
-      const k = (key, cls, inner, x, y, w) => `<g class="k ${cls}${sel === key ? ' on' : ''}${sporSet.has(key) ? ' tr' : ''}${lokSet && !lokSet.has(key) ? ' dim' : ''}" data-k="${key}"><rect class="hit" x="${x}" y="${y - ROW / 2}" width="${w}" height="${ROW}"/>${inner}</g>`;
+      const k = (key, cls, inner, x, y, w, ekstra) => `<g class="k ${cls}${sel === key ? ' on' : ''}${sporSet.has(key) ? ' tr' : ''}${lokSet && !lokSet.has(key) ? ' dim' : ''}" data-k="${key}"${ekstra || ''}><rect class="hit" x="${x}" y="${y - ROW / 2}" width="${w}" height="${ROW}"/>${inner}</g>`;
       const sw = (x, y) => `<circle class="l" cx="${x - 12}" cy="${y}" r="1.5"/>` + ln(x - 12, y, x + 9, y - 10);
       const mcb = (x, y) => sw(x, y) + ln(x + 8.5, y - 3.5, x + 15.5, y + 3.5) + ln(x + 8.5, y + 3.5, x + 15.5, y - 3.5);
       const rcdS = (x, y) => sw(x, y) + `<ellipse class="l" cx="${x + 26}" cy="${y}" rx="4" ry="9"/>`;
@@ -231,18 +234,29 @@ const APP_DIAGRAM = () => ({
       const afSym = (art, x, y) => `<g class="l" stroke-linecap="round" stroke-linejoin="round" transform="translate(${x - 9} ${y - (afLav(art) ? 13.5 : 9)}) scale(.9)">${this.afbSti(art)}</g>`;
       const afTxt = af => this.afbArt[af.art] + (af.art === 'kryds' || af.art === 'kip' || af.art === 'trappe' ? ' · ' + this.afbSteder(af) + ' steder' : '');
       const drawKids = (gr, did, bx, yy, seen) => {
-        const es = this.db.enheder.filter(e => e.gruppeId === gr.id && (did ? e.daaseId === did : !this.daase(e.daaseId)));
+        /* Kun rødder tegnes fra tavlen/dåsen. Sløjfer (fraEnhed) tegnes lige under den, de er sløjfet fra, og starter i en forgreningsprik på dens streg.
+           Børn uden egne sløjfer først, så fire udtag med hver sin stikkontakt giver U1, S1, U2, S2 … */
+        const es = this.db.enheder.filter(e => e.gruppeId === gr.id && (did ? e.daaseId === did : !this.daase(e.daaseId)) && !this.enhed(e.fraEnhed));
         const ds = this.db.daaser.filter(d => d.gruppeId === gr.id && (did ? d.parentId === did : !this.daase(d.parentId)) && !seen.has(d.id));
         let r = yy, last = yy;
-        for (const e of es) {
-          last = r; const eb = (this.duOver(e) || this.izFejl(e)) ? 'bad' : '', af = afbAf.get(e.id), gab = af ? afGab(af.art) : null;
-          o.push(k('e:' + e.id, eb, (af ? ln(bx, r, XA - gab[0], r) + ln(XA + gab[1], r, XE - 9, r) : ln(bx, r, XE - 9, r)) + load(this.symbolFor(e), XE, r) +
-            tx(bx + 10, r - 6, 'G' + gr.nr + ' | ' + gr.In + 'A | ' + e.ledere + this.fmt(e.tv) + ' ' + kort(e.kabel, 9) + ' | ' + this.fmt(e.laengde) + 'm') +
-            tx(XE + 26, r - 1, kort(e.navn, 38)) + tx(XE + 26, r + 12, this.lokaleNavn(e.lokaleId) + ' · ' + (e.effekt ? e.effekt + ' W · ΔU ' + this.fmt(this.du(e), 2) + ' %' : 'ingen fast last'), 'm'), bx + 3, r, W - bx - 10));
-          if (af) o.push(`<g class="k af${sel === 'a:' + af.id ? ' on' : ''}${sporSet.has('a:' + af.id) ? ' tr' : ''}${lokSet && !lokSet.has('a:' + af.id) ? ' dim' : ''}" data-k="a:${af.id}"><title>${esc(af.navn + ' · ' + afTxt(af))}</title>` +
+        const cl = key => (sporSet.has(key) ? ' tr' : '') + (lokSet && !lokSet.has(key) ? ' dim' : '');
+        const tegnE = (e, sx, fra, eSet) => {
+          eSet.add(e.id); const ry = r, eb = (this.duOver(e) || this.izFejl(e)) ? 'bad' : '', af = afbAf.get(e.id), gab = af ? afGab(af.art) : null;
+          const kids = this.sloejfer(e.id).filter(x => !eSet.has(x.id)), px = Math.min(sx + 24, XA - 60);
+          kids.sort((a, b) => (this.sloejfer(a.id).length ? 1 : 0) - (this.sloejfer(b.id).length ? 1 : 0));
+          o.push(k('e:' + e.id, eb, (af ? ln(sx, r, XA - gab[0], r) + ln(XA + gab[1], r, XE - 9, r) : ln(sx, r, XE - 9, r)) + load(this.symbolFor(e), XE, r) +
+            (kids.length ? `<circle class="dot sp" data-sp="${e.id}" cx="${px}" cy="${r}" r="3"/>` : '') +
+            tx(sx + 10, r - 6, (fra ? '' : 'G' + gr.nr + ' | ' + gr.In + 'A | ') + e.ledere + this.fmt(e.tv) + ' ' + kort(e.kabel, 9) + ' | ' + this.fmt(e.laengde) + 'm') +
+            tx(XE + 26, r - 1, kort(e.navn, 38)) + tx(XE + 26, r + 12, this.lokaleNavn(e.lokaleId) + ' · ' + (e.effekt ? e.effekt + ' W · ΔU ' + this.fmt(this.du(e), 2) + ' %' : 'ingen fast last') + (fra ? ' · sløjfe fra ' + kort(fra.navn, 18) : ''), 'm'), sx + 3, r, W - sx - 10, ' data-fra="' + (fra ? fra.id : '') + '"'));
+          if (af) o.push(`<g class="k af${sel === 'a:' + af.id ? ' on' : ''}${cl('a:' + af.id)}" data-k="a:${af.id}"><title>${esc(af.navn + ' · ' + afTxt(af))}</title>` +
             `<rect class="hit" x="${XA - 15}" y="${r - ROW / 2 + 2}" width="30" height="${ROW - 4}" rx="3"/>${afSym(af.art, XA, r)}${af.art === 'krone' ? tx(XA, r + 15, af.a.includes(e.id) ? '1' : '2', 'm', 'middle') : ''}</g>`);
           r += ROW;
-        }
+          const stik = [];
+          for (const c of kids) { if (eSet.has(c.id)) continue; stik.push([c.id, r]); tegnE(c, px, e, eSet); }
+          /* lodrette sløjfestreger: længste først, så en fremhævet kort streg ikke dækkes af en længere */
+          stik.reverse().forEach(([cid, cy]) => o.push(`<g class="k sl${cl('e:' + cid)}">${ln(px, ry, px, cy)}</g>`));
+        };
+        for (const e of es) { last = r; tegnE(e, bx, null, new Set()); }
         for (const af of (did ? [] : this.db.afbrydere.filter(x => x.gruppeId === gr.id && !afbVist.has(x.id)))) {
           last = r; const gab = afGab(af.art);
           o.push(k('a:' + af.id, '', ln(bx, r, XA - gab[0], r) + afSym(af.art, XA, r) + tx(bx + 10, r - 6, 'G' + gr.nr + ' | ' + gr.In + 'A | afbryder') +
@@ -389,8 +403,27 @@ const APP_DIAGRAM = () => ({
     sldEdit() { const i = this.sldInfo(); if (i) this.openForm(i.type, i.obj); },
     sldClick(ev) { if (this.panMoved) return; const el = ev.target.closest && ev.target.closest('[data-k]'); this.sldSel = el ? el.getAttribute('data-k') : null; },
     sldDbl(ev) { const el = ev.target.closest && ev.target.closest('[data-k]'); if (el) { this.sldSel = el.getAttribute('data-k'); this.sldEdit(); } },
-    panStart(ev) { if (ev.button) return; this.pan = { x:ev.clientX, y:ev.clientY, ox:this.z.x, oy:this.z.y }; this.panMoved = false; },
+    /* Én pointer panorerer. To pointere (to fingre på touch) zoomer om midtpunktet og panorerer samtidig. SLDP holder de aktive pointere. */
+    panStart(ev) {
+      if (ev.button) return; SLDP.set(ev.pointerId, { x:ev.clientX, y:ev.clientY });
+      if (SLDP.size === 2) { this.pinchStart(); return; }
+      if (SLDP.size > 2) return;
+      this.pinch = null; this.pan = { x:ev.clientX, y:ev.clientY, ox:this.z.x, oy:this.z.y }; this.panMoved = false;
+    },
+    pinchMaal() { const [a, b] = [...SLDP.values()], r = this.$refs.sldBox.getBoundingClientRect(); return { d:Math.hypot(a.x - b.x, a.y - b.y) || 1, cx:(a.x + b.x) / 2 - r.left, cy:(a.y + b.y) / 2 - r.top }; },
+    pinchStart() { const m = this.pinchMaal(); this.pinch = Object.assign(m, { z:Object.assign({}, this.z) }); this.pan = null; this.panMoved = true; },
+    panEnd(ev) {
+      if (!SLDP.delete(ev.pointerId)) return;
+      if (SLDP.size === 2) { this.pinchStart(); return; }
+      if (SLDP.size === 1 && this.pinch) { const p = [...SLDP.values()][0]; this.pinch = null; this.pan = { x:p.x, y:p.y, ox:this.z.x, oy:this.z.y }; return; }
+      if (!SLDP.size) { this.pan = null; this.pinch = null; }
+    },
     panMove(ev) {
+      if (SLDP.has(ev.pointerId)) SLDP.set(ev.pointerId, { x:ev.clientX, y:ev.clientY });
+      if (this.pinch && SLDP.size >= 2) {
+        const p = this.pinch, m = this.pinchMaal(), k = Math.min(4, Math.max(0.25, p.z.k * m.d / p.d));
+        this.z = { x:m.cx - (p.cx - p.z.x) * k / p.z.k, y:m.cy - (p.cy - p.z.y) * k / p.z.k, k }; return;
+      }
       const p = this.pan; if (!p) return; const dx = ev.clientX - p.x, dy = ev.clientY - p.y;
       if (Math.abs(dx) + Math.abs(dy) > 4) this.panMoved = true;
       if (this.panMoved) this.z = { x:p.ox + dx, y:p.oy + dy, k:this.z.k };

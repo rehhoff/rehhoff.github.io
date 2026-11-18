@@ -40,7 +40,9 @@ Projekterne ligger i browserens localStorage på `rehhoff.github.io` og kan synk
    Med npm: `npm install` og `python3 tests/smoke.py`. Sæt `PYTHONIOENCODING=utf-8`, hvis æ, ø og å giver fejl i konsollen.
 6. Commit med en beskrivelse på dansk, og nævn planen, hvis der er en. Push branchen.
 7. Claude merger selv (aftalt med Alexander 2026-11-16), når røgtesten giver `OK`. Hent først den nyeste `main` ind i branchen (`git fetch && git merge origin/main`), løs konflikter, sæt versionen ud fra den aktuelle `main`, og kør røgtesten igen. Derefter `git checkout main && git pull && git merge --no-ff <branch>` og `git push origin main`. `gh` er ikke logget ind, så der bruges ingen pull request.
-8. Efter merge: slet branchen lokalt og på GitHub (`git push origin --delete <branch>`), så `main` er den eneste branch, og kontrollér at `APP_VERSION` på https://rehhoff.github.io/ er den nye. Pages er 1–10 minutter om at opdatere. Fortæl Alexander, hvad der er udgivet.
+8. Efter merge: slet branchen lokalt og på GitHub (`git push origin --delete <branch>`), så `main` er den eneste branch, og kontrollér at `APP_VERSION` på https://rehhoff.github.io/ er den nye. Pages er 1–10 minutter om at opdatere. Tag merge-commit'en med versionen (`git tag -a v<version> -m "Udgivet version <version>"` og `git push origin v<version>`), så alle udgivne versioner kan findes og rulles tilbage til. Slet aldrig et versionstag. Fortæl Alexander, hvad der er udgivet.
+9. Tilbagerulning, hvis en ny version ødelægger noget (kun når Alexander beder om det): lav en branch fra `main`, gendan filerne fra det ønskede tag med `git checkout v<gammel> -- .` (`git rm` filer, der er kommet til siden), sæt en ny patch-version de fire steder, kør røgtesten og merge som normalt. Historikken bevares, og fejlen kan rettes bagefter.
+   - Er `SCHEMA` hævet siden den gamle version, så rul ikke tilbage over hævningen uden at spørge. Den gamle app kan ikke synkronisere med en Gist, der har det nyere skema (afsnit 1, punkt 4). Data i browseren er sikret af den automatiske backup (`lavBackup`), men ret hellere fremad.
 
 ## 3. Flere modeller samtidig
 

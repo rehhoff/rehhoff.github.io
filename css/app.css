@@ -50,6 +50,8 @@ kbd{font-family:"IBM Plex Mono",monospace;font-size:.7rem;border:1px solid var(-
 @media (pointer:coarse){.tab kbd{display:none}.btn{min-height:2.5rem}}
 .inp.soeg{width:14rem;padding:.33rem .55rem;font-size:.8125rem}
 @media (max-width:639px){.inp,.inp-s,.inp.soeg{font-size:16px}}
+/* Touchskærme: mindst 16 px i alle felter, så iOS ikke zoomer ind ved indtastning. !important dækker også inline-styles og pop-ups. */
+@media (pointer:coarse){input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]),select,textarea{font-size:16px!important}}
 .tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
 .typed{--t:var(--muted)}
 .typed.lys{--t:var(--lys)} .typed.lysstik{--t:var(--lysstik)} .typed.kraft{--t:var(--kraft)} .typed.stik{--t:var(--stik)} .typed.data{--t:var(--data)} .typed.cctv{--t:var(--cctv)}
@@ -125,7 +127,7 @@ button.din-item{cursor:pointer}
 .tsv .tk{cursor:pointer} .tsv .hit{fill:transparent;stroke:var(--line);stroke-dasharray:2 3}
 .tsv .tk:hover .hit{fill:color-mix(in srgb,var(--accent) 18%,transparent);stroke:var(--accent)}
 .sld svg{display:block}
-.sld .k.dim{opacity:.2}
+.sld .k.dim{opacity:.2} .sld .sl{pointer-events:none}
 .sld .k.tr .l{stroke:var(--accent);stroke-width:2.6} .sld .k.tr .t{fill:var(--accent)} .sld .k.tr .hit{fill:color-mix(in srgb,var(--accent) 12%,transparent)}
 .sld .l{stroke:var(--ink);stroke-width:1.3;fill:none} .sld .f{fill:var(--raised)} .sld .b{stroke-width:3} .sld .b2{stroke-width:2}
 .sld .t{fill:var(--ink);font:11px "IBM Plex Mono",monospace;stroke:none} .sld .m{fill:var(--muted);font:10px "IBM Plex Mono",monospace}
