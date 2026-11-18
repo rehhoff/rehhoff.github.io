@@ -136,6 +136,13 @@ button.din-item{cursor:pointer}
 .sld .bad .l{stroke:var(--crit)} .sld .bad .t{fill:var(--crit)}
 .sld .k:hover .hit{fill:color-mix(in srgb,var(--accent) 10%,transparent)}
 .sld .k.on .hit{fill:color-mix(in srgb,var(--accent) 20%,transparent);stroke:var(--accent);stroke-width:1.5}
+/* træk i enstregsdiagrammet: gyldige slipmål stiplet, målet under pointeren fyldt, ugyldigt mål rødt */
+.sld .k.dok .hit{fill:color-mix(in srgb,var(--accent) 7%,transparent);stroke:var(--accent);stroke-width:1;stroke-dasharray:4 3}
+.sld .k.dmaal .hit{fill:color-mix(in srgb,var(--accent) 30%,transparent);stroke:var(--accent);stroke-width:2.5}
+.sld .k.dnej .hit{fill:color-mix(in srgb,var(--crit) 14%,transparent);stroke:var(--crit);stroke-width:1.5}
+.sld .k.dkilde{opacity:.45}
+.traekmrk{position:fixed;z-index:60;pointer-events:none;max-width:18rem;padding:.3rem .55rem;border-radius:4px;font-size:.8rem;line-height:1.25;background:var(--crit);color:#fff;box-shadow:0 2px 8px rgb(0 0 0/.25)}
+.traekmrk.ok{background:var(--accent);color:var(--on-accent)}
 /* dokumentark: altid lyst papir */
 .sheet{color-scheme:light;background:#fff;color:#111;border:1px solid #9aa0a4;padding:1.25rem;font-size:.82rem}
 .sheet h3{font-family:"Barlow Condensed",sans-serif;font-weight:700;font-size:1.3rem;text-transform:uppercase;letter-spacing:.03em}

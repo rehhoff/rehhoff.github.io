@@ -513,7 +513,7 @@ async def main():
              and r['trae'] == [0, 1, 2, 3, 3] and r['linjer'] == [True, False, True, '[false,false]', '[false,false]', 2] and r['fraTxt'] == ['sløjfe fra F1', 'fra F1', ''] and r['fold'] == [True, False, False, True] and r['orden'] and r['ikkeFoer'] and r['status'] == [True, 'venter på tømrer'] and r['ikkeEfter'] and r['filter']
              and r['kopier'] == 2 and r['gren'] == [4, 2, True, True, 3] and r['grenDu'] and r['kaede'] == ['', True] and r['kaedeKabel'] == ['PVC', 1.5, 4, 'XLPE', 2.5, 2, 'XLPE', 2] and r['slet'] == ['', ''] and r['vist'] and r['redAaben'] and r['red'] == ['XLPE', '5G', 4, 7.5, True] and r['slettet'] and r['fortrudt'] and r['ryddet'], r)
 
-        # 4h2. Enstregsdiagram: sløjfekæde (Tilgang → U1 → U2 …, stikkontakt efter sit eget udtag), forgreningsprikker, sporing og lokalefilter. Tilgang uden last
+        # 4h2. Enstregsdiagram: sløjfekæde (Tilgang i serie → U1 → U2 …, stikkontakt efter sit eget udtag), forgreningsprikker, sporing og lokalefilter. Tilgang uden last
         r = await pg.evaluate(f"""(async()=>{{const a={A};const d=a.db, n0=JSON.stringify([d.tavler.length,d.grupper.length,d.enheder.length]), o={{}}, lok=d.lokaler[0].id;
           const E=(id,navn,fra,sym)=>({{id,gruppeId:'gq',lokaleId:id==='S4'?lok:'',daaseId:'',fraEnhed:fra,navn,effekt:sym==='stik'?230:0,kabel:'PVC',ledere:'3G',tv:2.5,laengde:3,symbol:sym,hoejde:'',placering:'',trukket:false,note:''}});
           try {{
@@ -532,8 +532,8 @@ async def main():
             o.prikker=[...svg.querySelectorAll('circle.sp')].map(c=>c.getAttribute('data-sp')).filter(x=>mine.includes(x)).sort();
             const ln=id=>svg.querySelector('g[data-k="e:'+id+'"] line'), y=id=>Number(ln(id).getAttribute('y1')), x1=id=>Number(ln(id).getAttribute('x1'));
             const prik=id=>svg.querySelector('circle.sp[data-sp="'+id+'"]');
-            o.geo=['U1','S1','U2','S2','U3','S3','U4','S4'].every(c=>{{const p=a.enhed(c).fraEnhed, dot=prik(p);return dot&&Number(dot.getAttribute('cx'))===x1(c)&&Number(dot.getAttribute('cy'))===y(p)&&y(c)>y(p)}});
-            o.raekker=['TQ1','U1','S1','U2','S2','U3','S3','U4','S4'].map(y).every((v,i,l)=>!i||v>l[i-1]);
+            o.geo=['S1','U2','S2','U3','S3','U4','S4'].every(c=>{{const p=a.enhed(c).fraEnhed, dot=prik(p);return dot&&Number(dot.getAttribute('cx'))===x1(c)&&Number(dot.getAttribute('cy'))===y(p)&&y(c)>y(p)}});
+            o.raekker=y('TQ1')===y('U1')&&['U1','S1','U2','S2','U3','S3','U4','S4'].map(y).every((v,i,l)=>!i||v>l[i-1]);
             o.spor=a.spor('e:S4').map(x=>x.key).filter(k=>/^e:/.test(k));
             a.sldSel='e:S4'; a.lokF=lok; const lv=P(a.sld(false)); a.lokF=''; a.sldSel=null;
             const c=id=>lv.querySelector('g[data-k="e:'+id+'"]').getAttribute('class');
@@ -545,8 +545,60 @@ async def main():
           return o}})()""")
         tjek('enstreg: sløjfekæde i rækkefølge, forgreningsprikker, sporing gennem kæden, lokalefilter; Tilgang uden last og ikke talt som brugsgenstand',
              r['orden'] == ['TQ1', 'U1', 'S1', 'U2', 'S2', 'U3', 'S3', 'U4', 'S4'] and r['fra'] == ['', 'TQ1', 'U1', 'U1', 'U2', 'U2', 'U3', 'U3', 'U4']
-             and r['prikker'] == ['TQ1', 'U1', 'U2', 'U3', 'U4'] and r['geo'] and r['raekker'] and r['spor'] == ['e:TQ1', 'e:U1', 'e:U2', 'e:U3', 'e:U4', 'e:S4']
+             and r['prikker'] == ['U1', 'U2', 'U3', 'U4'] and r['geo'] and r['raekker'] and r['spor'] == ['e:TQ1', 'e:U1', 'e:U2', 'e:U3', 'e:U4', 'e:S4']
              and r['live'] == [True, False, False, True, False] and r['tilg'] == ['tilgang', 0, 0, 1] and r['taelling'] == [8, 8, False, 27] and r['ryddet'], r)
+
+        # 4h3. Enstreg: Tilgang i serie mellem gruppeafbryder og sløjfer; flyt forbindelse (sløjfe, dåse, gruppe), kreds og anden gruppe afvist, fortryd, træk med pointer events
+        r = await pg.evaluate(f"""(async()=>{{const a={A};const T=n=>new Promise(f=>setTimeout(f,n));const d=a.db, n0=JSON.stringify([d.tavler.length,d.grupper.length,d.enheder.length,d.daaser.length]), o={{}};
+          const E=(id,navn,fra,sym,g)=>({{id,gruppeId:g||'gt',lokaleId:'',daaseId:'',fraEnhed:fra,navn,effekt:sym==='stik'?230:0,kabel:'PVC',ledere:'3G',tv:2.5,laengde:3,symbol:sym,hoejde:'',placering:'',trukket:false,note:'',fase:''}});
+          const G=(id,nr)=>({{id,tavleId:'tt',nr,navn:'T'+nr,type:'stik',kar:'B',In:13,faser:1,fase:'L1',rcdId:'',sf:1,brydeevne:6,maal:{{riso:'',zs:'',rcd:'',ok:false}},metode:'',temp:'',samlet:'',lag:''}});
+          try {{
+            a.mutate(()=>{{d.tavler.push({{id:'tt',navn:'TT',placering:'',forsikring:35,hovedafbryder:0,fra:'',fraGruppe:'',tilgang:'',tKabel:'PVC',tLedere:'5G',tTv:6,tLaengde:0,ze:0,ikMaks:0,tTrukket:false,tNote:''}});
+              d.grupper.push(G('gt',1),G('gt2',2));
+              d.daaser.push({{id:'DT',gruppeId:'gt',parentId:'',lokaleId:'',type:'PL-dåse',navn:'PL1',kabel:'PVC',ledere:'3G',tv:2.5,laengde:4,trukket:false,note:''}});
+              d.enheder.push(E('V1','Vægudtag 1','TT1','gen'),E('A1','Stik A1','V1','stik'),E('V2','Vægudtag 2','V1','gen'),E('A2','Stik A2','V2','stik'),E('V3','Vægudtag 3','V2','gen'),E('A3','Stik A3','V3','stik'),
+                E('V4','Vægudtag 4','V3','gen'),E('A4','Stik A4','V4','stik'),E('TT1','Tilgang','','auto'),E('L1','Lampe','','lys'),E('Y1','Anden','','stik','gt2'));
+              d.enheder.find(x=>x.id==='L1').daaseId='DT';}});
+            const P=h=>new DOMParser().parseFromString(h,'image/svg+xml'), svg=P(a.sld(true)), ln=id=>svg.querySelector('g[data-k="'+id+'"] line'), num=(el,k)=>Number(el.getAttribute(k));
+            const gl=ln('g:gt'), tg=svg.querySelector('g[data-k="e:TT1"]'), tx=num(tg,'data-tx'), xMcb=num(gl,'x2')+12;
+            const kids=['V1','A1','V2','A2','V3','A3','V4','A4'].map(id=>num(ln('e:'+id),'x1'));
+            o.serie=[xMcb<tx, num(ln('e:TT1'),'y1')===num(gl,'y1'), kids.every(x=>x>tx), num(ln('e:V1'),'x1')===Math.max(...[...tg.querySelectorAll('line')].map(l=>num(l,'x2'))), /tilg/.test(tg.getAttribute('class')),
+              tg.querySelector('path').getAttribute('d').startsWith('M '+(tx-10)+' ')];
+            const f=id=>a.enhed(id);
+            o.tilEnhed=[a.flytEnhed('A4','e:TT1'), f('A4').fraEnhed]; o.besked=a.toasts.some(t=>t.txt==='Stik A4 er nu sløjfet fra Tilgang.'&&t.undo);
+            o.tilDaase=[a.flytEnhed('A4','d:DT'), f('A4').fraEnhed, f('A4').daaseId];
+            o.tilGruppe=[a.flytEnhed('A4','g:gt'), f('A4').fraEnhed, f('A4').daaseId];
+            o.kreds=[a.flytEnhed('V1','e:A2'), f('V1').fraEnhed, a.toasts.some(t=>t.fejl&&/sløjfet fra Vægudtag 1/.test(t.txt))];
+            o.anden=[a.flytEnhed('A1','e:Y1'), f('A1').fraEnhed, a.flytTjek('A1','g:gt2').ok];
+            a.flytEnhed('A3','e:V1'); o.foer=f('A3').fraEnhed; a.undo(); o.fortryd=a.enhed('A3').fraEnhed;
+            o.valg=a.flytValg('A2').map(v=>v.key).sort().join(',');
+            a.toasts.slice().forEach(t=>a.lukToast(t.id));
+            /* træk i den levende visning: langt tryk på Stik A2, flyt hen på Stik A1 og så på Tilgang, slip */
+            a.go('enstreg'); await T(200); const box=a.$refs.sldBox; box.scrollIntoView(); await T(50);
+            const q=k=>document.querySelector('.sld g[data-k="'+k+'"] .hit'), bb=q('e:A2').getBBox(), bt=q('e:TT1').getBBox();
+            a.z={{x:8-bt.x+40,y:box.clientHeight/2-bb.y,k:1}}; await T(80);
+            const c=el=>{{const r=el.getBoundingClientRect();return [r.left+Math.min(60,r.width/2),r.top+r.height/2]}}, p0=c(q('e:A2')), p1=c(q('e:TT1')), p2=c(q('e:A1'));
+            const PE=(type,x,y,el)=>(el||window).dispatchEvent(new PointerEvent(type,{{pointerId:7,clientX:x,clientY:y,bubbles:true,pointerType:'mouse',button:0,isPrimary:true}}));
+            PE('pointerdown',p0[0],p0[1],q('e:A2')); await T(500); o.startet=!!a.traek;
+            PE('pointermove',p2[0],p2[1]); await T(80); const cls=k=>document.querySelector('.sld g[data-k="'+k+'"]').getAttribute('class');
+            o.fremh=[/dmaal/.test(cls('e:A1')), /dok/.test(cls('e:TT1')), /dok/.test(cls('g:gt')), /dkilde/.test(cls('e:A2')), !/dok/.test(cls('e:Y1')), /dok/.test(cls('e:V4'))];
+            PE('pointermove',p1[0],p1[1]); await T(80); o.mrk=document.querySelector('.traekmrk').textContent; o.maal=a.traek&&a.traek.maal;
+            PE('pointerup',p1[0],p1[1]); await T(80); o.traek=[a.enhed('A2').fraEnhed, a.traek, SLDP.size];
+            a.undo(); await T(50); o.traekFortryd=a.enhed('A2').fraEnhed;
+            /* kort tryk og træk panorerer stadig */
+            const z0=a.z.x; PE('pointerdown',p0[0],p0[1],q('e:A2')); PE('pointermove',p0[0]+60,p0[1]); await T(450); PE('pointerup',p0[0]+60,p0[1]); await T(50);
+            o.pan=[a.z.x-z0, a.traek, a.enhed('A2').fraEnhed];
+          }} finally {{
+            const d=a.db; d.enheder=d.enheder.filter(x=>!['gt','gt2'].includes(x.gruppeId)); d.daaser=d.daaser.filter(x=>x.id!=='DT'); d.grupper=d.grupper.filter(x=>!['gt','gt2'].includes(x.id)); d.tavler=d.tavler.filter(x=>x.id!=='tt'); a.save();
+          }}
+          o.ryddet=JSON.stringify([a.db.tavler.length,a.db.grupper.length,a.db.enheder.length,a.db.daaser.length])===n0;
+          return o}})()""")
+        tjek('enstreg: Tilgang i serie, flyt forbindelse til sløjfe/dåse/gruppe, kreds og anden gruppe afvist, fortryd, træk med langt tryk og fremhævning, kort træk panorerer',
+             r['serie'] == [True] * 6 and r['tilEnhed'] == [True, 'TT1'] and r['besked'] and r['tilDaase'] == [True, '', 'DT'] and r['tilGruppe'] == [True, '', '']
+             and r['kreds'] == [False, 'TT1', True] and r['anden'] == [False, 'V1', False] and r['foer'] == 'V1' and r['fortryd'] == 'V3'
+             and r['valg'] == 'd:DT,e:A1,e:A3,e:A4,e:L1,e:TT1,e:V1,e:V3,e:V4,g:gt'
+             and r['startet'] and r['fremh'] == [True] * 6 and r['maal'] == 'e:TT1' and r['mrk'] == 'Stik A2 → Tilgang' and r['traek'] == ['TT1', None, 0]
+             and r['traekFortryd'] == 'V2' and r['pan'] == [60, None, 'V2'] and r['ryddet'], r)
 
         # 4i. Pop-up med typiske samtidighedsfaktorer: åbnes fra Beregning, viser forslag og tabellen, valg sætter gruppens faktor
         r = await pg.evaluate(f"""(async()=>{{const a={A};const T=n=>new Promise(f=>setTimeout(f,n));const g=a.db.grupper.find(x=>x.type==='stik'), sf0=g.sf, o={{}};
