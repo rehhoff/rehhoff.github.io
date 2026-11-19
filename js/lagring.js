@@ -10,6 +10,7 @@ const APP_LAGRING = () => ({
     meta(id, d) { const p = d.projekt; return { id, navn:p.navn || 'Uden navn', sagsnr:p.sagsnr, kunde:p.kunde, adresse:p.adresse, grupper:d.grupper.length, enheder:d.enheder.length, opdateret:new Date().toISOString() }; },
     skrivIdx() { try { localStorage.setItem(IDX, JSON.stringify({ aktiv:this.pid, liste:this.projekter, schema:SCHEMA, app:APP_VERSION, sidstBackup:this.sidstBackup || '' })); } catch (e) { this.storageOk = false; } this.synkSenere(); },
     save() {
+      this.dbRev++;
       this.storageOk = true; this.skriv(this.pid, this.db);
       const m = this.meta(this.pid, this.db), i = this.projekter.findIndex(p => p.id === this.pid);
       if (i > -1) this.projekter.splice(i, 1, m); else this.projekter.push(m);

@@ -191,7 +191,8 @@ const APP_BEREGNING = () => ({
       r.txt = r.status === 'fejl' ? 'Fejl: ' + r.fejl.join(', ') : r.status === 'ok' ? 'OK' : 'Mangler måling';
       return r;
     },
-    warnings() {
+    warnings() { return this.memo('warnings', [], () => this.warningsRaw()); },
+    warningsRaw() {
       const out = [];
       for (const t of this.db.tavler) {
         const f = this.faseInfo(t.id);
@@ -268,7 +269,8 @@ const APP_BEREGNING = () => ({
     setRcd(gid, rid) { const g = this.gruppe(gid); if (g) this.mutate(() => { g.rcdId = rid; }); },
     sumLen(rows) { return rows.reduce((s, r) => s + (Number(r.e.laengde) || 0), 0); },
     fmt(n, d) { return Number(n || 0).toLocaleString('da-DK', { maximumFractionDigits: d == null ? 1 : d }); },
-    stats() {
+    stats() { return this.memo('stats', [], () => this.statsRaw()); },
+    statsRaw() {
       const w = this.warnings().length, u = this.enhederFor('').length;
       return [
         { l:'Grupper', v:this.db.grupper.length }, { l:'Brugsgenstande', v:this.db.enheder.filter(e => this.symbolFor(e) !== 'tilgang').length }, { l:'Samlepunkter', v:this.db.daaser.length },
@@ -279,7 +281,8 @@ const APP_BEREGNING = () => ({
     },
 
     /* kabeltabel */
-    rows() {
+    rows() { const f = this.filter; return this.memo('rows', [f.q, f.tavle, f.type, f.lokale, this.lokF, this.sort.key, this.sort.dir], () => this.rowsRaw()); },
+    rowsRaw() {
       const f = this.filter, q = f.q.trim().toLowerCase();
       const rs = this.db.enheder.map(e => {
         const g = this.gruppe(e.gruppeId);

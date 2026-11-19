@@ -350,7 +350,7 @@ async def main():
         # Vurdering af målinger
         r = await pg.evaluate(f"""(()=>{{const a={A};const g=a.db.grupper.find(x=>a.rcd(x));const gem=JSON.stringify(g);
           Object.assign(g,{{kar:'B',In:10}});g.maal={{riso:'>999',zs:'3,0',rcd:'25',ok:true}};const ok=a.maalVurdering(g);
-          g.maal.zs='3,1';const over=a.maalVurdering(g);const adv=a.warnings().some(w=>w.k==='m'+g.id);
+          g.maal.zs='3,1';const over=a.maalVurdering(g);a.dbRev++;const adv=a.warnings().some(w=>w.k==='m'+g.id);
           g.maal={{riso:'0,5',zs:'',rcd:'350',ok:false}};const flere=a.maalVurdering(g);
           const rcdId=g.rcdId;g.rcdId='';g.maal={{riso:'2',zs:'1',rcd:'999',ok:true}};const udenRcd=a.maalVurdering(g);g.rcdId=rcdId;
           const c16=a.zsMax({{kar:'C',In:16}});Object.assign(g,JSON.parse(gem));
@@ -421,7 +421,7 @@ async def main():
 
         # 4e. Kortslutningsstrøm og selektivitet med kendte tal (aftalt 2026-11-16). Ændringerne gemmes ikke.
         r = await pg.evaluate(f"""async()=>{{const a={A};const d=a.db, n={{t:d.tavler.length,g:d.grupper.length,r:d.rcds.length,e:d.enheder.length,d:d.daaser.length}}, o={{}}, T=ms=>new Promise(f=>setTimeout(f,ms));
-          const w=k=>a.warnings().some(x=>x.k===k), rd=x=>Math.round(x*1000)/1000;
+          const w=k=>{{a.dbRev++;return a.warnings().some(x=>x.k===k)}}, rd=x=>Math.round(x*1000)/1000;
           try {{
             d.tavler.push({{id:'tk',navn:'TK',placering:'',forsikring:25,hovedafbryder:0,fra:'',fraGruppe:'',tilgang:'',tKabel:'PVC',tLedere:'5G',tTv:6,tLaengde:0,ze:0,ikMaks:0}});
             d.rcds.push({{id:'rk',tavleId:'tk',navn:'HPFI K',type:'A',In:40,idn:30,selektiv:false}});

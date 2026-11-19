@@ -128,6 +128,12 @@ function app() {
       return (IDXC = { db, rev, n1, n2, n3, n4, tavle:m(db.tavler), gruppe:m(db.grupper), daase:m(db.daaser), enhed:m(db.enheder), kids:null });
     },
     /* børneindeks (id → liste i db-rækkefølge), bygges først ved brug. Nulstilles, når idx() bygges igen */
+    /* mellemlagring af tunge afledte værdier: gentages kun, når db (dbRev og listernes længde) eller de givne tilstandsværdier ændrer sig. Intet må ændre en returneret værdi. deps skal læses reaktivt af kalderen */
+    memo(navn, deps, fn) {
+      const c = this.idx(), m = MEMO[navn];
+      if (m && m.db === c.db && m.rev === c.rev && m.n1 === c.n1 && m.n2 === c.n2 && m.n3 === c.n3 && m.n4 === c.n4 && m.d.length === deps.length && m.d.every((v, i) => v === deps[i])) return m.v;
+      const v = fn(); MEMO[navn] = { db:c.db, rev:c.rev, n1:c.n1, n2:c.n2, n3:c.n3, n4:c.n4, d:deps, v }; return v;
+    },
     kid() {
       const c = this.idx(); if (c.kids) return c.kids; const db = this.db;
       const g = (L, f) => { const r = new Map(); for (const x of L) { const k = f(x); (r.get(k) || r.set(k, []).get(k)).push(x); } return r; };
@@ -148,7 +154,7 @@ function app() {
     rcd(g) { return this.db.rcds.find(r => r.id === g.rcdId && r.tavleId === g.tavleId); },
     rcdNavn(g) { const r = this.rcd(g); return r ? r.navn : ''; },
     rcdTxt(g) { const r = this.rcd(g); return r ? r.navn + ', ' + r.idn + ' mA type ' + r.type + (r.selektiv ? ' S' : '') : 'Ingen'; },
-    sorteredeGrupper() { return this.db.tavler.flatMap(t => this.grupperFor(t.id)); },
+    sorteredeGrupper() { return this.memo('sorteredeGrupper', [], () => this.db.tavler.flatMap(t => this.grupperFor(t.id))); },
     enhederFor(gid) { return (this.kid().enhGruppe.get(gid) || []).slice(); },
     enhederILokale(lid) { return this.db.enheder.filter(e => e.lokaleId === lid); },
     lokalerIGruppe(gid) { const ids = new Set(this.enhederFor(gid).map(e => e.lokaleId)); return this.db.lokaler.filter(l => ids.has(l.id)); },
@@ -247,7 +253,8 @@ function app() {
         .concat((this.kid().afbDaase.get(d.id) || []).filter(a => !a.fraEnhed).map(a => this.fvNode('afb', a)))
         .concat((this.kid().daaseParent.get(d.id) || []).map(x => this.fvDaase(x, seen)).filter(Boolean)));
     },
-    foeringTrae() {
+    foeringTrae() { return this.memo('foeringTrae', [this.lokF, this.fvIkke, this.fvFold, this.fvAaben], () => this.foeringTraeRaw()); },
+    foeringTraeRaw() {
       const seen = new Set(), lok = this.lokF, ikke = this.fvIkke, filt = !!(lok || ikke);
       const harKabel = n => n.kind === 'tavle' ? Number(n.o.tLaengde) > 0 : n.kind !== 'gruppe' && Number(n.o.laengde) > 0;
       const match = n => n.kind !== 'tavle' && n.kind !== 'gruppe' && (!lok || n.o.lokaleId === lok) && (!ikke || (harKabel(n) && !n.o.trukket));
@@ -305,7 +312,8 @@ function app() {
       if (r.kind === 'daase') return o.type + ' ' + o.navn; if (r.kind === 'afb') return (this.afbArt[o.art] || 'Afbryder') + ' ' + o.navn; return o.navn;
     },
     fvSted(r) { const o = r.o; if (r.kind === 'tavle' || r.kind === 'gruppe') return ''; return [o.placering, o.hoejde ? o.hoejde + ' cm' : '', this.lokF || !o.lokaleId ? '' : this.lokaleNavn(o.lokaleId)].filter(Boolean).join(' · '); },
-    fvOptael() {
+    fvOptael() { return this.memo('fvOptael', [this.lokF], () => this.fvOptaelRaw()); },
+    fvOptaelRaw() {
       let i = 0, t = 0; const lok = this.lokF, laeg = (L, ok) => { L = Number(L) || 0; if (ok) t += L; else i += L; };
       this.db.enheder.concat(this.db.daaser, this.db.afbrydere).filter(x => !lok || x.lokaleId === lok).forEach(x => laeg(x.laengde, x.trukket)); if (!lok) this.db.tavler.forEach(x => laeg(x.tLaengde, x.tTrukket));
       return { trukket:t, ikke:i };
@@ -813,7 +821,8 @@ function app() {
     },
 
     /* fejlfinder: manglende koblinger */
-    mangler() {
+    mangler() { return this.memo('mangler', [], () => this.manglerRaw()); },
+    manglerRaw() {
       const out = [], d = this.db;
       d.enheder.filter(e => !this.gruppe(e.gruppeId)).forEach(e => out.push({ k:'g' + e.id, kat:'gruppe', navn:e.navn, txt:'Ikke tildelt en gruppe.', type:'enhed', obj:e, spor:'' }));
       for (const x of d.daaser) {
