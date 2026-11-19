@@ -2,6 +2,14 @@
 
 Nyeste øverst. Versionsnummeret står også i appen som `APP_VERSION`. Hver version siger, hvilken model der lavede den.
 
+## 10.25.0 · 2026-11-19 · Claude Sonnet
+
+Føringsvej: grupper foldet sammen og samlet længde. Plan: `docs/planer/2026-11-19-foering-fold-laengde.md`.
+
+- **Grupper er foldet sammen som standard** i fanen Føringsvej. Tryk ▸ for at folde en gruppe ud. Knapperne **Fold alle ud** og **Fold alle sammen** over listen. Ved filteret "Kun ikke trukket" eller lokalefilter foldes grupper med træf automatisk ud, og "fra …" folder gruppen ud, før der rulles.
+- **I alt** ved brugsgenstande og afbrydere: samlet kabellængde fra tavlen (uden tilgangskablet) gennem dåser og sløjfer. Vises kun, når der er led foran.
+- Foldningen gemmes ikke i projektet. Ingen ændring i datamodellen.
+
 ## 10.24.0 · 2026-11-19 · Claude Opus
 
 - **Klon lokale** åbner nu en dialog: vælg navnet på det nye lokale, og vælg for hver gruppe i lokalet, hvilken gruppe kopierne skal på (eller Ikke tildelt). Forbindelser til dåser og sløjfer uden for lokalet beholdes kun, hvis de ligger i den nye gruppe.

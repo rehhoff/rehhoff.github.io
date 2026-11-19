@@ -4,7 +4,7 @@ function bland(...dele) { const r = {}; for (const d of dele) Object.definePrope
 function app() {
   return bland({
     view: 'tavle',
-    fvIkke: false, fvFold: new Set(), fvHi: '', fvAnc: [], fvBlink: '', gren: null, sfPop: null, fvRed: null, fvTmp: null,
+    fvIkke: false, fvFold: new Set(), fvAaben: new Set(), fvHi: '', fvAnc: [], fvBlink: '', gren: null, sfPop: null, fvRed: null, fvTmp: null,
     views: [ { id:'tavle', l:'Tavle' }, { id:'enstreg', l:'Enstregsdiagram' }, { id:'taending', l:'Tændingsdiagram' }, { id:'samlepunkter', l:'Samlepunkter & dåser' }, { id:'foering', l:'Føringsvej' }, { id:'svag', l:'Svagstrøm' }, { id:'beregning', l:'Beregning' }, { id:'lokaler', l:'Lokaler' }, { id:'kabler', l:'Kabler' }, { id:'dokumentation', l:'Dokumentation' }, { id:'fejlfinder', l:'Fejlfinder' }, { id:'brand', l:'Brandlukning' } ],
     db: tom(), hist: [], fremtid: [], klon: null, sel: null, drag: null, over: null,
     projekter: [], pid: '', pf: { navn:'', sagsnr:'', kunde:'', adresse:'' }, sldSel: null, z: { x:8, y:8, k:1 }, pan: null, pinch: null, panMoved: false, traek: null,
@@ -210,6 +210,8 @@ function app() {
       const seen = new Set(), lok = this.lokF, ikke = this.fvIkke, filt = !!(lok || ikke);
       const harKabel = n => n.kind === 'tavle' ? Number(n.o.tLaengde) > 0 : n.kind !== 'gruppe' && Number(n.o.laengde) > 0;
       const match = n => n.kind !== 'tavle' && n.kind !== 'gruppe' && (!lok || n.o.lokaleId === lok) && (!ikke || (harKabel(n) && !n.o.trukket));
+      /* ved filter foldes grupper med træf ud, ellers ser man kun grupperne */
+      const lukket = k => !(filt && k.startsWith('gruppe:')) && this.fvLukket(k);
       const out = [];
       const flad = (n, dep, par, anc) => {
         const plads = out.length; out.push(null); let vis = !filt || match(n), ant = 0; const k = n.kind + ':' + n.o.id;
@@ -228,19 +230,35 @@ function app() {
       const set = new Set(); for (let i = out.length - 1; i >= 0; i--) { out[i].sidst = !set.has(out[i].par); set.add(out[i].par); }
       const vej = []; for (const r of out) { r.linjer = vej.slice(1, r.dep); vej[r.dep] = !r.sidst; vej.length = r.dep + 1; }
       const byK = {}; out.forEach(r => { byK[r.k] = r; });
-      out.forEach(r => { const p = byK[r.par]; r.fra = !p || p.kind === 'gruppe' || p.kind === 'tavle' ? '' : (r.kind === 'enhed' && p.kind === 'enhed' ? 'sløjfe fra ' : 'fra ') + this.fvNavn(p); r.luk = this.fvFold.has(r.k); });
-      return out.filter(r => !r.anc.some(a => this.fvFold.has(a)));
+      out.forEach(r => { const p = byK[r.par]; r.fra = !p || p.kind === 'gruppe' || p.kind === 'tavle' ? '' : (r.kind === 'enhed' && p.kind === 'enhed' ? 'sløjfe fra ' : 'fra ') + this.fvNavn(p); r.luk = lukket(r.k); });
+      return out.filter(r => !r.anc.some(lukket));
     },
-    fvToggle(r) { const f = new Set(this.fvFold); if (f.has(r.k)) f.delete(r.k); else f.add(r.k); this.fvFold = f; },
+    /* grupper er foldet sammen som standard (fvAaben = dem, brugeren har foldet ud); øvrige rækker er udfoldet som standard (fvFold = dem, der er foldet sammen) */
+    fvLukket(k) { return k.startsWith('gruppe:') ? !this.fvAaben.has(k) : this.fvFold.has(k); },
+    fvToggle(r) { const gr = r.kind === 'gruppe', f = new Set(gr ? this.fvAaben : this.fvFold); if (f.has(r.k)) f.delete(r.k); else f.add(r.k); if (gr) this.fvAaben = f; else this.fvFold = f; },
+    fvFoldAlle(ud) { this.fvAaben = ud ? new Set(this.db.grupper.map(g => 'gruppe:' + g.id)) : new Set(); if (ud) this.fvFold = new Set(); },
     fvHover(r) { this.fvHi = r ? r.k : ''; this.fvAnc = r ? r.anc : []; },
-    fvGaa(k) {
-      const el = document.getElementById('fv-' + k.replace(':', '-')); if (!el) return;
-      el.scrollIntoView({ block:'center', behavior:'smooth' }); this.fvBlink = k; setTimeout(() => { if (this.fvBlink === k) this.fvBlink = ''; }, 1400);
+    fvGaa(k, anc) {
+      const gr = (anc || []).find(a => a.startsWith('gruppe:'));
+      if (gr && !this.fvAaben.has(gr)) this.fvAaben = new Set(this.fvAaben).add(gr);
+      this.$nextTick(() => {
+        const el = document.getElementById('fv-' + k.replace(':', '-')); if (!el) return;
+        el.scrollIntoView({ block:'center', behavior:'smooth' }); this.fvBlink = k; setTimeout(() => { if (this.fvBlink === k) this.fvBlink = ''; }, 1400);
+      });
     },
     fvTrukket(r) { return r.kind === 'tavle' ? !!r.o.tTrukket : !!r.o.trukket; },
     fvNote(r) { return (r.kind === 'tavle' ? r.o.tNote : r.o.note) || ''; },
     fvSaet(r, felt, v) { const o = r.o, k = r.kind === 'tavle' ? (felt === 'trukket' ? 'tTrukket' : 'tNote') : felt; if (o[k] === v) return; this.mutate(() => { o[k] = v; }); },
     fvKabelTxt(r) { const o = r.o; return r.kind === 'tavle' ? o.tKabel + ' ' + o.tLedere + this.fmt(o.tTv) + ' mm² · ' + this.fmt(o.tLaengde) + ' m' : o.kabel + ' ' + this.kabelDim(o) + ' · ' + this.fmt(o.laengde) + ' m'; },
+    /* samlet kabellængde fra tavlens afgang (uden tilgangskablet) gennem dåser og sløjfer til posten; null for tavle og gruppe */
+    fvDaaseLaengde(id) { let s = 0, d = this.daase(id), n = 0; while (d && n++ < 20) { s += Number(d.laengde) || 0; d = this.daase(d.parentId); } return s; },
+    fvTotal(r) {
+      const o = r.o, egen = Number(o.laengde) || 0;
+      if (r.kind === 'daase') return this.fvDaaseLaengde(o.id);
+      if (r.kind === 'enhed') return egen + this.sloejfeVej(o).reduce((s, p) => s + (Number(p.laengde) || 0), 0) + this.fvDaaseLaengde(this.enhedDaase(o));
+      if (r.kind === 'afb') { const e = o.fraEnhed && this.enhed(o.fraEnhed); return egen + (e ? this.fvTotal({ kind:'enhed', o:e }) : this.fvDaaseLaengde(o.daaseId)); }
+      return null;
+    },
     fvNavn(r) {
       const o = r.o; if (r.kind === 'tavle') return 'Tavle ' + o.navn; if (r.kind === 'gruppe') return 'Gruppe ' + o.nr + ' ' + o.navn;
       if (r.kind === 'daase') return o.type + ' ' + o.navn; if (r.kind === 'afb') return (this.afbArt[o.art] || 'Afbryder') + ' ' + o.navn; return o.navn;

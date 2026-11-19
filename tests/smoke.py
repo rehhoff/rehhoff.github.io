@@ -488,6 +488,14 @@ async def main():
             o.R=rd(a.enhedR(e2))===rd(a.rSloejfe('PVC',10,2.5)+a.rSloejfe('PVC',5,2.5));
             d.afbrydere.push({{id:'af',navn:'AF',art:'enpolet',gruppeId:'gf',lokaleId:'',steder:1,tid:3,a:[],b:[],daaseId:'',fraEnhed:'f1',kabel:'PVC',ledere:'3G',tv:1.5,laengde:3,hoejde:'',placering:'',trukket:false,note:''}});
             o.afbDu=rd(a.du(e1))===o.du[0]; o.afbRow=a.rows().some(x=>x.e.id==='aaf'&&x.e.laengde===3);
+            a.fvAaben=new Set(); a.fvFold=new Set(); const t0=a.foeringTrae(); o.standard=[t0.some(x=>['enhed','daase','afb'].includes(x.kind)), t0.find(x=>x.k==='gruppe:gf')&&t0.find(x=>x.k==='gruppe:gf').luk, t0.filter(x=>x.kind==='gruppe').every(x=>x.luk)];
+            a.fvIkke=true; o.autoUd=a.foeringTrae().some(x=>x.k==='enhed:f1'); a.fvIkke=false;
+            const gk=t0.find(x=>x.k==='gruppe:gf'); a.fvToggle(gk); o.togUd=a.foeringTrae().some(x=>x.k==='enhed:f1'); a.fvToggle(gk); o.togIgen=!a.foeringTrae().some(x=>x.k==='enhed:f1');
+            a.fvFoldAlle(true); o.alleUd=a.foeringTrae().some(x=>x.k==='enhed:f1'); a.fvFoldAlle(false); o.alleIgen=!a.foeringTrae().some(x=>x.k==='enhed:f1'); a.fvFoldAlle(true);
+            d.daaser.push({{id:'df',gruppeId:'gf',parentId:'',navn:'DF',kabel:'PVC',ledere:'3G',tv:2.5,laengde:4,lokaleId:'',placering:'',hoejde:'',trukket:false,note:''}});
+            const g3=E('f3','F3','',6); g3.daaseId='df'; const g4=E('f4','F4','f3',3); d.enheder.push(g3,g4); d.afbrydere.push({{id:'af2',navn:'AF2',art:'enpolet',gruppeId:'gf',lokaleId:'',steder:1,tid:3,a:[],b:[],daaseId:'',fraEnhed:'f4',kabel:'PVC',ledere:'3G',tv:1.5,laengde:2,hoejde:'',placering:'',trukket:false,note:''}});
+            const rk=(kind,ob)=>({{kind,o:ob}}); o.total=[a.fvTotal(rk('enhed',a.enhed('f1'))),a.fvTotal(rk('enhed',a.enhed('f2'))),a.fvTotal(rk('enhed',g3)),a.fvTotal(rk('enhed',g4)),a.fvTotal(rk('afb',d.afbrydere.find(x=>x.id==='af2'))),a.fvTotal(rk('afb',d.afbrydere.find(x=>x.id==='af')))];
+            d.afbrydere=d.afbrydere.filter(x=>x.id!=='af2'); d.enheder=d.enheder.filter(x=>!['f3','f4'].includes(x.id)); d.daaser=d.daaser.filter(x=>x.id!=='df');
             const tr=a.foeringTrae(), ix=k=>tr.findIndex(x=>x.k===k), dep=k=>(tr[ix(k)]||{{}}).dep;
             o.trae=[dep('tavle:tf'),dep('gruppe:gf'),dep('enhed:f1'),dep('enhed:f2'),dep('afb:af')]; o.orden=ix('tavle:tf')<ix('gruppe:gf')&&ix('gruppe:gf')<ix('enhed:f1')&&ix('enhed:f1')<ix('enhed:f2');
             const R=k=>tr[ix(k)]; o.linjer=[R('enhed:f1').sidst,R('enhed:f2').sidst,R('afb:af').sidst,JSON.stringify(R('enhed:f2').linjer),JSON.stringify(R('afb:af').linjer),R('enhed:f1').boern];
@@ -513,13 +521,13 @@ async def main():
             a.undo(); await T(100); o.fortrudt=!!a.enhed('f2')&&a.enhed('f2').kabel==='XLPE';
             a.go('tavle');
           }} finally {{
-            a.sel=sel0; a.modal=null; await T(50); const d=a.db; const g=x=>x.gruppeId!=='gf'; d.enheder=d.enheder.filter(g); d.afbrydere=d.afbrydere.filter(g); d.grupper=d.grupper.filter(x=>x.id!=='gf'); d.tavler=d.tavler.filter(x=>x.id!=='tf'); a.save();
+            a.sel=sel0; a.modal=null; a.fvAaben=new Set(); a.fvFold=new Set(); await T(50); const d=a.db; const g=x=>x.gruppeId!=='gf'; d.enheder=d.enheder.filter(g); d.afbrydere=d.afbrydere.filter(g); d.grupper=d.grupper.filter(x=>x.id!=='gf'); d.tavler=d.tavler.filter(x=>x.id!=='tf'); a.save();
           }}
           o.ryddet=JSON.stringify([a.db.tavler.length,a.db.grupper.length,a.db.enheder.length,a.db.afbrydere.length])===n0;
           return o}})()""")
         tjek('føringsvej: sløjfe i ΔU og Ik, afbrydertræk uden ΔU, træ, trukket og note, ikke trukket i materialeliste, kopiér gren, kæde, sletning',
              r['du0'] == 0.07826 and r['du'] == [0.15652, 0.19565] and r['I'] == [2, 1] and r['R'] and r['afbDu'] and r['afbRow']
-             and r['trae'] == [0, 1, 2, 3, 3] and r['linjer'] == [True, False, True, '[false,false]', '[false,false]', 2] and r['fraTxt'] == ['sløjfe fra F1', 'fra F1', ''] and r['fold'] == [True, False, False, True] and r['orden'] and r['ikkeFoer'] and r['status'] == [True, 'venter på tømrer'] and r['ikkeEfter'] and r['filter']
+             and r['trae'] == [0, 1, 2, 3, 3] and r['linjer'] == [True, False, True, '[false,false]', '[false,false]', 2] and r['fraTxt'] == ['sløjfe fra F1', 'fra F1', ''] and r['fold'] == [True, False, False, True] and r['standard'] == [False, True, True] and r['autoUd'] and r['togUd'] and r['togIgen'] and r['alleUd'] and r['alleIgen'] and r['total'] == [10, 15, 10, 13, 15, 13] and r['orden'] and r['ikkeFoer'] and r['status'] == [True, 'venter på tømrer'] and r['ikkeEfter'] and r['filter']
              and r['kopier'] == 2 and r['gren'] == [4, 2, True, True, 3] and r['grenDu'] and r['kaede'] == ['', True] and r['kaedeKabel'] == ['PVC', 1.5, 4, 'XLPE', 2.5, 2, 'XLPE', 2] and r['slet'] == ['', ''] and r['vist'] and r['redAaben'] and r['red'] == ['XLPE', '5G', 4, 7.5, True] and r['slettet'] and r['fortrudt'] and r['ryddet'], r)
 
         # 4h2. Enstregsdiagram: sløjfekæde (Tilgang i serie → U1 → U2 …, stikkontakt efter sit eget udtag), forgreningsprikker, sporing og lokalefilter. Tilgang uden last
