@@ -92,7 +92,7 @@ const kabMap = k => KABLER.includes(k) ? k : /noik|halogen|xlpe/i.test(k || '') 
 const daaMap = t => DAASER.includes(t) ? t : /underlag|fuga/i.test(t || '') ? 'Underlag' : /membran|ip44|brønd/i.test(t || '') ? 'Membrandåse' : 'PL-dåse';
 const TIMERS = {};
 /* ydelse: indeks og mellemlagring ligger uden for Alpines tilstand, så de ikke selv bliver reaktive */
-let IDXC = null;
+let IDXC = null, SAVEP = null;  /* SAVEP: projekt med en udskudt skrivning til localStorage (se save() og gemNu() i lagring.js) */
 const MEMO = {};
 /* Typiske mærkeeffekter som forslag: [mønster i navnet, W, betegnelse, ganges med antal] */
 const EFFEKT = [

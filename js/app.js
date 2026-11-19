@@ -67,7 +67,7 @@ function app() {
         if (!this.db.projekt.navn) this.db.projekt.navn = 'Mit projekt';
         if (!harOld) { const id2 = uid(), d2 = seed2(); this.skriv(id2, d2); this.projekter.push(this.meta(id2, d2)); }
       }
-      this.save();
+      this.save(); this.gemNu();
       this.sel = (this.gruppe('g7') || this.sorteredeGrupper()[0] || {}).id || null;
       this.brugTema(); this.firma = this.firmaLaes(); this.billedStart();
       const route = () => { const h = location.hash.slice(1); if (this.views.some(v => v.id === h)) { this.view = h; if (h === 'enstreg') this.$nextTick(() => this.tilpas()); } };
@@ -83,7 +83,7 @@ function app() {
       try { if (navigator.storage && navigator.storage.persist) navigator.storage.persisted().then(p => p || navigator.storage.persist()).then(p => { this.persistent = !!p; }).catch(() => {}); } catch (e) {}
       window.addEventListener('storage', ev => {
         if (ev.key === PK(this.pid) && ev.newValue) {
-          delete MEM[this.pid]; const d = this.laes(this.pid);
+          delete MEM[this.pid]; if (SAVEP && SAVEP.id === this.pid) { clearTimeout(TIMERS.gem); SAVEP = null; } const d = this.laes(this.pid);
           if (d) { this.db = d; this.dbRev++; this.hist = []; this.fremtid = []; this.billedStart(); this.say('Projektet blev ændret i en anden fane og er indlæst igen.'); }
         } else if (ev.key === IDX && ev.newValue) {
           try { const x = JSON.parse(ev.newValue); if (Array.isArray(x.liste)) { this.projekter = x.liste; if (x.sidstBackup) this.sidstBackup = x.sidstBackup; } } catch (e) {}
@@ -91,7 +91,8 @@ function app() {
       });
       this.synk = this.synkLaes();
       if (this.synk) this.synkNu();
-      document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && this.synk) this.synkNu(); });
+      document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') this.gemNu(); else if (this.synk) this.synkNu(); });
+      window.addEventListener('pagehide', () => this.gemNu()); window.addEventListener('beforeunload', () => this.gemNu());
     },
     datoTxt(iso) { const d = new Date(iso); return isNaN(d) ? '–' : d.toLocaleString('da-DK', { dateStyle:'short', timeStyle:'short' }); },
     stamTxt() { const p = this.db.projekt; return [p.sagsnr && 'Sag ' + p.sagsnr, p.kunde, p.adresse].filter(Boolean).join(' · '); },
@@ -99,7 +100,7 @@ function app() {
       const p = this.db.projekt, slug = String(p.sagsnr || p.navn || 'projekt').toLowerCase().replace(/æ/g, 'ae').replace(/ø/g, 'oe').replace(/å/g, 'aa').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
       return base + '-' + (slug || 'projekt') + '.' + ext;
     },
-    mutate(fn) { this.hist.push(JSON.stringify(this.db)); if (this.hist.length > 40) this.hist.shift(); this.fremtid = []; fn(); this.dbRev++; this.syncDaaser(); this.dbRev++; this.save(); },
+    mutate(fn) { this.hist.push(JSON.stringify(this.db)); if (this.hist.length > 40) this.hist.shift(); this.fremtid = []; fn(); this.dbRev++; this.syncDaaser(); this.save(JSON.stringify(this.db)); },
     redo() { if (!this.fremtid.length) return; this.hist.push(JSON.stringify(this.db)); this.db = norm(JSON.parse(this.fremtid.pop())); this.dbRev++; this.save(); this.say('Gentaget.'); },
     undo() { if (!this.hist.length) return; this.fremtid.push(JSON.stringify(this.db)); if (this.fremtid.length > 40) this.fremtid.shift(); this.db = norm(JSON.parse(this.hist.pop())); this.dbRev++; this.save(); this.toasts.filter(t => t.undo).forEach(t => this.lukToast(t.id)); this.say('Fortrudt.'); },
     /* beskeder i bunden: højst tre ad gangen, tid efter tekstens længde, fejl bliver stående til de lukkes */

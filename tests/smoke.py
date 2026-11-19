@@ -161,6 +161,12 @@ async def main():
         ctx = await b.new_context(viewport={'width': 1300, 'height': 1000}, accept_downloads=True); ctx.set_default_timeout(TRIN_MS)
         await ctx.route('**/*', route)
         pg = await ctx.new_page()
+        # Gemningen til localStorage er udskudt (højst 300 ms, se gemNu() i js/lagring.js). Før hvert tjek skrives det ventende, så testen ser det samme som efter en pause
+        _eval = pg.evaluate
+        async def _eval_gem(*a, **k):
+            await _eval("()=>{try{Alpine.$data(document.querySelector('[x-data]')).gemNu()}catch(e){}}")
+            return await _eval(*a, **k)
+        pg.evaluate = _eval_gem
         pg.on('pageerror', lambda e: fejl.append(str(e)) if 'tailwind' not in str(e) else None)
         pg.on('console', lambda m: fejl.append(m.text[:300]) if m.type == 'error' and 'ERR_' not in m.text and 'tailwind' not in m.text.lower() else None)
 
@@ -168,6 +174,13 @@ async def main():
         await pg.goto(URL); await pg.wait_for_timeout(500)
         r = await pg.evaluate(f"(()=>{{const a={A};return {{n:a.projekter.length, v:a.appVersion, w:a.warnings().length}}}})()")
         tjek('starter med eksempelprojekter', r['n'] >= 2, r)
+        # Udskudt gemning (ydelse): en ændring ligger straks i MEM, kommer i localStorage senest efter 300 ms, og skrives med det samme ved pagehide
+        rg = await _eval(f"""(async()=>{{const a={A}, k='tavleoversigt.p.'+a.pid, T=n=>new Promise(f=>setTimeout(f,n)); const o={{}}, navn0=a.db.projekt.navn;
+          const les=()=>JSON.parse(localStorage.getItem(k)).projekt.navn;
+          a.mutate(()=>{{a.db.projekt.navn='Gemt-test 1';}}); o.straks=[MEM[a.pid].includes('Gemt-test 1'), les()===navn0]; await T(450); o.efter=les()==='Gemt-test 1';
+          a.mutate(()=>{{a.db.projekt.navn='Gemt-test 2';}}); window.dispatchEvent(new Event('pagehide')); o.hide=les()==='Gemt-test 2';
+          a.mutate(()=>{{a.db.projekt.navn=navn0;}}); a.gemNu(); o.nu=les()===navn0; return o}})()""")
+        tjek('gemning: ændringen er straks i MEM, i localStorage senest efter 300 ms og straks ved pagehide og gemNu()', rg['straks'] == [True, True] and rg['efter'] and rg['hide'] and rg['nu'], rg)
         html = (ROD / 'index.html').read_text(encoding='utf-8')
         forkerte = sorted(set(re.findall(r'\?v=([0-9.]+)', html)) - {r['v']})
         tjek('alle ?v= i index.html svarer til APP_VERSION', not forkerte and '?v=' + r['v'] in html, (r['v'], forkerte))
@@ -675,7 +688,7 @@ async def main():
           return {e:k(p.enheder), g:JSON.stringify(p.grupper.map(g=>[g.id,g.type,g.faser,g.fase,g.sf])), n:p.enheder.length}})()""")
         await pg.goto(URL); await pg.wait_for_timeout(500)
         r = await pg.evaluate(f"""(()=>{{const a={A};const d=a.db;const k=x=>JSON.stringify(x.map(e=>[e.id,e.navn,e.gruppeId,e.daaseId,e.fraEnhed,e.effekt,e.kabel,e.ledere,e.tv,e.laengde,e.placering,e.trukket,e.note]));
-          a.save(); return {{navn:d.projekt.navn, b:a.backups.length, s:JSON.parse(localStorage.getItem('tavleoversigt.projekter')).schema, e:k(d.enheder), g:JSON.stringify(d.grupper.map(g=>[g.id,g.type,g.faser,g.fase,g.sf])),
+          a.save();a.gemNu(); return {{navn:d.projekt.navn, b:a.backups.length, s:JSON.parse(localStorage.getItem('tavleoversigt.projekter')).schema, e:k(d.enheder), g:JSON.stringify(d.grupper.map(g=>[g.id,g.type,g.faser,g.fase,g.sf])),
             fase:d.enheder.every(e=>e.fase===''), gemt:JSON.parse(localStorage.getItem('tavleoversigt.p.'+a.pid)||'{{}}').enheder.every(e=>e.fase==='')}}}})()""")
         tjek('opgradering fra skema 13: backup taget, brugsgenstande og grupper intakte, fase sat til som gruppen',
              r['navn'] == 'Skema 13-projekt' and r['b'] >= 1 and r['s'] == SKEMA and r['e'] == r0['e'] and r['g'] == r0['g'] and r['fase'] and r['gemt'] and r0['n'] > 0,

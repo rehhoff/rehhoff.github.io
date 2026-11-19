@@ -186,7 +186,7 @@ const APP_BILLEDER = () => ({
         billedIds(d).forEach(i => brugt.add(i));
       };
       /* 1. alle projekter i browseren, også nøgler uden for listen (fx fra en anden fane) */
-      this.save();
+      this.save(); this.gemNu();
       let idx = null; try { idx = JSON.parse(localStorage.getItem(IDX)); } catch (e) { throw new Error('Projektlisten i browseren kunne ikke læses. Intet er slettet.'); }
       if (idx && (Number(idx.schema) || 0) > SCHEMA) throw new Error('Projekterne i browseren er gemt af en nyere version af appen. Genindlæs siden. Intet er slettet.');
       const pids = new Set([...this.projekter.map(p => p.id), ...((idx && Array.isArray(idx.liste)) ? idx.liste.map(p => p.id) : [])]), pre = PK('');

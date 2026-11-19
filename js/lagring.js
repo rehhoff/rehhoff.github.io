@@ -2,40 +2,48 @@
 const FKEY = 'tavleoversigt.firma';
 const APP_LAGRING = () => ({
     /* projekter: hvert projekt gemmes under sin egen nøgle */
-    skriv(id, d) { const s = JSON.stringify(d); MEM[id] = s; try { localStorage.setItem(PK(id), s); } catch (e) { this.storageOk = false; } },
+    skriv(id, d, s) { s = s || JSON.stringify(d); MEM[id] = s; if (SAVEP && SAVEP.id === id) { clearTimeout(TIMERS.gem); SAVEP = null; } try { localStorage.setItem(PK(id), s); } catch (e) { this.storageOk = false; } },
     laes(id) {
       let s = MEM[id]; try { s = s || localStorage.getItem(PK(id)); } catch (e) {}
       try { const d = JSON.parse(s); return d && Array.isArray(d.tavler) ? norm(d) : null; } catch (e) { return null; }
     },
     meta(id, d) { const p = d.projekt; return { id, navn:p.navn || 'Uden navn', sagsnr:p.sagsnr, kunde:p.kunde, adresse:p.adresse, grupper:d.grupper.length, enheder:d.enheder.length, opdateret:new Date().toISOString() }; },
     skrivIdx() { try { localStorage.setItem(IDX, JSON.stringify({ aktiv:this.pid, liste:this.projekter, schema:SCHEMA, app:APP_VERSION, sidstBackup:this.sidstBackup || '' })); } catch (e) { this.storageOk = false; } this.synkSenere(); },
-    save() {
-      this.dbRev++;
-      this.storageOk = true; this.skriv(this.pid, this.db);
-      const m = this.meta(this.pid, this.db), i = this.projekter.findIndex(p => p.id === this.pid);
-      if (i > -1) this.projekter.splice(i, 1, m); else this.projekter.push(m);
+    /* gem: strengen lægges straks i MEM, og skrivningen til localStorage (samt meta og projektlisten) udskydes højst 300 ms. gemNu() skriver det ventende med det samme og kaldes før projektskift, backup, eksport, synkronisering og når siden skjules eller lukkes */
+    save(s) {
+      this.dbRev++; MEM[this.pid] = s || JSON.stringify(this.db); SAVEP = { id:this.pid };
+      clearTimeout(TIMERS.gem); TIMERS.gem = setTimeout(() => this.gemNu(), 300);
+    },
+    gemNu() {
+      clearTimeout(TIMERS.gem); const p = SAVEP; if (!p) return; SAVEP = null;
+      if (MEM[p.id] == null) return;
+      this.storageOk = true; try { localStorage.setItem(PK(p.id), MEM[p.id]); } catch (e) { this.storageOk = false; }
+      if (p.id === this.pid) {
+        const m = this.meta(p.id, this.db), i = this.projekter.findIndex(x => x.id === p.id);
+        if (i > -1) this.projekter.splice(i, 1, m); else this.projekter.push(m);
+      }
       this.skrivIdx();
     },
-    aktiver(id, d) { this.pid = id; this.db = d; this.dbRev++; this.hist = []; this.fremtid = []; this.lokF = ''; this.q = ''; this.sldSel = null; this.sel = (this.sorteredeGrupper()[0] || {}).id || null; this.save(); },
+    aktiver(id, d) { this.pid = id; this.db = d; this.dbRev++; this.hist = []; this.fremtid = []; this.lokF = ''; this.q = ''; this.sldSel = null; this.sel = (this.sorteredeGrupper()[0] || {}).id || null; this.save(); this.gemNu(); },
     skift(id) {
-      if (id === this.pid) return; this.save();
+      if (id === this.pid) return; this.gemNu();
       const d = this.laes(id); if (!d) { this.say('Projektet kunne ikke læses fra browserens lager.', false, true); return; }
       this.aktiver(id, d); this.say('Skiftet til ' + (d.projekt.navn || 'projekt') + '.');
     },
     aabnProjekter() { this.confirm = null; this.pf = { navn:'', sagsnr:'', kunde:'', adresse:'' }; this.modal = { type:'projekter' }; },
     nytProjekt() {
-      const navn = this.pf.navn.trim(); if (!navn) return; this.save();
+      const navn = this.pf.navn.trim(); if (!navn) return; this.gemNu();
       const d = tom(); Object.assign(d.projekt, this.pf, { navn, dato:new Date().toISOString().slice(0, 10) });
       this.aktiver(uid(), d); this.modal = null; this.go('tavle'); this.say('Projekt ' + navn + ' oprettet.');
     },
     dupliker(id) {
-      this.save(); const d = this.laes(id); if (!d) { this.say('Projektet kunne ikke læses.', false, true); return; }
+      this.gemNu(); const d = this.laes(id); if (!d) { this.say('Projektet kunne ikke læses.', false, true); return; }
       d.projekt.navn = (d.projekt.navn || 'Projekt') + ' (kopi)'; d.projekt.sagsnr = '';
       d.grupper.forEach(g => { g.maal = { riso:'', zs:'', rcd:'', ok:false }; });
       this.aktiver(uid(), d); this.say('Kopi oprettet og åbnet. Sagsnummer og måleværdier er nulstillet.');
     },
     sletProjekt(id) {
-      const p = this.projekter.find(p => p.id === id); delete MEM[id]; try { localStorage.removeItem(PK(id)); } catch (e) {}
+      const p = this.projekter.find(p => p.id === id); delete MEM[id]; if (SAVEP && SAVEP.id === id) { clearTimeout(TIMERS.gem); SAVEP = null; } try { localStorage.removeItem(PK(id)); } catch (e) {}
       this.projekter = this.projekter.filter(p => p.id !== id);
       if (id === this.pid) {
         const n = this.projekter[0], d = n && this.laes(n.id);
@@ -53,7 +61,7 @@ const APP_LAGRING = () => ({
     },
     /* backupfilen indeholder også billederne (skema 15) som billeder: { id: data-URL } */
     async hentBackup() {
-      this.save(); let txt = this.backupJson(), mangler = 0;
+      this.gemNu(); let txt = this.backupJson(), mangler = 0;
       const d = JSON.parse(txt), ids = new Set(); d.projekter.forEach(p => billedIds(p.data).forEach(i => ids.add(i)));
       if (ids.size) { const r = await this.billederTilBackup(ids); mangler = r.mangler; d.billeder = r.billeder; txt = JSON.stringify(d, null, 2); }
       await this.hent('tavleoversigt-backup-' + new Date().toISOString().slice(0, 10) + '.json', txt);
@@ -71,7 +79,7 @@ const APP_LAGRING = () => ({
       this.backups = liste;
     },
     gendanBackup(i) {
-      const b = this.backups[i]; if (!b) return; let n = 0; this.save();
+      const b = this.backups[i]; if (!b) return; let n = 0; this.gemNu();
       for (const [id, txt] of Object.entries(b.raw || {})) {
         let d; try { d = norm(JSON.parse(txt)); } catch (e) { continue; }
         const nyId = this.projekter.some(p => p.id === id) ? uid() : id;
@@ -81,7 +89,7 @@ const APP_LAGRING = () => ({
       this.skrivIdx(); this.say(n + ' projekter gendannet som kopier. Dine nuværende projekter er urørte.');
     },
     importBackup(d) {
-      const ps = Array.isArray(d.projekter) ? d.projekter : []; let n = 0, spring = 0; this.save();
+      const ps = Array.isArray(d.projekter) ? d.projekter : []; let n = 0, spring = 0; this.gemNu();
       for (const p of ps) {
         const raw = p && (p.data || p); if (!raw || !Array.isArray(raw.tavler)) { spring++; continue; }
         const dd = norm(raw), id = p.id && !this.projekter.some(x => x.id === p.id) ? p.id : uid();
@@ -139,6 +147,7 @@ const APP_LAGRING = () => ({
     },
     synkSenere() { if (!this.synk || this.iSynk) return; clearTimeout(SYNK_T); SYNK_T = setTimeout(() => this.synkNu(), 4000); },
     async synkNu() {
+      this.gemNu();
       if (this.synkKoerer) { this.synkIgen = true; return; }
       const s = this.synkLaes(); this.synk = s; if (!s || !s.gistId) return;
       if (navigator.onLine === false) { this.online = false; return; }  /* uden net: vent på online-hændelsen */
@@ -206,7 +215,7 @@ const APP_LAGRING = () => ({
       if (id === this.pid) { this.db = this.laes(id) || d; this.dbRev++; this.hist = []; this.fremtid = []; }
     },
     synkSletLokalt(id) {
-      delete MEM[id]; try { localStorage.removeItem(PK(id)); } catch (e) {}
+      delete MEM[id]; if (SAVEP && SAVEP.id === id) { clearTimeout(TIMERS.gem); SAVEP = null; } try { localStorage.removeItem(PK(id)); } catch (e) {}
       this.projekter = this.projekter.filter(p => p.id !== id);
       if (id === this.pid) {
         const nx = this.projekter[0], d = nx && this.laes(nx.id);
@@ -218,7 +227,7 @@ const APP_LAGRING = () => ({
       let d; try { d = JSON.parse(txt); } catch (e) { this.say('Kunne ikke læse JSON. Kontrollér at hele teksten er med.', false, true); return; }
       if (d && d.format === 'tavleoversigt-backup') { this.importBackup(d); return; }
       if (!d || !Array.isArray(d.tavler) || !Array.isArray(d.grupper) || !Array.isArray(d.enheder)) { this.say('Filen mangler tavler, grupper eller enheder og blev ikke indlæst.', false, true); return; }
-      if (somNyt) { this.save(); this.aktiver(uid(), norm(d)); } else { this.mutate(() => { this.db = norm(d); }); this.sel = (this.sorteredeGrupper()[0] || {}).id || null; }
+      if (somNyt) { this.gemNu(); this.aktiver(uid(), norm(d)); } else { this.mutate(() => { this.db = norm(d); }); this.sel = (this.sorteredeGrupper()[0] || {}).id || null; }
       this.io = '';
       this.say((somNyt ? 'Indlæst som nyt projekt: ' : 'Aktivt projekt erstattet: ') + this.db.grupper.length + ' grupper, ' + this.db.enheder.length + ' brugsgenstande.', !somNyt);
     },
