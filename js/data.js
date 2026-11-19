@@ -1,7 +1,7 @@
 /* Konstanter, lagernøgler, tabeller, norm() og eksempeldata. Indlæses først; alt her er globalt og bruges af de andre filer og markup. */
 const KEY = 'tavleoversigt.v2', OLD = 'tavleoversigt.v1', TKEY = 'tavleoversigt.tema', IDX = 'tavleoversigt.projekter';
 /* Versioner: APP_VERSION følger CHANGELOG.md. SCHEMA hæves kun, når datamodellen ændres, og udløser en automatisk backup før migrering. */
-const APP_VERSION = '10.25.0', SCHEMA = 17, BKEY = 'tavleoversigt.backups', BMAX = 3;
+const APP_VERSION = '10.26.0', SCHEMA = 17, BKEY = 'tavleoversigt.backups', BMAX = 3;
 const PK = id => 'tavleoversigt.p.' + id, MEM = {};
 /* Synkronisering: en hemmelig GitHub Gist med en markørfil og én fil pr. projekt. Se docs/planer/2026-11-15-gist-synk.md. */
 const SKEY = 'tavleoversigt.sync', GFIL = 'tavleoversigt.json', GP = id => 'tavleoversigt-' + id + '.json', GPRE = /^tavleoversigt-([A-Za-z0-9_-]+)\.json$/, GH = 'https://api.github.com';
@@ -91,6 +91,9 @@ const BRANDPRODUKTER = ['FR Brandkit', 'FR Brandplade', 'FR Gipsmørtel', 'FR Ma
 const kabMap = k => KABLER.includes(k) ? k : /noik|halogen|xlpe/i.test(k || '') ? 'XLPE' : 'PVC';
 const daaMap = t => DAASER.includes(t) ? t : /underlag|fuga/i.test(t || '') ? 'Underlag' : /membran|ip44|brønd/i.test(t || '') ? 'Membrandåse' : 'PL-dåse';
 const TIMERS = {};
+/* ydelse: indeks og mellemlagring ligger uden for Alpines tilstand, så de ikke selv bliver reaktive */
+let IDXC = null, SAVEP = null;  /* SAVEP: projekt med en udskudt skrivning til localStorage (se save() og gemNu() i lagring.js) */
+const MEMO = {};
 /* Typiske mærkeeffekter som forslag: [mønster i navnet, W, betegnelse, ganges med antal] */
 const EFFEKT = [
   [/halogen/, 50, 'Halogenspot 50 W', 1], [/skinne/, 60, 'Skinnespots'], [/downlight|indbygningsspot|spot/, 10, 'Downlight', 1], [/lysstof|\bt8\b|\bt5\b/, 36, 'Lysstofrør 36 W', 1], [/gløde/, 60, 'Glødepære 60 W', 1],

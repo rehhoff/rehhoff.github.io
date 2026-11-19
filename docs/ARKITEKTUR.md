@@ -4,7 +4,7 @@
 
 | Fil | Indhold |
 |---|---|
-| `index.html` | Markup med Alpine-direktiver. Hver fane er en `<section x-show="view==='…'">`, markeret med en `<!-- ===== NAVN ===== -->`-kommentar |
+| `index.html` | Markup med Alpine-direktiver. Hver fane er en `<template x-if="view==='…'"><section>…</section></template>`, så kun den aktive fane er i DOM'en, markeret med en `<!-- ===== NAVN ===== -->`-kommentar |
 | `css/app.css` | Farvetokens i `:root`, mørkt tema under `prefers-color-scheme` og `[data-theme="dark"]`, egne klasser |
 | `css/tailwind.css` | Bygget Tailwind-CSS (ret ikke i hånden). Kilde: `tailwind.config.js` og `css/tailwind.input.css` |
 | `tools/byg_css.py` | Bygger `css/tailwind.css`. `--tjek` fejler, hvis den ikke er bygget efter seneste ændring |
@@ -23,6 +23,7 @@
 | `CLAUDE.md` | Regler og hukommelse for Claude |
 | `CHANGELOG.md` | Versionshistorik |
 | `tests/smoke.py` | Røgtest i headless Chrome |
+| `tests/ydelse.py` | Måling af svartider på et stort projekt (`YDELSE_F` = størrelse, 1 = 3 tavler, 60 grupper, 120 dåser, 600 brugsgenstande, 60 afbrydere). Ikke en del af røgtesten |
 | `docs/planer/`, `docs/forslag.md` | Planer og forslag |
 | `.nojekyll` | GitHub Pages serverer filerne uændret |
 
@@ -33,6 +34,14 @@ Scriptsene er almindelige scripts (ikke ES-moduler) og deler globalt scope. Ræk
 Under 1024 px står hovedets titel og værktøjer under hinanden, og fanerne er én række, der kan rulles sidelæns (`.faner`, `lg:contents` fra 1024 px). Under 640 px vises måleskemaet som kort (`.mk`) i stedet for tabellen. Desktop-layoutet er uændret.
 
 Faner i `views`: Tavle, Enstregsdiagram, Tændingsdiagram, Samlepunkter & dåser, Svagstrøm, Beregning, Lokaler, Kabler, Dokumentation, Fejlfinder. Tasterne 1 til 9 og 0 skifter fane.
+
+## Ydelse
+
+- **`dbRev`** (tilstand i `app()`) øges i `mutate`, `save`, `undo`, `redo`, `aktiver` og når `db` udskiftes. Alt mellemlagret nulstilles, når `db`, `dbRev` eller længden af tavler, grupper, dåser eller brugsgenstande ændrer sig.
+- **`idx()`** giver `Map` fra id til objekt (`tavle`, `gruppe`, `daase`, `enhed`). **`kid()`** giver børneindeks (`grupper`, `enhFra`, `enhDaase`, `enhGruppe`, `daaseParent`, `daaseGruppe`, `afbFra`, `afbDaase`). Begge ligger i modul-variablen `IDXC` i `data.js`, uden for Alpines tilstand. `tavle()`, `gruppe()`, `daase()`, `enhed()`, `sloejfer()`, `grupperFor()`, `enhederFor()`, `daaserFor()` og `nedstroem()` bruger dem.
+- **`memo(navn, deps, fn)`** mellemlagrer én værdi (`foeringTrae`, `fvOptael`, `sorteredeGrupper`, `warnings`, `stats`, `rows`, `mangler`). **`mk(navn, key, fn)`** mellemlagrer pr. nøgle (`faseV`, `egenFaser`, `gruppeFaser`, `enhedFaser`, `daaseFaser`, `tilgI`). Lageret er `MEMO` i `data.js`. Intet må ændre en returneret værdi. Ændres `db` uden om `mutate` og `save()` (fx direkte i en test), skal `dbRev` øges, ellers ses ændringen ikke.
+- **Faner** er `x-if`. Alpine 3.14.1 stopper kun den sidste binding på et fjernet element, så `init()` har en `MutationObserver`, der stopper resten, når elementet stadig er væk.
+- **Gemning**: `save()` lægger strengen i `MEM` straks og udskyder `localStorage.setItem`, `meta()` og `skrivIdx()` højst 300 ms (`SAVEP`, `TIMERS.gem`). `gemNu()` skriver straks og kaldes før projektskift, backup, synkronisering og oprydning af billeder, og ved `visibilitychange` (skjult), `pagehide` og `beforeunload`. `skriv()` skriver altid straks.
 
 ## Lagring
 

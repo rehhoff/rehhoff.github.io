@@ -161,6 +161,12 @@ async def main():
         ctx = await b.new_context(viewport={'width': 1300, 'height': 1000}, accept_downloads=True); ctx.set_default_timeout(TRIN_MS)
         await ctx.route('**/*', route)
         pg = await ctx.new_page()
+        # Gemningen til localStorage er udskudt (højst 300 ms, se gemNu() i js/lagring.js). Før hvert tjek skrives det ventende, så testen ser det samme som efter en pause
+        _eval = pg.evaluate
+        async def _eval_gem(*a, **k):
+            await _eval("()=>{try{Alpine.$data(document.querySelector('[x-data]')).gemNu()}catch(e){}}")
+            return await _eval(*a, **k)
+        pg.evaluate = _eval_gem
         pg.on('pageerror', lambda e: fejl.append(str(e)) if 'tailwind' not in str(e) else None)
         pg.on('console', lambda m: fejl.append(m.text[:300]) if m.type == 'error' and 'ERR_' not in m.text and 'tailwind' not in m.text.lower() else None)
 
@@ -168,6 +174,13 @@ async def main():
         await pg.goto(URL); await pg.wait_for_timeout(500)
         r = await pg.evaluate(f"(()=>{{const a={A};return {{n:a.projekter.length, v:a.appVersion, w:a.warnings().length}}}})()")
         tjek('starter med eksempelprojekter', r['n'] >= 2, r)
+        # Udskudt gemning (ydelse): en ændring ligger straks i MEM, kommer i localStorage senest efter 300 ms, og skrives med det samme ved pagehide
+        rg = await _eval(f"""(async()=>{{const a={A}, k='tavleoversigt.p.'+a.pid, T=n=>new Promise(f=>setTimeout(f,n)); const o={{}}, navn0=a.db.projekt.navn;
+          const les=()=>JSON.parse(localStorage.getItem(k)).projekt.navn;
+          a.mutate(()=>{{a.db.projekt.navn='Gemt-test 1';}}); o.straks=[MEM[a.pid].includes('Gemt-test 1'), les()===navn0]; await T(450); o.efter=les()==='Gemt-test 1';
+          a.mutate(()=>{{a.db.projekt.navn='Gemt-test 2';}}); window.dispatchEvent(new Event('pagehide')); o.hide=les()==='Gemt-test 2';
+          a.mutate(()=>{{a.db.projekt.navn=navn0;}}); a.gemNu(); o.nu=les()===navn0; return o}})()""")
+        tjek('gemning: ændringen er straks i MEM, i localStorage senest efter 300 ms og straks ved pagehide og gemNu()', rg['straks'] == [True, True] and rg['efter'] and rg['hide'] and rg['nu'], rg)
         html = (ROD / 'index.html').read_text(encoding='utf-8')
         forkerte = sorted(set(re.findall(r'\?v=([0-9.]+)', html)) - {r['v']})
         tjek('alle ?v= i index.html svarer til APP_VERSION', not forkerte and '?v=' + r['v'] in html, (r['v'], forkerte))
@@ -257,14 +270,14 @@ async def main():
         # Afleveringstjek (forslag 10) og tavlefortegnelse (forslag 11)
         r = await pg.evaluate(f"""(()=>{{const a={A};const k=a.aflTjek();return {{kat:k.filter(x=>x.punkter.length).map(x=>x.k),n:a.aflAntal(),doc:a.docHtml().includes('Afleveringstjek: '+a.aflAntal()+' ')}}}})()""")
         tjek('afleveringstjek viser kendte mangler i eksempelprojektet, og dokumentationen har en statuslinje', r['n'] > 0 and len(r['kat']) > 0 and r['doc'], r)
-        r = await pg.evaluate(f"""(async()=>{{const a={A};const T=n=>new Promise(f=>setTimeout(f,n));const gem=a.db, v=a.view;const o={{}};
+        r = await pg.evaluate(f"""(async()=>{{const a={A};const T=n=>new Promise(f=>setTimeout(f,n));const gem=a.db, v=a.view;const o={{}};a.view='fejlfinder';await T(150);
           try {{ a.db=norm(JSON.parse(JSON.stringify(gem)));const d=a.db;
             d.enheder=[];d.daaser=[];d.afbrydere=[];d.links=[];d.racks=[];d.udstyr=[];d.brandlukninger=[];d.grupper=[];d.rcds=[];
             d.tavler.forEach(t=>{{t.tTrukket=true;t.ze=0.3;if(t.fra&&!t.tilgang)t.tilgang='5G6'}});
-            o.n=a.aflAntal();o.doc=a.docHtml().includes('Afleveringstjek');a.view='fejlfinder';await T(150);
+            o.n=a.aflAntal();o.doc=a.docHtml().includes('Afleveringstjek');await T(150);
             const e=document.getElementById('afl-klar');o.klar=!!e&&getComputedStyle(e).display!=='none';
             d.tavler[0].ze=0;o.ze=a.aflTjek().find(x=>x.k==='tavle').punkter.length;
-          }} finally {{ a.db=gem;a.view=v }} return o}})()""")
+          }} finally {{ a.view=v;await T(100);a.db=gem }} return o}})()""")
         tjek('afleveringstjek: "Klar til aflevering", når intet mangler; mangler Ze tæller med', r['n'] == 0 and r['klar'] and not r['doc'] and r['ze'] >= 1, r)
         r = await pg.evaluate(f"""(async()=>{{const a={A};const T=n=>new Promise(f=>setTimeout(f,n));const o={{}};a.view='fejlfinder';await T(150);
           const knap=document.querySelector('.afl-punkt');o.har=!!knap;o.foer=[a.view,!!a.modal];if(knap)knap.click();await T(150);o.efter=[a.view,!!a.modal];
@@ -350,7 +363,7 @@ async def main():
         # Vurdering af målinger
         r = await pg.evaluate(f"""(()=>{{const a={A};const g=a.db.grupper.find(x=>a.rcd(x));const gem=JSON.stringify(g);
           Object.assign(g,{{kar:'B',In:10}});g.maal={{riso:'>999',zs:'3,0',rcd:'25',ok:true}};const ok=a.maalVurdering(g);
-          g.maal.zs='3,1';const over=a.maalVurdering(g);const adv=a.warnings().some(w=>w.k==='m'+g.id);
+          g.maal.zs='3,1';const over=a.maalVurdering(g);a.dbRev++;const adv=a.warnings().some(w=>w.k==='m'+g.id);
           g.maal={{riso:'0,5',zs:'',rcd:'350',ok:false}};const flere=a.maalVurdering(g);
           const rcdId=g.rcdId;g.rcdId='';g.maal={{riso:'2',zs:'1',rcd:'999',ok:true}};const udenRcd=a.maalVurdering(g);g.rcdId=rcdId;
           const c16=a.zsMax({{kar:'C',In:16}});Object.assign(g,JSON.parse(gem));
@@ -421,7 +434,7 @@ async def main():
 
         # 4e. Kortslutningsstrøm og selektivitet med kendte tal (aftalt 2026-11-16). Ændringerne gemmes ikke.
         r = await pg.evaluate(f"""async()=>{{const a={A};const d=a.db, n={{t:d.tavler.length,g:d.grupper.length,r:d.rcds.length,e:d.enheder.length,d:d.daaser.length}}, o={{}}, T=ms=>new Promise(f=>setTimeout(f,ms));
-          const w=k=>a.warnings().some(x=>x.k===k), rd=x=>Math.round(x*1000)/1000;
+          const w=k=>{{a.dbRev++;return a.warnings().some(x=>x.k===k)}}, rd=x=>Math.round(x*1000)/1000;
           try {{
             d.tavler.push({{id:'tk',navn:'TK',placering:'',forsikring:25,hovedafbryder:0,fra:'',fraGruppe:'',tilgang:'',tKabel:'PVC',tLedere:'5G',tTv:6,tLaengde:0,ze:0,ikMaks:0}});
             d.rcds.push({{id:'rk',tavleId:'tk',navn:'HPFI K',type:'A',In:40,idn:30,selektiv:false}});
@@ -675,7 +688,7 @@ async def main():
           return {e:k(p.enheder), g:JSON.stringify(p.grupper.map(g=>[g.id,g.type,g.faser,g.fase,g.sf])), n:p.enheder.length}})()""")
         await pg.goto(URL); await pg.wait_for_timeout(500)
         r = await pg.evaluate(f"""(()=>{{const a={A};const d=a.db;const k=x=>JSON.stringify(x.map(e=>[e.id,e.navn,e.gruppeId,e.daaseId,e.fraEnhed,e.effekt,e.kabel,e.ledere,e.tv,e.laengde,e.placering,e.trukket,e.note]));
-          a.save(); return {{navn:d.projekt.navn, b:a.backups.length, s:JSON.parse(localStorage.getItem('tavleoversigt.projekter')).schema, e:k(d.enheder), g:JSON.stringify(d.grupper.map(g=>[g.id,g.type,g.faser,g.fase,g.sf])),
+          a.save();a.gemNu(); return {{navn:d.projekt.navn, b:a.backups.length, s:JSON.parse(localStorage.getItem('tavleoversigt.projekter')).schema, e:k(d.enheder), g:JSON.stringify(d.grupper.map(g=>[g.id,g.type,g.faser,g.fase,g.sf])),
             fase:d.enheder.every(e=>e.fase===''), gemt:JSON.parse(localStorage.getItem('tavleoversigt.p.'+a.pid)||'{{}}').enheder.every(e=>e.fase==='')}}}})()""")
         tjek('opgradering fra skema 13: backup taget, brugsgenstande og grupper intakte, fase sat til som gruppen',
              r['navn'] == 'Skema 13-projekt' and r['b'] >= 1 and r['s'] == SKEMA and r['e'] == r0['e'] and r['g'] == r0['g'] and r['fase'] and r['gemt'] and r0['n'] > 0,
@@ -717,7 +730,7 @@ async def main():
             a.sel='gql'; a.openForm('afbryder'); o.afb=a.form.gruppeId; a.modal=null; await T(50);
             a.go('tavle'); await T(150); const chip=document.querySelector('.typed.lysstik'), cs=getComputedStyle(document.documentElement).getPropertyValue('--lysstik').trim();
             o.farve=!!chip&&cs!==''&&getComputedStyle(chip).getPropertyValue('--t').trim()===cs;
-            o.filter=[...document.querySelectorAll('#f-type option')].some(x=>x.value==='lysstik'&&x.textContent==='Lys og stik');
+            a.go('kabler'); await T(150); o.filter=[...document.querySelectorAll('#f-type option')].some(x=>x.value==='lysstik'&&x.textContent==='Lys og stik');
             o.print=a.sld(true).includes('.lysstik .tc');
           }} finally {{
             a.sel=sel0; a.modal=null; await T(50); const g=x=>!['gqp','gq1','gql'].includes(x.gruppeId); d.enheder=d.enheder.filter(g); d.daaser=d.daaser.filter(g); d.grupper=d.grupper.filter(x=>x.tavleId!=='tqp'); d.tavler=d.tavler.filter(x=>x.id!=='tqp'); a.save();

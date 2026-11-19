@@ -14,8 +14,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=10.25.0">
-<link rel="stylesheet" href="css/tailwind.css?v=10.25.0">
+<link rel="stylesheet" href="css/app.css?v=10.26.0">
+<link rel="stylesheet" href="css/tailwind.css?v=10.26.0">
 </head>
 <body class="min-h-full">
 <p id="fail" hidden style="margin:16px;padding:12px;border:1px solid var(--crit);color:var(--crit)">Appen kunne ikke starte, fordi Alpine.js ikke blev indlæst. Genindlæs siden.</p>
@@ -106,7 +106,7 @@
   </div>
 
   <!-- ============ TAVLE ============ -->
-  <section x-show="view==='tavle'" class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_22rem] items-start">
+  <template x-if="view==='tavle'"><section class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_22rem] items-start">
     <div class="flex flex-col gap-4 min-w-0">
       <div class="flex flex-wrap gap-2">
         <button class="btn" @click="openForm('tavle')">+ Tavle</button>
@@ -291,10 +291,10 @@
         </ul>
       </div>
     </aside>
-  </section>
+  </section></template>
 
   <!-- ============ ENSTREGSDIAGRAM ============ -->
-  <section x-show="view==='enstreg'" class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem] items-start">
+  <template x-if="view==='enstreg'"><section class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem] items-start">
     <div class="panel overflow-hidden min-w-0">
       <header class="flex flex-wrap items-center justify-between gap-2 border-b border-line bg-raised px-3 py-2">
         <h2 class="hd text-xl">Enstregsdiagram</h2>
@@ -345,10 +345,10 @@
         <p class="text-xs text-muted mt-2">Afbryder med kryds = automatsikring, med ring = HPFI. Skråstreger viser antal faser. Symbolerne er forenklede.</p>
       </div>
     </aside>
-  </section>
+  </section></template>
 
   <!-- ============ TÆNDINGSDIAGRAM ============ -->
-  <section x-show="view==='taending'" class="flex flex-col gap-4">
+  <template x-if="view==='taending'"><section class="flex flex-col gap-4">
     <div class="flex flex-wrap gap-2 items-center">
       <template x-for="(l, k) in afbArt" :key="k">
         <button class="btn" @click="openForm('afbryder', null, {art:k})" :disabled="!db.grupper.length"><span x-html="afbIkon(k)"></span> <span x-text="'+ ' + l"></span></button>
@@ -383,10 +383,10 @@
         </article>
       </template>
     </div>
-  </section>
+  </section></template>
 
   <!-- ============ SAMLEPUNKTER ============ -->
-  <section x-show="view==='samlepunkter'" class="flex flex-col gap-4">
+  <template x-if="view==='samlepunkter'"><section class="flex flex-col gap-4">
     <div class="flex flex-wrap gap-2 items-center">
       <button class="btn btn-primary" @click="openForm('daase')" :disabled="!db.grupper.length"><span x-html="ikon('daase')"></span> + Samlepunkt</button>
       <template x-for="t in daaseTyper" :key="t"><span class="tag num" x-text="t + ': ' + db.daaser.filter(d => d.type === t).length"></span></template>
@@ -426,10 +426,10 @@
       </table>
     </div>
     <p class="text-xs text-muted" x-show="db.daaser.length">Indrykning viser forgreningen: en underdåse forsynes fra dåsen over den. Strøm og spændingsfald er summeret for alt, der ligger efter samlepunktet.</p>
-  </section>
+  </section></template>
 
   <!-- ============ FØRINGSVEJ ============ -->
-  <section x-show="view==='foering'" class="flex flex-col gap-3">
+  <template x-if="view==='foering'"><section class="flex flex-col gap-3">
     <div class="flex flex-wrap gap-2 items-center">
       <label class="flex items-center gap-2 text-sm" for="fv-ikke"><input type="checkbox" id="fv-ikke" x-model="fvIkke"> Kun ikke trukket</label>
       <span class="tag num" x-text="'Trukket: ' + fmt(fvOptael().trukket) + ' m'"></span>
@@ -491,10 +491,10 @@
       </template>
       <p x-show="view==='foering' && !foeringTrae().length" class="p-6 text-muted">Ingen træk matcher filtrene.</p>
     </div>
-  </section>
+  </section></template>
 
   <!-- ============ BRANDLUKNING ============ -->
-  <section x-show="view==='brand'" class="flex flex-col gap-3">
+  <template x-if="view==='brand'"><section class="flex flex-col gap-3">
     <div class="flex flex-wrap gap-2 items-center">
       <button class="btn btn-primary" id="bl-ny" @click="brandNy()">+ Brandlukning</button>
       <label class="flex items-center gap-2 text-sm" for="bl-ikke"><input type="checkbox" id="bl-ikke" x-model="brandIkke"> Kun ikke udført / mangler mærkat</label>
@@ -531,10 +531,10 @@
         </article>
       </template>
     </div>
-  </section>
+  </section></template>
 
   <!-- ============ SVAGSTRØM ============ -->
-  <section x-show="view==='svag'" class="flex flex-col gap-4">
+  <template x-if="view==='svag'"><section class="flex flex-col gap-4">
     <div class="flex flex-wrap gap-2">
       <button class="btn" @click="openForm('rack')"><span x-html="ikon('rack')"></span> + Rackskab</button>
       <button class="btn" @click="openForm('udstyr')" :disabled="!db.racks.length">+ Rackudstyr</button>
@@ -627,10 +627,10 @@
       </div>
       <p class="text-xs text-muted mt-2">Kontrol: fast kobberlink højst 90 m, én forbindelse pr. port, PoE-budget pr. switch, kanaler pr. NVR og højdeenheder pr. skab.</p>
     </div>
-  </section>
+  </section></template>
 
   <!-- ============ BEREGNING ============ -->
-  <section x-show="view==='beregning'" class="flex flex-col gap-4">
+  <template x-if="view==='beregning'"><section class="flex flex-col gap-4">
     <div class="panel p-3" :style="warnings().length ? 'border-color:var(--crit)' : ''">
       <h2 class="hd text-lg" :class="warnings().length && 'warn'" x-text="warnings().length ? '⚠ Kræver kontrol (' + warnings().length + ')' : 'Ingen advarsler'"></h2>
       <ul class="mt-1 flex flex-col gap-1 text-sm">
@@ -744,10 +744,10 @@
         </div>
       </article>
     </template>
-  </section>
+  </section></template>
 
   <!-- ============ LOKALER ============ -->
-  <section x-show="view==='lokaler'" class="flex flex-col gap-3">
+  <template x-if="view==='lokaler'"><section class="flex flex-col gap-3">
     <div class="flex flex-wrap gap-2"><button class="btn" @click="openForm('lokale')">+ Lokale <kbd>L</kbd></button><button class="btn" @click="aabnSkabelon()">+ Lokale fra skabelon</button><button class="btn" @click="impAaben('lokale')">Importér fra regneark</button></div>
     <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
       <template x-for="l in db.lokaler.filter(l => !lokF || l.id === lokF)" :key="l.id">
@@ -813,10 +813,10 @@
         </article>
       </template>
     </div>
-  </section>
+  </section></template>
 
   <!-- ============ KABLER ============ -->
-  <section x-show="view==='kabler'" class="flex flex-col gap-3" x-data="{ matOpen:false }">
+  <template x-if="view==='kabler'"><section class="flex flex-col gap-3" x-data="{ matOpen:false }">
     <div class="panel p-3">
       <div class="flex flex-wrap items-center gap-2">
         <h2 class="hd text-lg mr-auto">Materialeliste</h2>
@@ -898,10 +898,10 @@
         </template>
       </div>
     </div>
-  </section>
+  </section></template>
 
   <!-- ============ DOKUMENTATION ============ -->
-  <section x-show="view==='dokumentation'" class="grid gap-4 lg:grid-cols-[20rem_minmax(0,1fr)] items-start">
+  <template x-if="view==='dokumentation'"><section class="grid gap-4 lg:grid-cols-[20rem_minmax(0,1fr)] items-start">
     <div class="flex flex-col gap-4">
       <div class="panel p-3 flex flex-col gap-2">
         <h2 class="hd text-lg">Projektoplysninger</h2>
@@ -1066,10 +1066,10 @@
         </table>
       </div>
     </div>
-  </section>
+  </section></template>
 
   <!-- ============ FEJLFINDER ============ -->
-  <section x-show="view==='fejlfinder'" class="flex flex-col gap-4">
+  <template x-if="view==='fejlfinder'"><section class="flex flex-col gap-4">
     <div class="panel p-3 flex flex-col gap-2" id="afl-panel">
       <h2 class="hd text-lg">Klar til aflevering?</h2>
       <p x-show="!aflAntal()" id="afl-klar" class="flex items-center gap-2 font-semibold" style="color:var(--cctv)"><span aria-hidden="true">✓</span> Klar til aflevering</p>
@@ -1111,7 +1111,7 @@
       </table>
     </div>
     <p class="text-xs text-muted">Fejlfinderen viser kun manglende koblinger. Beregningsadvarsler som overlast og spændingsfald står under Beregning.</p>
-  </section>
+  </section></template>
 
   <!-- Toast -->
   <div class="fixed bottom-4 left-1/2 z-40 -translate-x-1/2 flex flex-col items-center gap-2 w-max max-w-[92vw]" aria-live="polite">
@@ -1682,7 +1682,7 @@
     <div class="fixed inset-0 z-[70]" @click.self="sfPop=null">
       <div class="panel shadow-xl absolute sf-pop" role="listbox" aria-label="Typiske samtidighedsfaktorer" :style="'left:' + sfPop.left + 'px;width:' + sfPop.w + 'px;' + (sfPop.op ? 'bottom:' + (innerHeight - sfPop.top) + 'px' : 'top:' + sfPop.top + 'px')">
         <p class="px-3 pt-2 pb-1 text-xs font-semibold uppercase tracking-wider text-muted">Typiske samtidighedsfaktorer</p>
-        <template x-for="(x, i) in sfListe(sfPop.gid ? gruppe(sfPop.gid) : form)" :key="i">
+        <template x-for="(x, i) in sfListe(sfPop && sfPop.gid ? gruppe(sfPop.gid) : form)" :key="i">
           <button type="button" role="option" class="sf-valg w-full flex justify-between gap-3 px-3 py-1.5 text-sm text-left" :class="(x.forslag || x.aktiv) && 'font-semibold'" @click="sfVaelg(x.v)">
             <span x-text="x.txt"></span><span class="num" x-text="fmt(x.v, 2)"></span></button>
         </template>
@@ -1793,16 +1793,16 @@
   </div>
 </div>
 
-<script src="js/data.js?v=10.25.0"></script>
-<script src="js/beregning.js?v=10.25.0"></script>
-<script src="js/diagram.js?v=10.25.0"></script>
-<script src="js/lagring.js?v=10.25.0"></script>
-<script src="js/historik.js?v=10.25.0"></script>
-<script src="js/billeder.js?v=10.25.0"></script>
-<script src="js/brand.js?v=10.25.0"></script>
-<script src="js/import.js?v=10.25.0"></script>
-<script src="js/aflevering.js?v=10.25.0"></script>
-<script src="js/app.js?v=10.25.0"></script>
+<script src="js/data.js?v=10.26.0"></script>
+<script src="js/beregning.js?v=10.26.0"></script>
+<script src="js/diagram.js?v=10.26.0"></script>
+<script src="js/lagring.js?v=10.26.0"></script>
+<script src="js/historik.js?v=10.26.0"></script>
+<script src="js/billeder.js?v=10.26.0"></script>
+<script src="js/brand.js?v=10.26.0"></script>
+<script src="js/import.js?v=10.26.0"></script>
+<script src="js/aflevering.js?v=10.26.0"></script>
+<script src="js/app.js?v=10.26.0"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.14.1/cdn.min.js"></script>
 </body>
 </html>

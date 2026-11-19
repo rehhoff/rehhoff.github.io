@@ -6,7 +6,7 @@ function app() {
     view: 'tavle',
     fvIkke: false, fvFold: new Set(), fvAaben: new Set(), fvHi: '', fvAnc: [], fvBlink: '', gren: null, sfPop: null, fvRed: null, fvTmp: null,
     views: [ { id:'tavle', l:'Tavle' }, { id:'enstreg', l:'Enstregsdiagram' }, { id:'taending', l:'Tændingsdiagram' }, { id:'samlepunkter', l:'Samlepunkter & dåser' }, { id:'foering', l:'Føringsvej' }, { id:'svag', l:'Svagstrøm' }, { id:'beregning', l:'Beregning' }, { id:'lokaler', l:'Lokaler' }, { id:'kabler', l:'Kabler' }, { id:'dokumentation', l:'Dokumentation' }, { id:'fejlfinder', l:'Fejlfinder' }, { id:'brand', l:'Brandlukning' } ],
-    db: tom(), hist: [], fremtid: [], klon: null, sel: null, drag: null, over: null,
+    db: tom(), dbRev: 0, hist: [], fremtid: [], klon: null, sel: null, drag: null, over: null,
     projekter: [], pid: '', pf: { navn:'', sagsnr:'', kunde:'', adresse:'' }, sldSel: null, z: { x:8, y:8, k:1 }, pan: null, pinch: null, panMoved: false, traek: null,
     filter: { q:'', tavle:'', type:'', lokale:'' }, sort: { key:'gruppe', dir:1 },
     modal: null, form: {}, confirm: null, toasts: [], storageOk: true, tema: 'auto', qa: '', io: '',
@@ -48,6 +48,11 @@ function app() {
 
     init() {
       window.__alpineOk = true;
+      /* Alpine 3.14.1 stopper kun den sidste binding på et fjernet element (fx en lukket fane med x-if), så resten bliver ved med at regne. Vi stopper de resterende, når elementet stadig er væk, efter at flytninger er færdige */
+      new MutationObserver(ms => { for (const m of ms) for (const n of m.removedNodes) {
+        if (n.nodeType !== 1 || n.isConnected) continue;
+        for (const e of [n, ...n.querySelectorAll('*')]) if (e._x_effects && e._x_effects.size) { e._x_effects.forEach(f => Alpine.release(f)); e._x_effects.clear(); }
+      } }).observe(document.body, { childList:true, subtree:true });
       let idx = null;
       try { idx = JSON.parse(localStorage.getItem(IDX)); this.tema = localStorage.getItem(TKEY) || 'auto'; } catch (e) { this.storageOk = false; }
       if (idx && Array.isArray(idx.liste) && idx.liste.length && (Number(idx.schema) || 0) < SCHEMA) this.lavBackup('Automatisk før opdatering fra skema ' + (Number(idx.schema) || 'uden nummer') + ' til ' + SCHEMA);
@@ -62,7 +67,7 @@ function app() {
         if (!this.db.projekt.navn) this.db.projekt.navn = 'Mit projekt';
         if (!harOld) { const id2 = uid(), d2 = seed2(); this.skriv(id2, d2); this.projekter.push(this.meta(id2, d2)); }
       }
-      this.save();
+      this.save(); this.gemNu();
       this.sel = (this.gruppe('g7') || this.sorteredeGrupper()[0] || {}).id || null;
       this.brugTema(); this.firma = this.firmaLaes(); this.billedStart();
       const route = () => { const h = location.hash.slice(1); if (this.views.some(v => v.id === h)) { this.view = h; if (h === 'enstreg') this.$nextTick(() => this.tilpas()); } };
@@ -78,15 +83,16 @@ function app() {
       try { if (navigator.storage && navigator.storage.persist) navigator.storage.persisted().then(p => p || navigator.storage.persist()).then(p => { this.persistent = !!p; }).catch(() => {}); } catch (e) {}
       window.addEventListener('storage', ev => {
         if (ev.key === PK(this.pid) && ev.newValue) {
-          delete MEM[this.pid]; const d = this.laes(this.pid);
-          if (d) { this.db = d; this.hist = []; this.fremtid = []; this.billedStart(); this.say('Projektet blev ændret i en anden fane og er indlæst igen.'); }
+          delete MEM[this.pid]; if (SAVEP && SAVEP.id === this.pid) { clearTimeout(TIMERS.gem); SAVEP = null; } const d = this.laes(this.pid);
+          if (d) { this.db = d; this.dbRev++; this.hist = []; this.fremtid = []; this.billedStart(); this.say('Projektet blev ændret i en anden fane og er indlæst igen.'); }
         } else if (ev.key === IDX && ev.newValue) {
           try { const x = JSON.parse(ev.newValue); if (Array.isArray(x.liste)) { this.projekter = x.liste; if (x.sidstBackup) this.sidstBackup = x.sidstBackup; } } catch (e) {}
         } else if (ev.key === SKEY) this.synk = this.synkLaes();
       });
       this.synk = this.synkLaes();
       if (this.synk) this.synkNu();
-      document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && this.synk) this.synkNu(); });
+      document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') this.gemNu(); else if (this.synk) this.synkNu(); });
+      window.addEventListener('pagehide', () => this.gemNu()); window.addEventListener('beforeunload', () => this.gemNu());
     },
     datoTxt(iso) { const d = new Date(iso); return isNaN(d) ? '–' : d.toLocaleString('da-DK', { dateStyle:'short', timeStyle:'short' }); },
     stamTxt() { const p = this.db.projekt; return [p.sagsnr && 'Sag ' + p.sagsnr, p.kunde, p.adresse].filter(Boolean).join(' · '); },
@@ -94,9 +100,9 @@ function app() {
       const p = this.db.projekt, slug = String(p.sagsnr || p.navn || 'projekt').toLowerCase().replace(/æ/g, 'ae').replace(/ø/g, 'oe').replace(/å/g, 'aa').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
       return base + '-' + (slug || 'projekt') + '.' + ext;
     },
-    mutate(fn) { this.hist.push(JSON.stringify(this.db)); if (this.hist.length > 40) this.hist.shift(); this.fremtid = []; fn(); this.syncDaaser(); this.save(); },
-    redo() { if (!this.fremtid.length) return; this.hist.push(JSON.stringify(this.db)); this.db = norm(JSON.parse(this.fremtid.pop())); this.save(); this.say('Gentaget.'); },
-    undo() { if (!this.hist.length) return; this.fremtid.push(JSON.stringify(this.db)); if (this.fremtid.length > 40) this.fremtid.shift(); this.db = norm(JSON.parse(this.hist.pop())); this.save(); this.toasts.filter(t => t.undo).forEach(t => this.lukToast(t.id)); this.say('Fortrudt.'); },
+    mutate(fn) { this.hist.push(JSON.stringify(this.db)); if (this.hist.length > 40) this.hist.shift(); this.fremtid = []; fn(); this.dbRev++; this.syncDaaser(); this.save(JSON.stringify(this.db)); },
+    redo() { if (!this.fremtid.length) return; this.hist.push(JSON.stringify(this.db)); this.db = norm(JSON.parse(this.fremtid.pop())); this.dbRev++; this.save(); this.say('Gentaget.'); },
+    undo() { if (!this.hist.length) return; this.fremtid.push(JSON.stringify(this.db)); if (this.fremtid.length > 40) this.fremtid.shift(); this.db = norm(JSON.parse(this.hist.pop())); this.dbRev++; this.save(); this.toasts.filter(t => t.undo).forEach(t => this.lukToast(t.id)); this.say('Fortrudt.'); },
     /* beskeder i bunden: højst tre ad gangen, tid efter tekstens længde, fejl bliver stående til de lukkes */
     async installer() { const p = this.installPrompt; if (!p) return; this.installPrompt = null; p.prompt(); try { await p.userChoice; } catch (e) {} },
     erIos() { return /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); },
@@ -115,21 +121,49 @@ function app() {
     },
 
     /* opslag */
-    tavle(id) { return this.db.tavler.find(t => t.id === id); },
-    gruppe(id) { return this.db.grupper.find(g => g.id === id); },
+    /* ydelse: id → objekt og børneindeks. Bygges igen, når db, dbRev eller listernes længde ændrer sig. Gemmes uden for Alpines tilstand (IDXC) */
+    idx() {
+      const db = this.db, rev = this.dbRev, n1 = db.tavler.length, n2 = db.grupper.length, n3 = db.daaser.length, n4 = db.enheder.length, c = IDXC;
+      if (c && c.db === db && c.rev === rev && c.n1 === n1 && c.n2 === n2 && c.n3 === n3 && c.n4 === n4) return c;
+      const m = (L, f) => { const r = new Map(); for (const x of L) r.set(f ? f(x) : x.id, x); return r; };
+      return (IDXC = { db, rev, n1, n2, n3, n4, tavle:m(db.tavler), gruppe:m(db.grupper), daase:m(db.daaser), enhed:m(db.enheder), kids:null });
+    },
+    /* børneindeks (id → liste i db-rækkefølge), bygges først ved brug. Nulstilles, når idx() bygges igen */
+    /* mellemlagring af tunge afledte værdier: gentages kun, når db (dbRev og listernes længde) eller de givne tilstandsværdier ændrer sig. Intet må ændre en returneret værdi. deps skal læses reaktivt af kalderen */
+    memo(navn, deps, fn) {
+      const c = this.idx(), m = MEMO[navn];
+      if (m && m.db === c.db && m.rev === c.rev && m.n1 === c.n1 && m.n2 === c.n2 && m.n3 === c.n3 && m.n4 === c.n4 && m.d.length === deps.length && m.d.every((v, i) => v === deps[i])) return m.v;
+      const v = fn(); MEMO[navn] = { db:c.db, rev:c.rev, n1:c.n1, n2:c.n2, n3:c.n3, n4:c.n4, d:deps, v }; return v;
+    },
+    /* som memo, men pr. nøgle: en lille mellemlagring pr. navn, der nulstilles, når db ændrer sig. Til funktioner, der kaldes mange gange pr. tegning med forskellige id'er */
+    mk(navn, key, fn) {
+      const c = this.idx(); let m = MEMO['k:' + navn];
+      if (!m || m.db !== c.db || m.rev !== c.rev || m.n1 !== c.n1 || m.n2 !== c.n2 || m.n3 !== c.n3 || m.n4 !== c.n4) m = MEMO['k:' + navn] = { db:c.db, rev:c.rev, n1:c.n1, n2:c.n2, n3:c.n3, n4:c.n4, map:new Map() };
+      if (m.map.has(key)) return m.map.get(key);
+      const v = fn(); m.map.set(key, v); return v;
+    },
+    kid() {
+      const c = this.idx(); if (c.kids) return c.kids; const db = this.db;
+      const g = (L, f) => { const r = new Map(); for (const x of L) { const k = f(x); (r.get(k) || r.set(k, []).get(k)).push(x); } return r; };
+      const gr = g(db.grupper, x => x.tavleId); gr.forEach(l => l.sort((a, b) => a.nr - b.nr));
+      return (c.kids = { grupper:gr, enhFra:g(db.enheder, x => x.fraEnhed), enhDaase:g(db.enheder, x => x.daaseId), enhGruppe:g(db.enheder, x => x.gruppeId),
+        daaseParent:g(db.daaser, x => x.parentId), daaseGruppe:g(db.daaser, x => x.gruppeId), afbFra:g(db.afbrydere, x => x.fraEnhed), afbDaase:g(db.afbrydere, x => x.daaseId) });
+    },
+    tavle(id) { return this.idx().tavle.get(id); },
+    gruppe(id) { return this.idx().gruppe.get(id); },
     sg() { return this.gruppe(this.sel); },
     mid() { return this.modal ? this.modal.id : null; },
     tavleNavn(id) { const t = this.tavle(id); return t ? t.navn : '?'; },
     gruppeTxt(id) { const g = this.gruppe(id); return g ? this.tavleNavn(g.tavleId) + ' · ' + g.nr + ' ' + g.navn : 'Ikke tildelt'; },
     lokaleNavn(id) { const l = this.db.lokaler.find(l => l.id === id); return l ? l.navn : 'Lokale ikke angivet'; },
     typeOf(e) { const g = this.gruppe(e.gruppeId); return g ? g.type : ''; },
-    grupperFor(tid) { return this.db.grupper.filter(g => g.tavleId === tid).sort((a, b) => a.nr - b.nr); },
+    grupperFor(tid) { return (this.kid().grupper.get(tid) || []).slice(); },
     rcdsFor(tid) { return this.db.rcds.filter(r => r.tavleId === tid); },
     rcd(g) { return this.db.rcds.find(r => r.id === g.rcdId && r.tavleId === g.tavleId); },
     rcdNavn(g) { const r = this.rcd(g); return r ? r.navn : ''; },
     rcdTxt(g) { const r = this.rcd(g); return r ? r.navn + ', ' + r.idn + ' mA type ' + r.type + (r.selektiv ? ' S' : '') : 'Ingen'; },
-    sorteredeGrupper() { return this.db.tavler.flatMap(t => this.grupperFor(t.id)); },
-    enhederFor(gid) { return this.db.enheder.filter(e => e.gruppeId === gid); },
+    sorteredeGrupper() { return this.memo('sorteredeGrupper', [], () => this.db.tavler.flatMap(t => this.grupperFor(t.id))); },
+    enhederFor(gid) { return (this.kid().enhGruppe.get(gid) || []).slice(); },
     enhederILokale(lid) { return this.db.enheder.filter(e => e.lokaleId === lid); },
     lokalerIGruppe(gid) { const ids = new Set(this.enhederFor(gid).map(e => e.lokaleId)); return this.db.lokaler.filter(l => ids.has(l.id)); },
     grupperILokale(lid) { const ids = new Set(this.enhederILokale(lid).map(e => e.gruppeId)); return this.sorteredeGrupper().filter(g => ids.has(g.id)); },
@@ -149,18 +183,18 @@ function app() {
 
     ikon(n) { return IK[n] || ''; },
     /* samlepunkter */
-    daase(id) { return this.db.daaser.find(d => d.id === id); },
-    daaserFor(gid) { return this.db.daaser.filter(d => d.gruppeId === gid); },
+    daase(id) { return this.idx().daase.get(id); },
+    daaserFor(gid) { return (this.kid().daaseGruppe.get(gid) || []).slice(); },
     daaserILokale(lid) { return this.db.daaser.filter(d => d.lokaleId === lid); },
     daaseTxt(id) { const d = this.daase(id); return d ? d.type + ' ' + d.navn : ''; },
     erUnder(id, anc) { let d = this.daase(id), n = 0; while (d && n++ < 20) { if (d.parentId === anc) return true; d = this.daase(d.parentId); } return false; },
     nedstroem(did, seen) {
       seen = seen || new Set(); if (seen.has(did)) return []; seen.add(did);
-      let out = this.db.enheder.filter(e => e.daaseId === did);
-      for (const d of this.db.daaser.filter(d => d.parentId === did)) out = out.concat(this.nedstroem(d.id, seen));
+      const k = this.kid(); let out = (k.enhDaase.get(did) || []).slice();
+      for (const d of k.daaseParent.get(did) || []) out = out.concat(this.nedstroem(d.id, seen));
       return out;
     },
-    daaseFaser(did) { return this.faseSum(this.nedstroem(did)); },
+    daaseFaser(did) { return this.mk('daaseFaser', did, () => this.faseSum(this.nedstroem(did))); },
     daaseI(did) { const v = this.daaseFaser(did); return Math.max(v.L1, v.L2, v.L3); },
     daaseIz(d) { const g = this.gruppe(d.gruppeId); return this.izBeregn(d.kabel, d.tv, !!g && g.faser == 3, this.forhold(g)); },
     daaseIzFejl(d) { const g = this.gruppe(d.gruppeId); return !!g && !!this.daaseIz(d) && g.In > this.daaseIz(d); },
@@ -171,22 +205,43 @@ function app() {
       return s;
     },
     syncDaaser() {
-      const D = this.db.daaser;
-      for (let i = 0; i < D.length + 1; i++) D.forEach(d => { const p = d.parentId && d.parentId !== d.id ? this.daase(d.parentId) : null; if (p) d.gruppeId = p.gruppeId; else d.parentId = ''; });
-      this.db.enheder.forEach(e => { if (!e.daaseId) return; const d = this.daase(e.daaseId); if (d) e.gruppeId = d.gruppeId; else e.daaseId = ''; });
+      /* hver dåse arver gruppe fra roden af sin kæde (parentId), hver sløjfet brugsgenstand gruppe og samlepunkt fra roden af sin sløjfe (fraEnhed). Kæder følges én gang pr. post; en løkke brydes */
+      const D = this.db.daaser, E = this.db.enheder, dm = this.idx().daase, em = this.idx().enhed, gr = new Map();
+      for (const d0 of D) {
+        const sti = [], set = new Set(); let x = d0, g;
+        for (;;) {
+          if (gr.has(x.id)) { g = gr.get(x.id); break; }
+          sti.push(x); set.add(x.id);
+          const p = x.parentId && x.parentId !== x.id ? dm.get(x.parentId) : null;
+          if (!p || set.has(p.id)) { x.parentId = ''; g = x.gruppeId; break; }
+          x = p;
+        }
+        for (const y of sti) { if (y.gruppeId !== g) y.gruppeId = g; gr.set(y.id, g); }
+      }
+      E.forEach(e => { if (!e.daaseId) return; const d = dm.get(e.daaseId); if (d) e.gruppeId = d.gruppeId; else e.daaseId = ''; });
       /* sløjfer: en sløjfet brugsgenstand arver gruppe og samlepunkt fra den, den er sløjfet fra */
-      const E = this.db.enheder;
-      E.forEach(e => { if (e.fraEnhed && (e.fraEnhed === e.id || !this.enhed(e.fraEnhed) || this.erSloejfetUnder(e.fraEnhed, e.id))) e.fraEnhed = ''; });
-      for (let i = 0; i < E.length + 1; i++) E.forEach(e => { const p = this.enhed(e.fraEnhed); if (p) { e.gruppeId = p.gruppeId; e.daaseId = p.daaseId; } });
-      this.db.afbrydere.forEach(a => { if (a.fraEnhed && !this.enhed(a.fraEnhed)) a.fraEnhed = ''; if (a.fraEnhed) a.daaseId = ''; if (a.daaseId && !this.daase(a.daaseId)) a.daaseId = ''; });
+      E.forEach(e => { if (e.fraEnhed && (e.fraEnhed === e.id || !em.get(e.fraEnhed) || this.erSloejfetUnder(e.fraEnhed, e.id))) e.fraEnhed = ''; });
+      const rs = new Map();
+      for (const e0 of E) {
+        const sti = [], set = new Set(); let x = e0, g, d;
+        for (;;) {
+          if (rs.has(x.id)) { [g, d] = rs.get(x.id); break; }
+          sti.push(x); set.add(x.id);
+          const p = em.get(x.fraEnhed);
+          if (!p || set.has(p.id)) { g = x.gruppeId; d = x.daaseId; break; }
+          x = p;
+        }
+        for (const y of sti) { if (y.gruppeId !== g) y.gruppeId = g; if (y.daaseId !== d) y.daaseId = d; rs.set(y.id, [g, d]); }
+      }
+      this.db.afbrydere.forEach(a => { if (a.fraEnhed && !em.get(a.fraEnhed)) a.fraEnhed = ''; if (a.fraEnhed) a.daaseId = ''; if (a.daaseId && !dm.get(a.daaseId)) a.daaseId = ''; });
     },
     /* føringsvej: sløjfer mellem brugsgenstande (skema 13) */
-    enhed(id) { return id ? this.db.enheder.find(e => e.id === id) : undefined; },
-    sloejfer(id) { return id ? this.db.enheder.filter(e => e.fraEnhed === id) : []; },
+    enhed(id) { return id ? this.idx().enhed.get(id) : undefined; },
+    sloejfer(id) { return id ? (this.kid().enhFra.get(id) || []).slice() : []; },
     erSloejfetUnder(id, anc) { let e = this.enhed(id), n = 0; while (e && n++ < 50) { if (e.id === anc) return true; e = this.enhed(e.fraEnhed); } return false; },
     enhedNed(e, seen) { seen = seen || new Set(); if (!e || seen.has(e.id)) return []; seen.add(e.id); return [e].concat(...this.sloejfer(e.id).map(x => this.enhedNed(x, seen))); },
     /* strøm i e's eget træk pr. fase: e og alt sløjfet efter den, hver på sine faser (skema 14) */
-    enhedFaser(e) { return this.faseSum(this.enhedNed(e)); },
+    enhedFaser(e) { return this.mk('enhedFaser', e.id, () => this.faseSum(this.enhedNed(e))); },
     enhedI(e) { const v = this.enhedFaser(e); return Math.max(v.L1, v.L2, v.L3); },
     /* ΔU i e's eget træk; L kan gives for at regne pr. meter (lmax) */
     duEget(e, tv, L) { return this.duV(this.enhedFaser(e), L == null ? Number(e.laengde) || 0 : L, Number(tv || e.tv) || 1); },
@@ -198,15 +253,16 @@ function app() {
     fvNode(kind, o, kids) { return { kind, o, kids:kids || [] }; },
     fvEnhed(e, seen) {
       if (seen.has(e.id)) return null; seen.add(e.id);
-      return this.fvNode('enhed', e, this.sloejfer(e.id).map(x => this.fvEnhed(x, seen)).filter(Boolean).concat(this.db.afbrydere.filter(a => a.fraEnhed === e.id).map(a => this.fvNode('afb', a))));
+      return this.fvNode('enhed', e, this.sloejfer(e.id).map(x => this.fvEnhed(x, seen)).filter(Boolean).concat((this.kid().afbFra.get(e.id) || []).map(a => this.fvNode('afb', a))));
     },
     fvDaase(d, seen) {
       if (seen.has(d.id)) return null; seen.add(d.id);
-      return this.fvNode('daase', d, this.db.enheder.filter(e => e.daaseId === d.id && !this.enhed(e.fraEnhed)).map(e => this.fvEnhed(e, seen)).filter(Boolean)
-        .concat(this.db.afbrydere.filter(a => a.daaseId === d.id && !a.fraEnhed).map(a => this.fvNode('afb', a)))
-        .concat(this.db.daaser.filter(x => x.parentId === d.id).map(x => this.fvDaase(x, seen)).filter(Boolean)));
+      return this.fvNode('daase', d, (this.kid().enhDaase.get(d.id) || []).filter(e => !this.enhed(e.fraEnhed)).map(e => this.fvEnhed(e, seen)).filter(Boolean)
+        .concat((this.kid().afbDaase.get(d.id) || []).filter(a => !a.fraEnhed).map(a => this.fvNode('afb', a)))
+        .concat((this.kid().daaseParent.get(d.id) || []).map(x => this.fvDaase(x, seen)).filter(Boolean)));
     },
-    foeringTrae() {
+    foeringTrae() { return this.memo('foeringTrae', [this.lokF, this.fvIkke, this.fvFold, this.fvAaben], () => this.foeringTraeRaw()); },
+    foeringTraeRaw() {
       const seen = new Set(), lok = this.lokF, ikke = this.fvIkke, filt = !!(lok || ikke);
       const harKabel = n => n.kind === 'tavle' ? Number(n.o.tLaengde) > 0 : n.kind !== 'gruppe' && Number(n.o.laengde) > 0;
       const match = n => n.kind !== 'tavle' && n.kind !== 'gruppe' && (!lok || n.o.lokaleId === lok) && (!ikke || (harKabel(n) && !n.o.trukket));
@@ -221,9 +277,9 @@ function app() {
         return true;
       };
       for (const t of this.db.tavler) {
-        const tn = this.fvNode('tavle', t, this.grupperFor(t.id).slice().sort((a, b) => a.nr - b.nr).map(g => this.fvNode('gruppe', g,
-          this.db.daaser.filter(d => d.gruppeId === g.id && !this.daase(d.parentId)).map(d => this.fvDaase(d, seen)).filter(Boolean)
-            .concat(this.db.enheder.filter(e => e.gruppeId === g.id && !this.daase(e.daaseId) && !this.enhed(e.fraEnhed)).map(e => this.fvEnhed(e, seen)).filter(Boolean)))));
+        const tn = this.fvNode('tavle', t, this.grupperFor(t.id).map(g => this.fvNode('gruppe', g,
+          this.daaserFor(g.id).filter(d => !this.daase(d.parentId)).map(d => this.fvDaase(d, seen)).filter(Boolean)
+            .concat(this.enhederFor(g.id).filter(e => !this.daase(e.daaseId) && !this.enhed(e.fraEnhed)).map(e => this.fvEnhed(e, seen)).filter(Boolean)))));
         flad(tn, 0, '', []);
       }
       /* trælinjer: sidst = ingen senere række med samme forælder; linjer[i] = om forfaderen på niveau i+1 har søskende efter sig */
@@ -264,7 +320,8 @@ function app() {
       if (r.kind === 'daase') return o.type + ' ' + o.navn; if (r.kind === 'afb') return (this.afbArt[o.art] || 'Afbryder') + ' ' + o.navn; return o.navn;
     },
     fvSted(r) { const o = r.o; if (r.kind === 'tavle' || r.kind === 'gruppe') return ''; return [o.placering, o.hoejde ? o.hoejde + ' cm' : '', this.lokF || !o.lokaleId ? '' : this.lokaleNavn(o.lokaleId)].filter(Boolean).join(' · '); },
-    fvOptael() {
+    fvOptael() { return this.memo('fvOptael', [this.lokF], () => this.fvOptaelRaw()); },
+    fvOptaelRaw() {
       let i = 0, t = 0; const lok = this.lokF, laeg = (L, ok) => { L = Number(L) || 0; if (ok) t += L; else i += L; };
       this.db.enheder.concat(this.db.daaser, this.db.afbrydere).filter(x => !lok || x.lokaleId === lok).forEach(x => laeg(x.laengde, x.trukket)); if (!lok) this.db.tavler.forEach(x => laeg(x.tLaengde, x.tTrukket));
       return { trukket:t, ikke:i };
@@ -772,7 +829,8 @@ function app() {
     },
 
     /* fejlfinder: manglende koblinger */
-    mangler() {
+    mangler() { return this.memo('mangler', [], () => this.manglerRaw()); },
+    manglerRaw() {
       const out = [], d = this.db;
       d.enheder.filter(e => !this.gruppe(e.gruppeId)).forEach(e => out.push({ k:'g' + e.id, kat:'gruppe', navn:e.navn, txt:'Ikke tildelt en gruppe.', type:'enhed', obj:e, spor:'' }));
       for (const x of d.daaser) {
