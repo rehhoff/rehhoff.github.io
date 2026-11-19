@@ -91,6 +91,9 @@ const BRANDPRODUKTER = ['FR Brandkit', 'FR Brandplade', 'FR Gipsmørtel', 'FR Ma
 const kabMap = k => KABLER.includes(k) ? k : /noik|halogen|xlpe/i.test(k || '') ? 'XLPE' : 'PVC';
 const daaMap = t => DAASER.includes(t) ? t : /underlag|fuga/i.test(t || '') ? 'Underlag' : /membran|ip44|brønd/i.test(t || '') ? 'Membrandåse' : 'PL-dåse';
 const TIMERS = {};
+/* ydelse: indeks og mellemlagring ligger uden for Alpines tilstand, så de ikke selv bliver reaktive */
+let IDXC = null;
+const MEMO = {};
 /* Typiske mærkeeffekter som forslag: [mønster i navnet, W, betegnelse, ganges med antal] */
 const EFFEKT = [
   [/halogen/, 50, 'Halogenspot 50 W', 1], [/skinne/, 60, 'Skinnespots'], [/downlight|indbygningsspot|spot/, 10, 'Downlight', 1], [/lysstof|\bt8\b|\bt5\b/, 36, 'Lysstofrør 36 W', 1], [/gløde/, 60, 'Glødepære 60 W', 1],

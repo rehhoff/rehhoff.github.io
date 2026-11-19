@@ -1682,7 +1682,7 @@
     <div class="fixed inset-0 z-[70]" @click.self="sfPop=null">
       <div class="panel shadow-xl absolute sf-pop" role="listbox" aria-label="Typiske samtidighedsfaktorer" :style="'left:' + sfPop.left + 'px;width:' + sfPop.w + 'px;' + (sfPop.op ? 'bottom:' + (innerHeight - sfPop.top) + 'px' : 'top:' + sfPop.top + 'px')">
         <p class="px-3 pt-2 pb-1 text-xs font-semibold uppercase tracking-wider text-muted">Typiske samtidighedsfaktorer</p>
-        <template x-for="(x, i) in sfListe(sfPop.gid ? gruppe(sfPop.gid) : form)" :key="i">
+        <template x-for="(x, i) in sfListe(sfPop && sfPop.gid ? gruppe(sfPop.gid) : form)" :key="i">
           <button type="button" role="option" class="sf-valg w-full flex justify-between gap-3 px-3 py-1.5 text-sm text-left" :class="(x.forslag || x.aktiv) && 'font-semibold'" @click="sfVaelg(x.v)">
             <span x-text="x.txt"></span><span class="num" x-text="fmt(x.v, 2)"></span></button>
         </template>
