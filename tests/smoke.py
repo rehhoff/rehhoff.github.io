@@ -1077,7 +1077,13 @@ async def main():
         # 7. Offline-app: service worker på localhost (kræver https eller localhost)
         class Stille(http.server.SimpleHTTPRequestHandler):
             def log_message(self, *a): pass
-        srv = http.server.ThreadingHTTPServer(('127.0.0.1', 0), functools.partial(Stille, directory=str(ROD)))
+        class Server(http.server.ThreadingHTTPServer):
+            # Standardkøen er 5 forbindelser. Chrome henter mange filer samtidig, og på Windows blev
+            # forbindelser så afvist (ERR_CONNECTION_REFUSED). Et script manglede, appen startede ikke,
+            # service workeren blev aldrig registreret, og testen hang på serviceWorker.ready.
+            request_queue_size = 128
+            daemon_threads = True
+        srv = Server(('127.0.0.1', 0), functools.partial(Stille, directory=str(ROD)))
         threading.Thread(target=srv.serve_forever, daemon=True).start()
         lok = 'http://127.0.0.1:%d/' % srv.server_address[1]
         async def lok_route(r):
@@ -1089,8 +1095,10 @@ async def main():
         await ctx.route('**/*', lok_route)
         pg = await ctx.new_page()
         pg.on('pageerror', lambda e: fejl.append('offline: ' + str(e)))
+        pg.on('requestfailed', lambda r: fejl.append('offline: kunne ikke hente ' + r.url + ' (' + str(r.failure) + ')') if r.url.startswith(lok) else None)
         await pg.goto(lok); await pg.wait_for_timeout(500)
-        klar = await pg.evaluate("navigator.serviceWorker.ready.then(()=>new Promise(f=>setTimeout(()=>f(!!navigator.serviceWorker.controller),300)))")
+        # ready løses aldrig, hvis service workeren ikke bliver registreret; derfor en tidsgrænse i siden
+        klar = await pg.evaluate("Promise.race([navigator.serviceWorker.ready.then(()=>new Promise(f=>setTimeout(()=>f(!!navigator.serviceWorker.controller),300))), new Promise(f=>setTimeout(()=>f(false),10000))])")
         if not klar:
             await pg.reload(); await pg.wait_for_timeout(500)
             klar = await pg.evaluate("!!navigator.serviceWorker.controller")
