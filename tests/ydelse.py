@@ -56,7 +56,7 @@ TID = """async ([navn, arg]) => {
 OPSAET = """() => {
   window.__maal = {
     flueben: (a, i) => { const r = a.foeringTrae().find(x => x.kind === 'enhed' && Number(x.o.laengde) > 0); a.fvSaet(r, 'trukket', !r.o.trukket); },
-    gem: (a, i) => { const r = a.foeringTrae().find(x => x.kind === 'enhed' && Number(x.o.laengde) > 0); a.fvRedAabn(r); a.fvTmp.laengde = 6 + (i % 2); a.fvRedGem(r); },
+    gem: (a, i) => { const r = a.foeringTrae().find(x => x.kind === 'enhed' && Number(x.o.laengde) > 0); a.fvRedAabn(r); a.fvTmp.laengde = 6 + ((window.__n = (window.__n || 0) + 1) % 50) / 10; a.fvRedGem(r); },
     ret: (a, i) => { const e = a.db.enheder[10]; a.openForm('enhed', e); a.form.effekt = 500 + i; a.saveForm(); },
     undo: (a, i) => { a.undo(); },
     fane: (a, v) => { a.go(v); }

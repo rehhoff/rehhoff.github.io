@@ -257,14 +257,14 @@ async def main():
         # Afleveringstjek (forslag 10) og tavlefortegnelse (forslag 11)
         r = await pg.evaluate(f"""(()=>{{const a={A};const k=a.aflTjek();return {{kat:k.filter(x=>x.punkter.length).map(x=>x.k),n:a.aflAntal(),doc:a.docHtml().includes('Afleveringstjek: '+a.aflAntal()+' ')}}}})()""")
         tjek('afleveringstjek viser kendte mangler i eksempelprojektet, og dokumentationen har en statuslinje', r['n'] > 0 and len(r['kat']) > 0 and r['doc'], r)
-        r = await pg.evaluate(f"""(async()=>{{const a={A};const T=n=>new Promise(f=>setTimeout(f,n));const gem=a.db, v=a.view;const o={{}};
+        r = await pg.evaluate(f"""(async()=>{{const a={A};const T=n=>new Promise(f=>setTimeout(f,n));const gem=a.db, v=a.view;const o={{}};a.view='fejlfinder';await T(150);
           try {{ a.db=norm(JSON.parse(JSON.stringify(gem)));const d=a.db;
             d.enheder=[];d.daaser=[];d.afbrydere=[];d.links=[];d.racks=[];d.udstyr=[];d.brandlukninger=[];d.grupper=[];d.rcds=[];
             d.tavler.forEach(t=>{{t.tTrukket=true;t.ze=0.3;if(t.fra&&!t.tilgang)t.tilgang='5G6'}});
-            o.n=a.aflAntal();o.doc=a.docHtml().includes('Afleveringstjek');a.view='fejlfinder';await T(150);
+            o.n=a.aflAntal();o.doc=a.docHtml().includes('Afleveringstjek');await T(150);
             const e=document.getElementById('afl-klar');o.klar=!!e&&getComputedStyle(e).display!=='none';
             d.tavler[0].ze=0;o.ze=a.aflTjek().find(x=>x.k==='tavle').punkter.length;
-          }} finally {{ a.db=gem;a.view=v }} return o}})()""")
+          }} finally {{ a.view=v;await T(100);a.db=gem }} return o}})()""")
         tjek('afleveringstjek: "Klar til aflevering", når intet mangler; mangler Ze tæller med', r['n'] == 0 and r['klar'] and not r['doc'] and r['ze'] >= 1, r)
         r = await pg.evaluate(f"""(async()=>{{const a={A};const T=n=>new Promise(f=>setTimeout(f,n));const o={{}};a.view='fejlfinder';await T(150);
           const knap=document.querySelector('.afl-punkt');o.har=!!knap;o.foer=[a.view,!!a.modal];if(knap)knap.click();await T(150);o.efter=[a.view,!!a.modal];
@@ -717,7 +717,7 @@ async def main():
             a.sel='gql'; a.openForm('afbryder'); o.afb=a.form.gruppeId; a.modal=null; await T(50);
             a.go('tavle'); await T(150); const chip=document.querySelector('.typed.lysstik'), cs=getComputedStyle(document.documentElement).getPropertyValue('--lysstik').trim();
             o.farve=!!chip&&cs!==''&&getComputedStyle(chip).getPropertyValue('--t').trim()===cs;
-            o.filter=[...document.querySelectorAll('#f-type option')].some(x=>x.value==='lysstik'&&x.textContent==='Lys og stik');
+            a.go('kabler'); await T(150); o.filter=[...document.querySelectorAll('#f-type option')].some(x=>x.value==='lysstik'&&x.textContent==='Lys og stik');
             o.print=a.sld(true).includes('.lysstik .tc');
           }} finally {{
             a.sel=sel0; a.modal=null; await T(50); const g=x=>!['gqp','gq1','gql'].includes(x.gruppeId); d.enheder=d.enheder.filter(g); d.daaser=d.daaser.filter(g); d.grupper=d.grupper.filter(x=>x.tavleId!=='tqp'); d.tavler=d.tavler.filter(x=>x.id!=='tqp'); a.save();

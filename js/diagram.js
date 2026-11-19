@@ -488,7 +488,7 @@ const APP_DIAGRAM = () => ({
       this.db.enheder.filter(x => x.gruppeId === e.gruppeId).forEach(x => ud.push({ key:'e:' + x.id, txt:'Sløjfe fra ' + x.navn }));
       return ud.filter(v => this.flytTjek(eid, v.key).ok);
     },
-    pinchMaal() { const [a, b] = [...SLDP.values()], r = this.$refs.sldBox.getBoundingClientRect(); return { d:Math.hypot(a.x - b.x, a.y - b.y) || 1, cx:(a.x + b.x) / 2 - r.left, cy:(a.y + b.y) / 2 - r.top }; },
+    pinchMaal() { const [a, b] = [...SLDP.values()], r = (this.$refs.sldBox || document.body).getBoundingClientRect(); return { d:Math.hypot(a.x - b.x, a.y - b.y) || 1, cx:(a.x + b.x) / 2 - r.left, cy:(a.y + b.y) / 2 - r.top }; },
     pinchStart() { const m = this.pinchMaal(); this.pinch = Object.assign(m, { z:Object.assign({}, this.z) }); this.pan = null; this.panMoved = true; },
     panEnd(ev) {
       if (!SLDP.delete(ev.pointerId)) return;
@@ -511,8 +511,8 @@ const APP_DIAGRAM = () => ({
       if (this.panMoved) this.z = { x:p.ox + dx, y:p.oy + dy, k:this.z.k };
     },
     zoomAt(f, cx, cy) { const z = this.z, k = Math.min(4, Math.max(0.25, z.k * f)); this.z = { x: cx - (cx - z.x) * k / z.k, y: cy - (cy - z.y) * k / z.k, k }; },
-    zoom(f) { const b = this.$refs.sldBox; this.zoomAt(f, b.clientWidth / 2, b.clientHeight / 2); },
-    hjul(ev) { if (!(ev.ctrlKey || ev.metaKey)) return; ev.preventDefault(); const r = this.$refs.sldBox.getBoundingClientRect(); this.zoomAt(ev.deltaY < 0 ? 1.15 : 1 / 1.15, ev.clientX - r.left, ev.clientY - r.top); },
-    tilpas() { const w = this.$refs.sldBox.clientWidth; this.z = { x:8, y:8, k: w ? Math.min(1.5, Math.max(0.25, (w - 16) / SLDW)) : 1 }; },
+    zoom(f) { const b = this.$refs.sldBox; if (!b) return; this.zoomAt(f, b.clientWidth / 2, b.clientHeight / 2); },
+    hjul(ev) { if (!(ev.ctrlKey || ev.metaKey) || !this.$refs.sldBox) return; ev.preventDefault(); const r = this.$refs.sldBox.getBoundingClientRect(); this.zoomAt(ev.deltaY < 0 ? 1.15 : 1 / 1.15, ev.clientX - r.left, ev.clientY - r.top); },
+    tilpas() { if (!this.$refs.sldBox) return; const w = this.$refs.sldBox.clientWidth; this.z = { x:8, y:8, k: w ? Math.min(1.5, Math.max(0.25, (w - 16) / SLDW)) : 1 }; },
 
 });

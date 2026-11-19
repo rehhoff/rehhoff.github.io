@@ -48,6 +48,11 @@ function app() {
 
     init() {
       window.__alpineOk = true;
+      /* Alpine 3.14.1 stopper kun den sidste binding på et fjernet element (fx en lukket fane med x-if), så resten bliver ved med at regne. Vi stopper de resterende, når elementet stadig er væk, efter at flytninger er færdige */
+      new MutationObserver(ms => { for (const m of ms) for (const n of m.removedNodes) {
+        if (n.nodeType !== 1 || n.isConnected) continue;
+        for (const e of [n, ...n.querySelectorAll('*')]) if (e._x_effects && e._x_effects.size) { e._x_effects.forEach(f => Alpine.release(f)); e._x_effects.clear(); }
+      } }).observe(document.body, { childList:true, subtree:true });
       let idx = null;
       try { idx = JSON.parse(localStorage.getItem(IDX)); this.tema = localStorage.getItem(TKEY) || 'auto'; } catch (e) { this.storageOk = false; }
       if (idx && Array.isArray(idx.liste) && idx.liste.length && (Number(idx.schema) || 0) < SCHEMA) this.lavBackup('Automatisk før opdatering fra skema ' + (Number(idx.schema) || 'uden nummer') + ' til ' + SCHEMA);
