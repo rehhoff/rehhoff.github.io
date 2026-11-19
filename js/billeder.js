@@ -192,7 +192,7 @@ const APP_BILLEDER = () => ({
       const pids = new Set([...this.projekter.map(p => p.id), ...((idx && Array.isArray(idx.liste)) ? idx.liste.map(p => p.id) : [])]), pre = PK('');
       for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && k.startsWith(pre)) pids.add(k.slice(pre.length)); }
       for (const id of pids) { const raw = MEM[id] || localStorage.getItem(PK(id)); if (raw == null) throw new Error('Et projekt kunne ikke læses fra browserens lager. Intet er slettet.'); tilfoej(raw, 'Et projekt i browseren'); }
-      tilfoej(this.db, 'Det åbne projekt'); this.hist.forEach(h => tilfoej(h, 'Fortryd-listen'));
+      tilfoej(this.db, 'Det åbne projekt'); this.hist.concat(this.fremtid || []).forEach(h => tilfoej(h, 'Fortryd-listen'));
       tjek.push(pids.size + ' projekter i browseren');
       /* 2. automatiske backups */
       const braw = localStorage.getItem(BKEY);

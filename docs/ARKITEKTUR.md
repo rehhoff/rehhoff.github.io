@@ -68,7 +68,7 @@ Skema 16 (`docs/planer/2026-11-18-billeder.md`): højst `BMAKS` = 250 billeder p
 | `racks` | `id, navn, type, he, lokaleId, gruppeId` |
 | `udstyr` | `id, rackId, navn, art, he, pos, porte, poe, poeBudget, effekt` |
 | `links` | `id, art (data, cctv), navn, lokaleId, kabel, laengde, panelId, panelPort, switchId, switchPort, patch, poeW, kamType, oploesning, nvrId` |
-| `brandlukninger` | Skema 15: `id, nr, lokaleId, placering, beskrivelse, brandklasse, produkt, udfoert, maerkat` (brandmærkat sat), `note`, `billeder[]` (billed-id'er; selve billederne ligger i IndexedDB) |
+| `brandlukninger` | Skema 15: `id, nr, lokaleId, placering, beskrivelse, brandklasse, produkt` (fritekst), `produkter[]` (skema 17, afkrydsede fra `BRANDPRODUKTER`), `udfoert, maerkat` (brandmærkat sat), `note`, `billeder[]` (billed-id'er; selve billederne ligger i IndexedDB) |
 
 Relationer: gruppe → tavle, gruppe → HPFI, brugsgenstand → gruppe, lokale og evt. samledåse eller en anden brugsgenstand (sløjfe), afbryder → evt. dåse eller brugsgenstand (træk), samledåse → gruppe og evt. overordnet dåse, undertavle → tavle og evt. gruppe (`fraGruppe`), link → patchpanel, switch og NVR.
 

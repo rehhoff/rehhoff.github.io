@@ -14,7 +14,7 @@ ROD = Path(__file__).resolve().parent.parent
 TYPER = {'.html': 'text/html', '.js': 'application/javascript', '.css': 'text/css', '.json': 'application/json'}
 ALPINE = ROD / 'node_modules' / 'alpinejs' / 'dist' / 'cdn.min.js'
 URL = 'http://app.test/'
-SKEMA = 16  # SCHEMA i js/data.js
+SKEMA = int(re.search(r'SCHEMA = (\d+)', (Path(__file__).resolve().parent.parent / 'js' / 'data.js').read_text(encoding='utf-8')).group(1))  # SCHEMA i js/data.js
 fejl, kontrol = [], []
 # Tidsgrænser, så en test, der hænger, fejler med en besked i stedet for at vente (forslag 17).
 TRIN_MS = int(os.environ.get('SMOKE_TRIN_MS', '15000'))   # pr. Playwright-handling (klik, navigation, popup …)
@@ -617,6 +617,34 @@ async def main():
           const v=opt.find(x=>x.textContent.includes('omklædning')); v.click(); await T(100); o.valgt=g.sf; o.lukket=!document.querySelector('[role=listbox]');
           a.setSf(g.id, sf0); a.go('tavle'); return o}})()""")
         tjek('samtidighedsfaktor: pop-up med forslag og typiske værdier, valg sætter gruppens faktor', r['antal'] >= 8 and r['forslag'] and r['tabel'] and r['valgt'] == 0.8 and r['lukket'], r)
+
+        # 4j. Klon lokale til en anden gruppe, duplikér brandlukning, produkter med afkrydsning (skema 17), gentag efter fortryd
+        r = await pg.evaluate(f"""(async()=>{{const a={A};const T=n=>new Promise(f=>setTimeout(f,n));const d=a.db, o={{}};
+          const n0=[d.lokaler.length,d.enheder.length,d.brandlukninger.length];
+          const lok=d.lokaler.find(l=>d.enheder.filter(e=>e.lokaleId===l.id&&e.gruppeId).length>=2); const ne=d.enheder.filter(e=>e.lokaleId===lok.id).length;
+          const til=d.grupper.find(g=>!d.enheder.some(e=>e.lokaleId===lok.id&&e.gruppeId===g.id));
+          a.klonAabn(lok.id); await T(100); o.dialog=!!document.querySelector('[id^=klon-g-]'); a.klon.navn='Klon-test'; Object.keys(a.klon.map).forEach(k=>{{a.klon.map[k]=til.id;}}); a.klonGem(); await T(50);
+          const nl=a.db.lokaler.find(l=>l.navn==='Klon-test'), es=a.db.enheder.filter(e=>e.lokaleId===nl.id), ds=a.db.daaser.filter(x=>x.lokaleId===nl.id);
+          o.klon=[es.length===ne, es.every(e=>e.gruppeId===til.id), ds.every(x=>x.gruppeId===til.id), a.db.enheder.filter(e=>e.lokaleId===lok.id).every(e=>e.gruppeId!==til.id)];
+          o.gentagFoer=document.getElementById('gentag').disabled;
+          a.undo(); await T(50); o.fortrudt=!a.db.lokaler.some(l=>l.navn==='Klon-test'); o.gentagAktiv=!document.getElementById('gentag').disabled;
+          a.redo(); await T(50); o.gentaget=a.db.lokaler.some(l=>l.navn==='Klon-test')&&a.db.enheder.filter(e=>e.gruppeId===til.id&&a.db.lokaler.find(l=>l.navn==='Klon-test').id===e.lokaleId).length===ne;
+          a.undo(); await T(20); a.mutate(()=>{{}}); o.nulstil=a.fremtid.length===0;
+          a.openForm('brand',null,{{lokaleId:lok.id}}); await T(100); o.bokse=document.querySelectorAll('[id^="bp-FR"]').length;
+          Object.assign(a.form,{{placering:'Test-lukning',produkter:['FR Akryl','FR Manchet','Ukendt'],produkt:'Egen fugemasse',udfoert:true,maerkat:true,note:'x'}}); a.brandGem(); await T(50);
+          const b=a.db.brandlukninger.find(x=>x.placering==='Test-lukning'); o.prod=[b.produkter.join('|'), b.produkt, a.brandProduktTxt(b)];
+          const max=a.db.brandlukninger.reduce((m,x)=>Math.max(m,x.nr),0); a.brandDup(b); const c=a.db.brandlukninger[a.db.brandlukninger.length-1];
+          o.dup=[c.id!==b.id, c.nr===max+1, c.placering==='Test-lukning', c.produkter.join('|')===b.produkter.join('|'), c.udfoert, c.maerkat, c.billeder.length, c.note];
+          o.norm=JSON.stringify(norm({{brandlukninger:[{{nr:1,produkt:'Gammelt'}},{{nr:2,produkter:['FR Grafit','Noget andet','FR Grafit']}}]}}).brandlukninger.map(x=>[x.produkt,x.produkter]));
+          o.doc=a.docHtml().includes('FR Manchet, FR Akryl, Egen fugemasse');
+          a.db.lokaler=a.db.lokaler.filter(l=>l.navn!=='Klon-test'); const nlid=nl.id; a.db.enheder=a.db.enheder.filter(e=>e.lokaleId!==nlid); a.db.daaser=a.db.daaser.filter(x=>x.lokaleId!==nlid); a.db.links=a.db.links.filter(x=>x.lokaleId!==nlid);
+          a.db.brandlukninger=a.db.brandlukninger.filter(x=>x.placering!=='Test-lukning'); a.save();
+          o.ryddet=JSON.stringify([a.db.lokaler.length,a.db.enheder.length,a.db.brandlukninger.length])===JSON.stringify(n0);
+          return o}})()""")
+        tjek('klon lokale til valgfri gruppe, gentag efter fortryd, duplikér brandlukning med næste nummer, produkter med afkrydsning og fritekst',
+             r['dialog'] and r['klon'] == [True, True, True, True] and r['gentagFoer'] and r['fortrudt'] and r['gentagAktiv'] and r['gentaget'] and r['nulstil']
+             and r['bokse'] == 9 and r['prod'] == ['FR Manchet|FR Akryl', 'Egen fugemasse', 'FR Manchet, FR Akryl, Egen fugemasse']
+             and r['dup'] == [True, True, True, True, False, False, 0, ''] and r['norm'] == '[["Gammelt",[]],["",["FR Grafit"]]]' and r['doc'] and r['ryddet'], r)
 
         # 4f. Forslag til fasefordeling: vises først, ændrer intet før Anvend, og giver bedre balance
         r = await pg.evaluate(f"""(async()=>{{const a={A};const T=n=>new Promise(f=>setTimeout(f,n));const d=a.db, tid=d.tavler[0].id, gs=a.grupperFor(tid).filter(g=>g.faser!=3), gem=gs.map(g=>g.fase), o={{}};

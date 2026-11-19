@@ -15,7 +15,7 @@ const APP_LAGRING = () => ({
       if (i > -1) this.projekter.splice(i, 1, m); else this.projekter.push(m);
       this.skrivIdx();
     },
-    aktiver(id, d) { this.pid = id; this.db = d; this.hist = []; this.lokF = ''; this.q = ''; this.sldSel = null; this.sel = (this.sorteredeGrupper()[0] || {}).id || null; this.save(); },
+    aktiver(id, d) { this.pid = id; this.db = d; this.hist = []; this.fremtid = []; this.lokF = ''; this.q = ''; this.sldSel = null; this.sel = (this.sorteredeGrupper()[0] || {}).id || null; this.save(); },
     skift(id) {
       if (id === this.pid) return; this.save();
       const d = this.laes(id); if (!d) { this.say('Projektet kunne ikke læses fra browserens lager.', false, true); return; }
@@ -202,7 +202,7 @@ const APP_LAGRING = () => ({
     synkHent(id, d) {
       this.skriv(id, d); const m = this.meta(id, d), i = this.projekter.findIndex(p => p.id === id);
       if (i > -1) this.projekter.splice(i, 1, m); else this.projekter.push(m);
-      if (id === this.pid) { this.db = this.laes(id) || d; this.hist = []; }
+      if (id === this.pid) { this.db = this.laes(id) || d; this.hist = []; this.fremtid = []; }
     },
     synkSletLokalt(id) {
       delete MEM[id]; try { localStorage.removeItem(PK(id)); } catch (e) {}
@@ -210,7 +210,7 @@ const APP_LAGRING = () => ({
       if (id === this.pid) {
         const nx = this.projekter[0], d = nx && this.laes(nx.id);
         if (d) { this.pid = nx.id; this.db = d; } else { const t = tom(); t.projekt.navn = 'Nyt projekt'; this.pid = uid(); this.db = t; this.skriv(this.pid, t); this.projekter = [this.meta(this.pid, t)]; }
-        this.hist = []; this.sldSel = null; this.sel = (this.sorteredeGrupper()[0] || {}).id || null;
+        this.hist = []; this.fremtid = []; this.sldSel = null; this.sel = (this.sorteredeGrupper()[0] || {}).id || null;
       }
     },
     importJson(txt, somNyt) {

@@ -2,6 +2,15 @@
 
 Nyeste øverst. Versionsnummeret står også i appen som `APP_VERSION`. Hver version siger, hvilken model der lavede den.
 
+## 10.24.0 · 2026-11-19 · Claude Opus
+
+- **Klon lokale** åbner nu en dialog: vælg navnet på det nye lokale, og vælg for hver gruppe i lokalet, hvilken gruppe kopierne skal på (eller Ikke tildelt). Forbindelser til dåser og sløjfer uden for lokalet beholdes kun, hvis de ligger i den nye gruppe.
+- **Duplikér brandlukning**: kopien får næste ledige nummer og samme lokale, placering, beskrivelse, brandklasse og produkter. Udført, mærkat, note og billeder kopieres ikke.
+- **Produkter ved brandlukning**: afkrydsning af FR Brandkit, FR Brandplade, FR Gipsmørtel, FR Manchet, FR Pakning, FR Akryl, FR Grafit, FR Brandspjæld og FR Trækrør (flere kan vælges). Fritekstfeltet "Andet produkt" findes stadig. Begge vises i listen og dokumentationen.
+- **Gentag** (↷) til højre for Fortryd, også med Ctrl+Y eller Ctrl+Shift+Z. Gentag-listen tømmes ved en ny ændring.
+- Røgtesten læser `SCHEMA` fra `js/data.js` i stedet for et fast tal.
+- Datamodel: `SCHEMA` 17 med `brandlukninger.produkter[]`. Ingen felter er fjernet. Første start tager en backup.
+
 ## 10.23.0 · 2026-11-18 · Claude Opus
 
 Billeder på tavler, lokaler og samledåser, oprydning af billeder og mange billeder (forslag 15, 20 og 21). Plan: `docs/planer/2026-11-18-billeder.md`. **Skema 16.**

@@ -6,7 +6,7 @@ function app() {
     view: 'tavle',
     fvIkke: false, fvFold: new Set(), fvHi: '', fvAnc: [], fvBlink: '', gren: null, sfPop: null, fvRed: null, fvTmp: null,
     views: [ { id:'tavle', l:'Tavle' }, { id:'enstreg', l:'Enstregsdiagram' }, { id:'taending', l:'Tændingsdiagram' }, { id:'samlepunkter', l:'Samlepunkter & dåser' }, { id:'foering', l:'Føringsvej' }, { id:'svag', l:'Svagstrøm' }, { id:'beregning', l:'Beregning' }, { id:'lokaler', l:'Lokaler' }, { id:'kabler', l:'Kabler' }, { id:'dokumentation', l:'Dokumentation' }, { id:'fejlfinder', l:'Fejlfinder' }, { id:'brand', l:'Brandlukning' } ],
-    db: tom(), hist: [], sel: null, drag: null, over: null,
+    db: tom(), hist: [], fremtid: [], klon: null, sel: null, drag: null, over: null,
     projekter: [], pid: '', pf: { navn:'', sagsnr:'', kunde:'', adresse:'' }, sldSel: null, z: { x:8, y:8, k:1 }, pan: null, pinch: null, panMoved: false, traek: null,
     filter: { q:'', tavle:'', type:'', lokale:'' }, sort: { key:'gruppe', dir:1 },
     modal: null, form: {}, confirm: null, toasts: [], storageOk: true, tema: 'auto', qa: '', io: '',
@@ -79,7 +79,7 @@ function app() {
       window.addEventListener('storage', ev => {
         if (ev.key === PK(this.pid) && ev.newValue) {
           delete MEM[this.pid]; const d = this.laes(this.pid);
-          if (d) { this.db = d; this.hist = []; this.billedStart(); this.say('Projektet blev ændret i en anden fane og er indlæst igen.'); }
+          if (d) { this.db = d; this.hist = []; this.fremtid = []; this.billedStart(); this.say('Projektet blev ændret i en anden fane og er indlæst igen.'); }
         } else if (ev.key === IDX && ev.newValue) {
           try { const x = JSON.parse(ev.newValue); if (Array.isArray(x.liste)) { this.projekter = x.liste; if (x.sidstBackup) this.sidstBackup = x.sidstBackup; } } catch (e) {}
         } else if (ev.key === SKEY) this.synk = this.synkLaes();
@@ -94,8 +94,9 @@ function app() {
       const p = this.db.projekt, slug = String(p.sagsnr || p.navn || 'projekt').toLowerCase().replace(/æ/g, 'ae').replace(/ø/g, 'oe').replace(/å/g, 'aa').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
       return base + '-' + (slug || 'projekt') + '.' + ext;
     },
-    mutate(fn) { this.hist.push(JSON.stringify(this.db)); if (this.hist.length > 40) this.hist.shift(); fn(); this.syncDaaser(); this.save(); },
-    undo() { if (!this.hist.length) return; this.db = norm(JSON.parse(this.hist.pop())); this.save(); this.toasts.filter(t => t.undo).forEach(t => this.lukToast(t.id)); this.say('Fortrudt.'); },
+    mutate(fn) { this.hist.push(JSON.stringify(this.db)); if (this.hist.length > 40) this.hist.shift(); this.fremtid = []; fn(); this.syncDaaser(); this.save(); },
+    redo() { if (!this.fremtid.length) return; this.hist.push(JSON.stringify(this.db)); this.db = norm(JSON.parse(this.fremtid.pop())); this.save(); this.say('Gentaget.'); },
+    undo() { if (!this.hist.length) return; this.fremtid.push(JSON.stringify(this.db)); if (this.fremtid.length > 40) this.fremtid.shift(); this.db = norm(JSON.parse(this.hist.pop())); this.save(); this.toasts.filter(t => t.undo).forEach(t => this.lukToast(t.id)); this.say('Fortrudt.'); },
     /* beskeder i bunden: højst tre ad gangen, tid efter tekstens længde, fejl bliver stående til de lukkes */
     async installer() { const p = this.installPrompt; if (!p) return; this.installPrompt = null; p.prompt(); try { await p.userChoice; } catch (e) {} },
     erIos() { return /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); },
@@ -425,7 +426,7 @@ function app() {
         daase: { antal:1, navn:'', type:'Membrandåse', gruppeId:this.sel || '', parentId:'', lokaleId:'', hoejde:'', placering:'', trukket:false, note:'', kabel:'PVC', ledere:'3G', tv:1.5, laengde:5, billeder:[] },
         rack: { navn:'R' + (this.db.racks.length + 1), type:'19" vægskab', he:9, lokaleId:'', gruppeId:'' },
         udstyr: { rackId:(this.db.racks[0] || {}).id || '', navn:'', art:'switch', he:1, pos:1, porte:24, poe:false, poeBudget:0, effekt:20 },
-        brand: { nr:1, lokaleId:'', placering:'', beskrivelse:'', brandklasse:'', produkt:'', udfoert:false, maerkat:false, note:'', billeder:[] },
+        brand: { nr:1, lokaleId:'', placering:'', beskrivelse:'', brandklasse:'', produkt:'', produkter:[], udfoert:false, maerkat:false, note:'', billeder:[] },
         link: { antal:1, art:'data', navn:'', lokaleId:'', kabel:'Cat6A', laengde:20, panelId:'', panelPort:0, switchId:'', switchPort:0, patch:0.5, poeW:0, kamType:'Dome', oploesning:'4 MP', nvrId:'' }
       }[type];
       this.form = item ? JSON.parse(JSON.stringify(item)) : Object.assign(std, pre || {});
@@ -542,6 +543,7 @@ function app() {
       if (ev.key === 'Escape') { this.soegAaben = false; if (this.hurtig.aaben) { this.hurtig.aaben = false; return; } this.modal = null; if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); return; }
       const tag = (ev.target.tagName || '').toLowerCase();
       if (this.modal || tag === 'input' || tag === 'select' || tag === 'textarea') return;
+      if ((ev.ctrlKey || ev.metaKey) && (ev.key.toLowerCase() === 'y' || (ev.shiftKey && ev.key.toLowerCase() === 'z'))) { ev.preventDefault(); this.redo(); return; }
       if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === 'z') { ev.preventDefault(); this.undo(); return; }
       if (ev.ctrlKey || ev.metaKey || ev.altKey) return;
       const k = ev.key.toLowerCase();
@@ -709,15 +711,28 @@ function app() {
       this.mutate(() => { if (type === 'link') this.givPorte(c); this.db[liste].push(c); });
       this.modal = null; this.say(c.navn + ' oprettet som kopi af ' + src.navn + '.', true);
     },
-    klonLokale(lid) {
+    /* klon lokale: dialog, hvor brugsgenstande og dåser kan flyttes til en anden gruppe */
+    klonAabn(lid) {
       const d = this.db, src = d.lokaler.find(l => l.id === lid); if (!src) return;
-      const ny = { id:uid(), navn:this.naeste(src.navn, d.lokaler), etage:src.etage }, dm = {}, kopi = x => JSON.parse(JSON.stringify(x));
+      const gs = [...new Set(d.enheder.filter(e => e.lokaleId === lid).map(e => e.gruppeId).concat(d.daaser.filter(x => x.lokaleId === lid).map(x => x.gruppeId)))];
+      this.klon = { lid, navn:this.naeste(src.navn, d.lokaler), map:Object.fromEntries(gs.map(g => [g, g])), grupper:gs };
+      this.modal = { type:'klon' };
+    },
+    klonAntal(gid) { const l = this.klon; return l ? this.db.enheder.filter(e => e.lokaleId === l.lid && e.gruppeId === gid).length : 0; },
+    klonGem() { const k = this.klon; if (!k) return; this.klonLokale(k.lid, k.map, k.navn); this.modal = null; },
+    klonLokale(lid, gmap, navn) {
+      const d = this.db, src = d.lokaler.find(l => l.id === lid); if (!src) return; gmap = gmap || {};
+      const ng = g => (Object.prototype.hasOwnProperty.call(gmap, g) && (gmap[g] === '' || this.gruppe(gmap[g]))) ? gmap[g] : g;
+      const nv = String(navn || '').trim(), ny = { id:uid(), navn:nv && !d.lokaler.some(l => l.navn === nv) ? nv : this.naeste(src.navn, d.lokaler), etage:src.etage }, dm = {}, kopi = x => JSON.parse(JSON.stringify(x));
       const ds = d.daaser.filter(x => x.lokaleId === lid), es = d.enheder.filter(e => e.lokaleId === lid), ls = d.links.filter(l => l.lokaleId === lid);
       ds.forEach(x => { dm[x.id] = uid(); }); const em = {}; es.forEach(e => { em[e.id] = uid(); });
       this.mutate(() => {
         d.lokaler.push(ny);
-        ds.forEach(x => d.daaser.push(Object.assign(kopi(x), { id:dm[x.id], lokaleId:ny.id, parentId:dm[x.parentId] || x.parentId, navn:this.naeste(x.navn, d.daaser), trukket:false, note:'', billeder:[] })));
-        es.forEach(e => d.enheder.push(Object.assign(kopi(e), { id:em[e.id], lokaleId:ny.id, daaseId:dm[e.daaseId] || e.daaseId, fraEnhed:em[e.fraEnhed] || e.fraEnhed, trukket:false, note:'' })));
+        ds.forEach(x => d.daaser.push(Object.assign(kopi(x), { id:dm[x.id], lokaleId:ny.id, gruppeId:ng(x.gruppeId), parentId:dm[x.parentId] || (this.daase(x.parentId) && this.daase(x.parentId).gruppeId === ng(x.gruppeId) ? x.parentId : ''), navn:this.naeste(x.navn, d.daaser), trukket:false, note:'', billeder:[] })));
+        /* en reference ud af lokalet beholdes kun, hvis den peger ind i den gruppe, genstanden ender i */
+        const iGr = (x, g) => !!x && x.gruppeId === g;
+        es.forEach(e => { const g = ng(e.gruppeId); d.enheder.push(Object.assign(kopi(e), { id:em[e.id], lokaleId:ny.id, gruppeId:g, daaseId:dm[e.daaseId] || (iGr(this.daase(e.daaseId), g) ? e.daaseId : ''),
+          fraEnhed:em[e.fraEnhed] || (iGr(this.enhed(e.fraEnhed), g) ? e.fraEnhed : ''), trukket:false, note:'' })); });
         ls.forEach(l => { const c = Object.assign(kopi(l), { id:uid(), lokaleId:ny.id, navn:this.naeste(l.navn, d.links) }); this.givPorte(c); d.links.push(c); });
       });
       this.say(ny.navn + ' oprettet med ' + es.length + ' brugsgenstande, ' + ds.length + ' samledåser og ' + ls.length + ' udtag/kameraer.', true);

@@ -60,6 +60,7 @@ Faste lister, som ikke må ændres uden aftale:
 
 - Kabeltyper: Brandkabel, XLPE, PVC, PKAJ, PKL. "Tilgangskabel" på tavlen er fritekst og skal blive ved med at være det.
 - Samlepunkttyper: Membrandåse, Indmuringsdåse, Forfradåse, Underlag, Europadåse, PL-dåse.
+- Brandtætningsprodukter til afkrydsning (`BRANDPRODUKTER`, aftalt 2026-11-19): FR Brandkit, FR Brandplade, FR Gipsmørtel, FR Manchet, FR Pakning, FR Akryl, FR Grafit, FR Brandspjæld, FR Trækrør. Andre produkter skrives i fritekstfeltet.
 - Datakabler under svagstrøm (Cat6, Cat6A, Cat7, fiber) er undtaget fra kabellisten.
 
 Forudsætninger i beregningerne. Alt er vejledende og står også i appen:
