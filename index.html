@@ -14,8 +14,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=10.23.0">
-<link rel="stylesheet" href="css/tailwind.css?v=10.23.0">
+<link rel="stylesheet" href="css/app.css?v=10.24.0">
+<link rel="stylesheet" href="css/tailwind.css?v=10.24.0">
 </head>
 <body class="min-h-full">
 <p id="fail" hidden style="margin:16px;padding:12px;border:1px solid var(--crit);color:var(--crit)">Appen kunne ikke starte, fordi Alpine.js ikke blev indlæst. Genindlæs siden.</p>
@@ -51,6 +51,7 @@
         </div>
       </div>
       <button class="btn" @click="undo()" :disabled="!hist.length" title="Ctrl+Z">↶ Fortryd</button>
+      <button class="btn" id="gentag" @click="redo()" :disabled="!fremtid.length" title="Ctrl+Y">↷ Gentag</button>
       <button class="btn" @click="skiftTema()" x-text="'Tema: ' + ({auto:'Auto', light:'Lys', dark:'Mørk'})[tema]"></button>
       <button class="btn" @click="modal={type:'help'}">Genveje <kbd>?</kbd></button>
     </div>
@@ -507,7 +508,7 @@
           <div class="bl-nr num" x-text="b.nr"></div>
           <div class="flex-1 min-w-0">
             <div class="font-semibold" x-text="b.placering || 'Placering ikke angivet'"></div>
-            <div class="text-xs text-muted" x-text="[b.lokaleId ? lokaleNavn(b.lokaleId) : 'Lokale ikke angivet', b.brandklasse, b.produkt].filter(Boolean).join(' · ')"></div>
+            <div class="text-xs text-muted" x-text="[b.lokaleId ? lokaleNavn(b.lokaleId) : 'Lokale ikke angivet', b.brandklasse, brandProduktTxt(b)].filter(Boolean).join(' · ')"></div>
             <p class="text-sm" x-show="b.beskrivelse" x-text="b.beskrivelse"></p>
             <p class="text-xs text-muted" x-show="b.note" x-text="'Note: ' + b.note"></p>
             <div class="flex flex-wrap gap-1 pt-1" x-show="b.billeder.length">
@@ -521,6 +522,7 @@
             <label class="bl-chk" :class="b.udfoert && 'on'"><input type="checkbox" class="bl-udf" :checked="b.udfoert" @change="brandSaet(b, 'udfoert', $event.target.checked)" :aria-label="'Udført: brandlukning ' + b.nr"> Udført</label>
             <label class="bl-chk" :class="b.maerkat && 'on'"><input type="checkbox" class="bl-maerk" :checked="b.maerkat" @change="brandSaet(b, 'maerkat', $event.target.checked)" :aria-label="'Mærkat: brandlukning ' + b.nr"> Mærkat</label>
             <button class="btn" @click="openForm('brand', b)">Rediger</button>
+            <button class="btn bl-dup" @click="brandDup(b)" :aria-label="'Duplikér brandlukning ' + b.nr" title="Kopi med næste ledige nummer">Duplikér</button>
           </div>
         </article>
       </template>
@@ -801,7 +803,7 @@
               <button class="btn" @click="openForm('enhed', null, {lokaleId:l.id})">+ Brugsgenstand</button>
               <button class="btn" @click="filterLokale(l.id)">Vis i kabeltabel</button>
               <button class="btn" @click="lokF = lokF===l.id ? '' : l.id" x-text="lokF===l.id ? 'Vis alle lokaler' : 'Filtrér alle faner'"></button>
-              <button class="btn" @click="klonLokale(l.id)">Klon lokale</button>
+              <button class="btn" @click="klonAabn(l.id)">Klon lokale</button>
             </div>
           </div>
         </article>
@@ -1191,6 +1193,25 @@
         </footer>
       </form>
     </template>
+    <template x-if="modal && modal.type==='klon' && klon">
+      <form class="panel w-full max-w-lg mt-8 shadow-xl" role="dialog" aria-modal="true" @submit.prevent="klonGem()">
+        <header class="border-b border-line bg-raised px-4 py-3"><h2 class="hd text-xl">Klon lokale</h2>
+          <p class="text-xs text-muted" x-text="'Kopierer ' + lokaleNavn(klon.lid) + ' med brugsgenstande, samledåser og udtag. Vælg, hvilken gruppe kopierne skal på.'"></p></header>
+        <div class="grid gap-3 p-4">
+          <label class="f" for="klon-navn">Det nye lokales navn<input id="klon-navn" class="inp" x-model="klon.navn" required></label>
+          <p x-show="!klon.grupper.length" class="text-sm text-muted">Lokalet har ingen brugsgenstande eller dåser.</p>
+          <template x-for="g in klon.grupper" :key="g || 'ingen'">
+            <label class="f" :for="'klon-g-' + (g || 'ingen')"><span x-text="(g ? gruppeTxt(g) : 'Ikke tildelt') + ' (' + klonAntal(g) + ' brugsgenstande) →'"></span>
+              <select :id="'klon-g-' + (g || 'ingen')" class="inp" x-model="klon.map[g]"><option value="">Ikke tildelt</option>
+                <template x-for="x in sorteredeGrupper()" :key="x.id"><option :value="x.id" :selected="klon.map[g]===x.id" x-text="gruppeTxt(x.id) + (x.id === g ? ' (samme)' : '')"></option></template></select></label>
+          </template>
+        </div>
+        <footer class="flex justify-end gap-2 border-t border-line px-4 py-3">
+          <button type="button" class="btn" @click="modal=null">Annuller</button>
+          <button type="submit" class="btn btn-primary">Klon lokale</button>
+        </footer>
+      </form>
+    </template>
     <template x-if="modal && modal.type==='historik'">
       <div class="panel w-full max-w-lg mt-8 shadow-xl" role="dialog" aria-modal="true" aria-labelledby="hist-t">
         <header class="border-b border-line bg-raised px-4 py-3 flex justify-between items-center"><h2 id="hist-t" class="hd text-xl">Tidligere versioner</h2><button class="btn" @click="modal=null">Luk</button></header>
@@ -1248,6 +1269,7 @@
           <dt><kbd>E</kbd></dt><dd>Rediger valgt gruppe</dd>
           <dt><kbd>/</kbd></dt><dd>Søg i kabeltabel</dd>
           <dt><kbd>Ctrl</kbd> <kbd>Z</kbd></dt><dd>Fortryd seneste ændring</dd>
+          <dt><kbd>Ctrl</kbd> <kbd>Y</kbd></dt><dd>Gentag det, der blev fortrudt</dd>
           <dt><kbd>Esc</kbd></dt><dd>Luk dialog</dd>
         </dl>
         <p class="px-4 pb-4 text-xs text-muted">Hurtig tilføj forstår effekt (2500W, 2,2kW), kabel (3G2,5), længde (12m), lokalenavn og gruppe (gr7 eller UT1:2).</p>
@@ -1563,7 +1585,15 @@
             <label class="f sm:col-span-2" for="m-bbesk">Beskrivelse<textarea id="m-bbesk" class="inp" rows="2" x-model="form.beskrivelse" placeholder="3 kabler + 1 rør gennem EI60-væg"></textarea></label>
             <label class="f" for="m-bklasse">Brandklasse<input id="m-bklasse" class="inp" x-model="form.brandklasse" list="bl-klasser" placeholder="EI60"></label>
             <datalist id="bl-klasser"><template x-for="k in brandKlasser()" :key="k"><option :value="k"></option></template></datalist>
-            <label class="f" for="m-bprod">Produkt<input id="m-bprod" class="inp" x-model="form.produkt" list="bl-produkter" placeholder="Brandfugemasse, manchet …"></label>
+            <fieldset class="sm:col-span-2 border border-line rounded p-2">
+              <legend class="px-1 text-xs font-semibold uppercase tracking-wider text-muted">Produkter</legend>
+              <div class="grid grid-cols-2 sm:grid-cols-3 gap-x-3 gap-y-1">
+                <template x-for="p in brandProduktListe()" :key="p">
+                  <label class="flex items-center gap-2 text-sm py-0.5" :for="'bp-' + p"><input type="checkbox" :id="'bp-' + p" :value="p" x-model="form.produkter"> <span x-text="p"></span></label>
+                </template>
+              </div>
+            </fieldset>
+            <label class="f sm:col-span-2" for="m-bprod">Andet produkt (fritekst)<input id="m-bprod" class="inp" x-model="form.produkt" list="bl-produkter" placeholder="Brandfugemasse …"></label>
             <datalist id="bl-produkter"><template x-for="k in brandProdukter()" :key="k"><option :value="k"></option></template></datalist>
             <label class="bl-chk" :class="form.udfoert && 'on'" for="m-budf"><input type="checkbox" id="m-budf" x-model="form.udfoert"> Udført</label>
             <label class="bl-chk" :class="form.maerkat && 'on'" for="m-bmaerk"><input type="checkbox" id="m-bmaerk" x-model="form.maerkat"> Brandmærkat sat</label>
@@ -1759,16 +1789,16 @@
   </div>
 </div>
 
-<script src="js/data.js?v=10.23.0"></script>
-<script src="js/beregning.js?v=10.23.0"></script>
-<script src="js/diagram.js?v=10.23.0"></script>
-<script src="js/lagring.js?v=10.23.0"></script>
-<script src="js/historik.js?v=10.23.0"></script>
-<script src="js/billeder.js?v=10.23.0"></script>
-<script src="js/brand.js?v=10.23.0"></script>
-<script src="js/import.js?v=10.23.0"></script>
-<script src="js/aflevering.js?v=10.23.0"></script>
-<script src="js/app.js?v=10.23.0"></script>
+<script src="js/data.js?v=10.24.0"></script>
+<script src="js/beregning.js?v=10.24.0"></script>
+<script src="js/diagram.js?v=10.24.0"></script>
+<script src="js/lagring.js?v=10.24.0"></script>
+<script src="js/historik.js?v=10.24.0"></script>
+<script src="js/billeder.js?v=10.24.0"></script>
+<script src="js/brand.js?v=10.24.0"></script>
+<script src="js/import.js?v=10.24.0"></script>
+<script src="js/aflevering.js?v=10.24.0"></script>
+<script src="js/app.js?v=10.24.0"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.14.1/cdn.min.js"></script>
 </body>
 </html>
