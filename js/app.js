@@ -135,6 +135,13 @@ function app() {
       if (m && m.db === c.db && m.rev === c.rev && m.n1 === c.n1 && m.n2 === c.n2 && m.n3 === c.n3 && m.n4 === c.n4 && m.d.length === deps.length && m.d.every((v, i) => v === deps[i])) return m.v;
       const v = fn(); MEMO[navn] = { db:c.db, rev:c.rev, n1:c.n1, n2:c.n2, n3:c.n3, n4:c.n4, d:deps, v }; return v;
     },
+    /* som memo, men pr. nøgle: en lille mellemlagring pr. navn, der nulstilles, når db ændrer sig. Til funktioner, der kaldes mange gange pr. tegning med forskellige id'er */
+    mk(navn, key, fn) {
+      const c = this.idx(); let m = MEMO['k:' + navn];
+      if (!m || m.db !== c.db || m.rev !== c.rev || m.n1 !== c.n1 || m.n2 !== c.n2 || m.n3 !== c.n3 || m.n4 !== c.n4) m = MEMO['k:' + navn] = { db:c.db, rev:c.rev, n1:c.n1, n2:c.n2, n3:c.n3, n4:c.n4, map:new Map() };
+      if (m.map.has(key)) return m.map.get(key);
+      const v = fn(); m.map.set(key, v); return v;
+    },
     kid() {
       const c = this.idx(); if (c.kids) return c.kids; const db = this.db;
       const g = (L, f) => { const r = new Map(); for (const x of L) { const k = f(x); (r.get(k) || r.set(k, []).get(k)).push(x); } return r; };
@@ -187,7 +194,7 @@ function app() {
       for (const d of k.daaseParent.get(did) || []) out = out.concat(this.nedstroem(d.id, seen));
       return out;
     },
-    daaseFaser(did) { return this.faseSum(this.nedstroem(did)); },
+    daaseFaser(did) { return this.mk('daaseFaser', did, () => this.faseSum(this.nedstroem(did))); },
     daaseI(did) { const v = this.daaseFaser(did); return Math.max(v.L1, v.L2, v.L3); },
     daaseIz(d) { const g = this.gruppe(d.gruppeId); return this.izBeregn(d.kabel, d.tv, !!g && g.faser == 3, this.forhold(g)); },
     daaseIzFejl(d) { const g = this.gruppe(d.gruppeId); return !!g && !!this.daaseIz(d) && g.In > this.daaseIz(d); },
@@ -234,7 +241,7 @@ function app() {
     erSloejfetUnder(id, anc) { let e = this.enhed(id), n = 0; while (e && n++ < 50) { if (e.id === anc) return true; e = this.enhed(e.fraEnhed); } return false; },
     enhedNed(e, seen) { seen = seen || new Set(); if (!e || seen.has(e.id)) return []; seen.add(e.id); return [e].concat(...this.sloejfer(e.id).map(x => this.enhedNed(x, seen))); },
     /* strøm i e's eget træk pr. fase: e og alt sløjfet efter den, hver på sine faser (skema 14) */
-    enhedFaser(e) { return this.faseSum(this.enhedNed(e)); },
+    enhedFaser(e) { return this.mk('enhedFaser', e.id, () => this.faseSum(this.enhedNed(e))); },
     enhedI(e) { const v = this.enhedFaser(e); return Math.max(v.L1, v.L2, v.L3); },
     /* ΔU i e's eget træk; L kan gives for at regne pr. meter (lmax) */
     duEget(e, tv, L) { return this.duV(this.enhedFaser(e), L == null ? Number(e.laengde) || 0 : L, Number(tv || e.tv) || 1); },

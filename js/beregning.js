@@ -6,7 +6,8 @@ const APP_BEREGNING = () => ({
     faseTxt(e) { const p = this.fase1(e); return p ? p + ', 230 V' : ''; },
     tre(e) { const g = this.gruppe(e.gruppeId); return !!g && g.faser == 3 && !this.fase1(e); },
     /* strøm pr. fase for én brugsgenstand: 3-faset på alle tre, 1-faset tilslutning på sin fase, 1-faset gruppe på gruppens fase */
-    faseV(e) { const I = this.strom(e), v = { L1:0, L2:0, L3:0 }, g = this.gruppe(e.gruppeId); if (this.tre(e)) PH.forEach(p => { v[p] = I; }); else v[this.fase1(e) || (g && PH.includes(g.fase) ? g.fase : 'L1')] = I; return v; },
+    faseV(e) { return this.mk('faseV', e.id, () => this.faseVRaw(e)); },
+    faseVRaw(e) { const I = this.strom(e), v = { L1:0, L2:0, L3:0 }, g = this.gruppe(e.gruppeId); if (this.tre(e)) PH.forEach(p => { v[p] = I; }); else v[this.fase1(e) || (g && PH.includes(g.fase) ? g.fase : 'L1')] = I; return v; },
     faseSum(es) { const v = { L1:0, L2:0, L3:0 }; for (const e of es) { const f = this.faseV(e); PH.forEach(p => { v[p] += f[p]; }); } return v; },
     /* ΔU i ét træk ud fra strøm pr. fase, cos φ = 1, nul som faselederen. Én fase belastet: 2·L·I·ρ/A/230. Ellers største ΔU_p = ρL/A·(2·I_p − ½·(I_q + I_r))/(400/√3), som ved symmetrisk last er den 3-fasede formel. */
     duV(v, L, A) {
@@ -67,8 +68,9 @@ const APP_BEREGNING = () => ({
       return f.metode + ' · ' + f.temp + ' °C · ' + f.samlet + (f.samlet === 1 ? ' kreds' : ' kredse') + (egen ? '' : ' (projekt)');
     },
     underTavler(gid) { return gid ? this.db.tavler.filter(t => t.fraGruppe === gid) : []; },
-    gruppeFaser(g, seen) {
-      const f = this.egenFaser(g);
+    gruppeFaser(g, seen) { return seen ? this.gruppeFaserRaw(g, seen) : this.mk('gruppeFaser', g.id, () => this.gruppeFaserRaw(g)); },
+    gruppeFaserRaw(g, seen) {
+      const f = Object.assign({}, this.egenFaser(g));
       for (const u of this.underTavler(g.id)) { const s = this.subFaser(u.id, seen || new Set([g.tavleId])); if (g.faser == 3) PH.forEach(p => { f[p] += s[p]; }); else f[g.fase] += s.L1 + s.L2 + s.L3; }
       return f;
     },
@@ -78,7 +80,8 @@ const APP_BEREGNING = () => ({
       return this.instI(gid) + this.racksFor(gid).reduce((s, r) => s + this.rackW(r.id), 0) / 230;
     },
     /* gruppens egen last pr. fase: samtidighedsfaktor × brugsgenstande (hver på sine faser) + rackforbrug */
-    egenFaser(g) {
+    egenFaser(g) { return this.mk('egenFaser', g.id, () => this.egenFaserRaw(g)); },
+    egenFaserRaw(g) {
       const v = this.faseSum(this.enhederFor(g.id)), sf = this.sfVal(g), rw = this.racksFor(g.id).reduce((s, r) => s + this.rackW(r.id), 0), f = { L1:0, L2:0, L3:0 };
       PH.forEach(p => { f[p] = sf * v[p]; }); if (g.faser == 3) PH.forEach(p => { f[p] += rw / (Math.sqrt(3) * 400); }); else f[g.fase] += rw / 230;
       return f;
