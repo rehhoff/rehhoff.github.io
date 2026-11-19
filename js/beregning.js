@@ -377,7 +377,7 @@ const APP_BEREGNING = () => ({
     /* tilgangskabel til tavle */
     tilgTxt(t) { return Number(t.tLaengde) > 0 ? t.tLedere + this.fmt(t.tTv) + ' ' + t.tKabel + ', ' + this.fmt(t.tLaengde) + ' m' : (t.tilgang || ''); },
     tilg3(t) { const g = this.gruppe(t.fraGruppe); return g ? g.faser == 3 : true; },
-    tilgI(t) { const s = this.subFaser(t.id, new Set()); return this.tilg3(t) ? Math.max(s.L1, s.L2, s.L3) : s.L1 + s.L2 + s.L3; },
+    tilgI(t) { return this.mk('tilgI', t.id, () => { const s = this.subFaser(t.id, new Set()); return this.tilg3(t) ? Math.max(s.L1, s.L2, s.L3) : s.L1 + s.L2 + s.L3; }); },
     tilgDu(t) { return Number(t.tLaengde) > 0 ? this.duSeg(this.tilgI(t), Number(t.tLaengde), Number(t.tTv) || 1, this.tilg3(t)) : 0; },
     tilgIz(t) { return Number(t.tLaengde) > 0 ? this.izBeregn(t.tKabel, t.tTv, this.tilg3(t), this.forhold(t, 't')) : 0; },
     tilgBeskyt(t) { const g = this.gruppe(t.fraGruppe); return g ? g.In : t.forsikring; },
