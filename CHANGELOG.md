@@ -2,6 +2,18 @@
 
 Nyeste øverst. Versionsnummeret står også i appen som `APP_VERSION`. Hver version siger, hvilken model der lavede den.
 
+## 10.26.0 · 2026-11-19 · Claude Sonnet
+
+Ydelse: appen svarer hurtigere ved ændringer. Plan: `docs/planer/2026-11-19-ydelse.md`.
+
+- Kun den aktive fane ligger i DOM'en (`x-if` i stedet for `x-show`). Skjulte faner regner ikke længere med.
+- Opslag på tavle, gruppe, dåse og brugsgenstand går gennem indeks (`idx()`, `kid()`). `syncDaaser` er ikke længere O(n³).
+- Tunge afledte værdier mellemlagres (`memo()`, `mk()`): føringsvejen, advarsler, kabeltabellen, nøgletal og fasestrømme.
+- Rettelse af en fejl i Alpine 3.14.1, hvor bindinger på fjernede elementer blev ved med at regne.
+- Gemning til browserens lager udskydes højst 300 ms og skrives straks ved projektskift, backup, synkronisering og når siden skjules eller lukkes.
+- Måling på et projekt med 600 brugsgenstande: ca. 0,5 s pr. ændring. Før ændringerne tog det flere minutter. Se planen for tallene.
+- Nyt måleværktøj `tests/ydelse.py`. Ingen ændring i datamodellen.
+
 ## 10.25.0 · 2026-11-19 · Claude Sonnet
 
 Føringsvej: grupper foldet sammen og samlet længde. Plan: `docs/planer/2026-11-19-foering-fold-laengde.md`.
