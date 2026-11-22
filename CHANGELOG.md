@@ -2,6 +2,14 @@
 
 Nyeste øverst. Versionsnummeret står også i appen som `APP_VERSION`. Hver version siger, hvilken model der lavede den.
 
+## 10.26.1 · 2026-11-22 · Claude Opus 5.5
+
+Service workeren rører kun appens egne filer. Plan: `docs/planer/2026-11-22-sw-egne-adresser.md`.
+
+- Service workerens scope er hele `rehhoff.github.io`, så den greb også sider fra andre apps på samme adresse, fx Elskolen under `/elskole/`. En sådan side blev gemt som appens `index.html`, så appen uden net viste den anden apps side, indtil den igen blev åbnet med net.
+- Nu håndteres kun appens egne adresser (`index.html`, `manifest.webmanifest`, `sw.js`, `css/`, `js/`, `ikoner/`). Alt andet på samme origin går direkte til nettet.
+- Røgtesten åbner `/elskole/` og kontrollerer, at den gemte `index.html` stadig er appens. Ingen ændring i datamodellen.
+
 ## 10.26.0 · 2026-11-19 · Claude Sonnet
 
 Ydelse: appen svarer hurtigere ved ændringer. Plan: `docs/planer/2026-11-19-ydelse.md`.
