@@ -33,7 +33,7 @@ Scriptsene er almindelige scripts (ikke ES-moduler) og deler globalt scope. Ræk
 
 Under 1024 px står hovedets titel og værktøjer under hinanden, og fanerne er én række, der kan rulles sidelæns (`.faner`, `lg:contents` fra 1024 px). Under 640 px vises måleskemaet som kort (`.mk`) i stedet for tabellen. Desktop-layoutet er uændret.
 
-Faner i `views`: Tavle, Enstregsdiagram, Tændingsdiagram, Samlepunkter & dåser, Svagstrøm, Beregning, Lokaler, Kabler, Dokumentation, Fejlfinder. Tasterne 1 til 9 og 0 skifter fane.
+Faner i `views`: Tavle, Enstregsdiagram, Tændingsdiagram, Samlepunkter & dåser, Svagstrøm, Beregning, Lokaler, Kabler, Dokumentation, Fejlfinder. Tasterne 1 til 9 og 0 skifter fane. Under Lokaler har hver brugsgenstand et afkrydsningsfelt for `trukket` (samme felt som i Føringsvej, sættes med `fvSaet`), og lokalets overskrift viser "x af y trukket".
 
 ## Ydelse
 
@@ -85,7 +85,7 @@ Relationer: gruppe → tavle, gruppe → HPFI, brugsgenstand → gruppe, lokale 
 
 | Område | Funktioner |
 |---|---|
-| Lagring | `save`, `skriv`, `laes`, `skrivIdx`, `lavBackup`, `gendanBackup`, `backupJson`, `importBackup` |
+| Lagring | `save`, `skriv`, `laes`, `skrivIdx`, `lavBackup`, `gendanBackup`, `backupJson`, `importBackup`, `omdoebStart`, `omdoebGem` (omdøb projekt i dialogen Projekter; tilstand `omd: { id, navn }`) |
 | Beskeder | `say(txt, undo, fejl)`, `lukToast` (i `js/app.js`) |
 | Synkronisering | `synkForbind`, `synkNu`, `synkKoer` (fletning), `synkTxt`, `synkHent`, `synkSletLokalt`, `synkSenere`, `synkAfbryd`, `gh`, `hashD` |
 | Strøm og last | `strom`, `fase1`, `faseTxt`, `tre`, `faseV` (strøm pr. fase for én brugsgenstand), `faseSum`, `instI`, `egenI`, `egenFaser`, `harFase1`, `gruppeI`, `gruppeFaser`, `subFaser`, `faseInfo`, `fasePlan`, `faseForesla`, `faseAnvend` (forslag til fasefordeling, tilstand i `faseFs`), `autoBalance` |
