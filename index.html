@@ -14,8 +14,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=10.26.1">
-<link rel="stylesheet" href="css/tailwind.css?v=10.26.1">
+<link rel="stylesheet" href="css/app.css?v=10.27.0">
+<link rel="stylesheet" href="css/tailwind.css?v=10.27.0">
 </head>
 <body class="min-h-full">
 <p id="fail" hidden style="margin:16px;padding:12px;border:1px solid var(--crit);color:var(--crit)">Appen kunne ikke starte, fordi Alpine.js ikke blev indlæst. Genindlæs siden.</p>
@@ -32,7 +32,7 @@
           <template x-for="p in projekter" :key="p.id"><option :value="p.id" :selected="p.id===pid" x-text="(p.sagsnr ? p.sagsnr + ' · ' : '') + p.navn"></option></template></select>
         <button class="btn" @click="aabnProjekter()">Projekter <kbd>P</kbd></button>
       </div>
-      <input id="p-navn" class="hd text-3xl font-bold bg-transparent w-full min-w-0 border-b border-transparent hover:border-line focus:border-accent" x-model="db.projekt.navn" @change="save()" aria-label="Projektnavn" placeholder="Projektnavn">
+      <input id="p-navn" class="hd text-3xl font-bold bg-transparent w-full min-w-0 border-b border-dashed border-line hover:border-muted focus:border-accent focus:border-solid" x-model="db.projekt.navn" @change="db.projekt.navn = db.projekt.navn.trim() || 'Uden navn'; save()" aria-label="Projektnavn" title="Klik for at omdøbe projektet" placeholder="Projektnavn">
       <p class="text-sm text-muted" x-show="stamTxt()" x-text="stamTxt()"></p>
       <p class="text-xs mt-1" :class="storageOk ? 'text-muted' : 'warn'" x-text="(storageOk ? 'Gemmes automatisk i browseren' : 'Browseren tillader ikke lokal lagring. Hent en backup under Dokumentation.') + synkTxt() + ' · version ' + appVersion"></p>
     </div>
@@ -755,7 +755,7 @@
           <header class="flex items-start justify-between gap-2 border-b border-line bg-raised px-3 py-2">
             <div>
               <h2 class="hd text-xl" x-text="l.navn"></h2>
-              <p class="text-xs text-muted" x-text="(l.etage || 'Etage ikke angivet') + ' · ' + fmt(lokaleMeter(l.id)) + ' m elkabel'"></p>
+              <p class="text-xs text-muted" x-text="(l.etage || 'Etage ikke angivet') + ' · ' + fmt(lokaleMeter(l.id)) + ' m elkabel' + (enhederILokale(l.id).length ? ' · ' + enhederILokale(l.id).filter(e => e.trukket).length + ' af ' + enhederILokale(l.id).length + ' trukket' : '')"></p>
               <span class="flex flex-wrap gap-1 mt-1" x-show="(l.billeder || []).length"><template x-for="id in (l.billeder || [])" :key="id"><button type="button" class="bl-mini bl-mini-s" @click="billedVis(id)" :aria-label="'Vis billede af ' + l.navn"><img x-show="billedSrc(id)" :src="billedSrc(id)" alt=""><span x-show="!billedSrc(id)" class="text-xs text-muted">–</span></button></template></span>
               <p class="num text-xs mt-0.5 flex flex-wrap gap-x-3">
                 <span><span class="c-el" x-html="ikon('el')"></span> <span x-text="enhederILokale(l.id).length"></span></span>
@@ -784,7 +784,7 @@
             <ul class="flex flex-col text-sm">
               <template x-for="e in enhederILokale(l.id)" :key="e.id">
                 <li class="typed stripe flex items-baseline justify-between gap-2 border-b border-line last:border-b-0 py-1 pl-2" :class="typeOf(e)">
-                  <button class="text-left hover:underline" @click="openForm('enhed', e)" x-text="e.navn"></button>
+                  <span class="flex items-baseline gap-2 min-w-0"><input type="checkbox" class="lok-trukket shrink-0" :checked="!!e.trukket" @change="fvSaet({ kind:'enhed', o:e }, 'trukket', $event.target.checked)" :aria-label="'Kabel trukket: ' + e.navn" title="Kablet er trukket"><button class="text-left hover:underline" @click="openForm('enhed', e)" x-text="e.navn"></button></span>
                   <span class="num text-xs text-muted whitespace-nowrap" x-text="kabelDim(e) + ' · ' + fmt(e.laengde) + ' m'"></span>
                 </li>
               </template>
@@ -1133,12 +1133,18 @@
           <template x-for="p in projekter" :key="p.id">
             <li class="flex flex-wrap items-center gap-3 border-b border-line px-4 py-2" :class="p.id===pid && 'bg-raised'">
               <div class="flex-1 min-w-[12rem]">
-                <div class="font-semibold"><span x-text="p.navn"></span> <span x-show="p.id===pid" class="tag">Aktivt</span></div>
+                <div class="font-semibold" x-show="omd.id!==p.id"><span x-text="p.navn"></span> <span x-show="p.id===pid" class="tag">Aktivt</span></div>
+                <form class="flex flex-wrap gap-1" x-show="omd.id===p.id" @submit.prevent="omdoebGem()" @keydown.escape.stop="omd.id=''">
+                  <label class="sr-only" for="omd-navn">Nyt projektnavn</label>
+                  <template x-if="omd.id===p.id"><input id="omd-navn" class="inp inp-s flex-1 min-w-[10rem]" x-model="omd.navn" placeholder="Projektnavn" required></template>
+                  <button class="btn btn-primary">Gem</button><button type="button" class="btn" @click="omd.id=''">Annullér</button>
+                </form>
                 <div class="text-xs text-muted" x-text="[p.sagsnr && 'Sag ' + p.sagsnr, p.kunde, p.adresse].filter(Boolean).join(' · ') || 'Ingen stamdata'"></div>
                 <div class="num text-xs text-muted" x-text="p.grupper + ' grupper · ' + p.enheder + ' brugsgenstande · ændret ' + datoTxt(p.opdateret)"></div>
               </div>
               <div class="flex flex-wrap gap-1">
                 <button class="btn" :disabled="p.id===pid" @click="skift(p.id); modal=null">Åbn</button>
+                <button class="btn" @click="omdoebStart(p)">Omdøb</button>
                 <button class="btn" @click="dupliker(p.id)">Duplikér</button>
                 <button class="btn btn-danger" :class="confirm==='p'+p.id && 'armed'" @click="ask('p'+p.id, () => sletProjekt(p.id))" x-text="confirm==='p'+p.id ? 'Bekræft: slet projekt' : 'Slet'"></button>
               </div>
@@ -1793,16 +1799,16 @@
   </div>
 </div>
 
-<script src="js/data.js?v=10.26.1"></script>
-<script src="js/beregning.js?v=10.26.1"></script>
-<script src="js/diagram.js?v=10.26.1"></script>
-<script src="js/lagring.js?v=10.26.1"></script>
-<script src="js/historik.js?v=10.26.1"></script>
-<script src="js/billeder.js?v=10.26.1"></script>
-<script src="js/brand.js?v=10.26.1"></script>
-<script src="js/import.js?v=10.26.1"></script>
-<script src="js/aflevering.js?v=10.26.1"></script>
-<script src="js/app.js?v=10.26.1"></script>
+<script src="js/data.js?v=10.27.0"></script>
+<script src="js/beregning.js?v=10.27.0"></script>
+<script src="js/diagram.js?v=10.27.0"></script>
+<script src="js/lagring.js?v=10.27.0"></script>
+<script src="js/historik.js?v=10.27.0"></script>
+<script src="js/billeder.js?v=10.27.0"></script>
+<script src="js/brand.js?v=10.27.0"></script>
+<script src="js/import.js?v=10.27.0"></script>
+<script src="js/aflevering.js?v=10.27.0"></script>
+<script src="js/app.js?v=10.27.0"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.14.1/cdn.min.js"></script>
 </body>
 </html>

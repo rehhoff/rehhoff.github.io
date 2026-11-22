@@ -2,6 +2,15 @@
 
 Nyeste øverst. Versionsnummeret står også i appen som `APP_VERSION`. Hver version siger, hvilken model der lavede den.
 
+## 10.27.0 · 2026-11-22 · Claude Opus 5.5
+
+Omdøb projekt og flueben for trukket kabel i Lokaler. Plan: `docs/planer/2026-11-22-omdoeb-trukket-lokale.md`.
+
+- Dialogen Projekter har knappen **Omdøb** på hvert projekt, også dem, der ikke er åbne. Enter gemmer, Esc annullerer, et tomt navn afvises. Omdøbning af det åbne projekt kan fortrydes.
+- Navnefeltet øverst har en stiplet kant, så det kan ses, at det kan rettes. Et tomt navn bliver til "Uden navn".
+- Fanen Lokaler: afkrydsningsfelt foran hver brugsgenstand for, om kablet er trukket (samme felt som i Føringsvej), og "x af y trukket" i lokalets overskrift.
+- Ingen ændring i datamodellen.
+
 ## 10.26.1 · 2026-11-22 · Claude Opus 5.5
 
 Service workeren rører kun appens egne filer. Plan: `docs/planer/2026-11-22-sw-egne-adresser.md`.

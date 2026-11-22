@@ -30,11 +30,24 @@ const APP_LAGRING = () => ({
       const d = this.laes(id); if (!d) { this.say('Projektet kunne ikke læses fra browserens lager.', false, true); return; }
       this.aktiver(id, d); this.say('Skiftet til ' + (d.projekt.navn || 'projekt') + '.');
     },
-    aabnProjekter() { this.confirm = null; this.pf = { navn:'', sagsnr:'', kunde:'', adresse:'' }; this.modal = { type:'projekter' }; },
+    aabnProjekter() { this.confirm = null; this.omd = { id:'', navn:'' }; this.pf = { navn:'', sagsnr:'', kunde:'', adresse:'' }; this.modal = { type:'projekter' }; },
     nytProjekt() {
       const navn = this.pf.navn.trim(); if (!navn) return; this.gemNu();
       const d = tom(); Object.assign(d.projekt, this.pf, { navn, dato:new Date().toISOString().slice(0, 10) });
       this.aktiver(uid(), d); this.modal = null; this.go('tavle'); this.say('Projekt ' + navn + ' oprettet.');
+    },
+    /* omdøb: det aktive projekt rettes i db (kan fortrydes), andre læses, rettes og skrives direkte */
+    omdoebStart(p) { this.omd = { id:p.id, navn:p.navn === 'Uden navn' ? '' : p.navn }; this.$nextTick(() => { const el = document.getElementById('omd-navn'); if (el) { el.focus(); el.select(); } }); },
+    omdoebGem() {
+      const o = this.omd; if (!o.id) return; const navn = String(o.navn || '').trim();
+      if (!navn) { this.say('Projektet skal have et navn.', false, true); return; }
+      if (o.id === this.pid) { if (this.db.projekt.navn !== navn) this.mutate(() => { this.db.projekt.navn = navn; }); this.gemNu(); }
+      else {
+        this.gemNu(); const d = this.laes(o.id); if (!d) { this.say('Projektet kunne ikke læses fra browserens lager.', false, true); return; }
+        d.projekt.navn = navn; this.skriv(o.id, d); const i = this.projekter.findIndex(x => x.id === o.id);
+        if (i > -1) this.projekter.splice(i, 1, this.meta(o.id, d)); this.skrivIdx();
+      }
+      this.omd = { id:'', navn:'' }; this.say('Projektet hedder nu ' + navn + '.', true);
     },
     dupliker(id) {
       this.gemNu(); const d = this.laes(id); if (!d) { this.say('Projektet kunne ikke læses.', false, true); return; }

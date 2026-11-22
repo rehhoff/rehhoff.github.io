@@ -200,6 +200,31 @@ async def main():
           return {{sld:a.sld(true).length, doc:a.docHtml().length, bak:JSON.parse(a.backupJson()).projekter.length, spor:a.spor('e:'+a.db.enheder[0].id).length}}}}""")
         tjek('diagrammer, dokumentation og backup kan bygges', r['sld'] > 1000 and r['doc'] > 1000 and r['bak'] >= 2 and r['spor'] >= 2, r)
 
+        # 2a. Omdøb projekt (aktivt og ikke aktivt) i dialogen Projekter, og flueben for trukket kabel i Lokaler
+        r = await pg.evaluate(f"""async()=>{{const a={A};const T=n=>new Promise(f=>setTimeout(f,n));const o={{}};
+          const akt=a.pid, anden=a.projekter.find(p=>p.id!==akt).id, n1=a.db.projekt.navn, n2=a.projekter.find(p=>p.id===anden).navn;
+          const knap=(li,t)=>[...li.querySelectorAll('button')].find(b=>b.textContent.trim()===t);
+          const rk=id=>[...document.querySelectorAll('[role=dialog] li')][a.projekter.findIndex(p=>p.id===id)];
+          a.aabnProjekter(); await T(80);
+          knap(rk(anden),'Omdøb').click(); await T(80); let inp=document.getElementById('omd-navn'); o.fokus=document.activeElement===inp;
+          inp.value='  Omdøbt anden  '; inp.dispatchEvent(new Event('input')); knap(rk(anden),'Gem').click(); await T(80);
+          o.anden=[a.projekter.find(p=>p.id===anden).navn, JSON.parse(localStorage.getItem('tavleoversigt.p.'+anden)).projekt.navn, a.pid===akt];
+          knap(rk(akt),'Omdøb').click(); await T(80); inp=document.getElementById('omd-navn'); inp.value=''; inp.dispatchEvent(new Event('input')); knap(rk(akt),'Gem').click(); await T(80);
+          o.tomAfvist=a.db.projekt.navn===n1 && a.omd.id===akt;
+          inp.value='Omdøbt aktiv'; inp.dispatchEvent(new Event('input')); knap(rk(akt),'Gem').click(); await T(80);
+          o.akt=[a.db.projekt.navn, a.projekter.find(p=>p.id===akt).navn, JSON.parse(localStorage.getItem('tavleoversigt.p.'+akt)).projekt.navn, document.getElementById('p-navn').value];
+          a.undo(); await T(50); o.fortrudt=a.db.projekt.navn===n1;
+          a.modal=null; a.gemNu(); const d=a.laes(anden); d.projekt.navn=n2; a.skriv(anden,d); a.projekter.splice(a.projekter.findIndex(p=>p.id===anden),1,a.meta(anden,d)); a.skrivIdx();
+          a.go('lokaler'); await T(120);
+          const e=a.db.enheder.find(x=>x.lokaleId&&!x.trukket), cb=document.querySelector('input[aria-label="Kabel trukket: '+e.navn+'"]');
+          o.cb=!!cb && !cb.checked; cb.click(); await T(60); o.sat=e.trukket===true && a.fvTrukket({{kind:'enhed',o:e}});
+          o.optael=[...document.querySelectorAll('article h2')].some(h=>h.textContent===a.lokaleNavn(e.lokaleId) && /\d+ af \d+ trukket/.test(h.parentElement.textContent));
+          cb.click(); await T(60); o.fjernet=!e.trukket; a.undo(); a.undo(); await T(50); o.undo=!e.trukket;
+          return o}}""")
+        tjek('omdøb projekt i Projekter (aktivt og andet, tomt navn afvises, kan fortrydes) og flueben for trukket kabel i Lokaler',
+             r['fokus'] and r['anden'] == ['Omdøbt anden', 'Omdøbt anden', True] and r['tomAfvist'] and r['akt'] == ['Omdøbt aktiv'] * 4
+             and r['fortrudt'] and r['cb'] and r['sat'] and r['optael'] and r['fjernet'] and r['undo'], r)
+
         # 2b. Regression: eksempelprojekternes tændingsdiagrammer er uændrede (optaget i version 10.3.0, før krydsafbryderen)
         base = json.loads((ROD / 'tests' / 'regression-taending.json').read_text(encoding='utf-8'))
         ny = await pg.evaluate(f"""(()=>{{const a={A};const out={{}};a.sim={{}};
