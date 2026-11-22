@@ -8,7 +8,7 @@
 | `css/app.css` | Farvetokens i `:root`, mørkt tema under `prefers-color-scheme` og `[data-theme="dark"]`, egne klasser |
 | `css/tailwind.css` | Bygget Tailwind-CSS (ret ikke i hånden). Kilde: `tailwind.config.js` og `css/tailwind.input.css` |
 | `tools/byg_css.py` | Bygger `css/tailwind.css`. `--tjek` fejler, hvis den ikke er bygget efter seneste ændring |
-| `sw.js` | Service worker: gemmer app-skallen (`SKAL`) til brug uden net. Sider hentes net først, filer med `?v=` cache først, GitHub aldrig gemt |
+| `sw.js` | Service worker: gemmer app-skallen (`SKAL`) til brug uden net. Sider hentes net først, filer med `?v=` cache først, GitHub aldrig gemt. Kun appens egne adresser (`EGNE`) håndteres; andre apps på samme origin, fx Elskolen under `/elskole/`, røres ikke |
 | `manifest.webmanifest`, `ikoner/` | Installérbar app (navn, farver, ikoner) |
 | `js/data.js` | Konstanter, `APP_VERSION`, `SCHEMA`, lagernøgler, tabeller, `norm()`, eksempeldata (`seed`, `seed2`), `hashD` |
 | `js/beregning.js` | `APP_BEREGNING()`: strøm, ΔU, I<sub>z</sub>, fasebalance, kabeltabel, samtidighed, tilgangskabel, effektforslag |

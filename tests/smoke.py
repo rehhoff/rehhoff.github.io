@@ -1124,6 +1124,12 @@ async def main():
             await pg.reload(); await pg.wait_for_timeout(500)
             klar = await pg.evaluate("!!navigator.serviceWorker.controller")
         foer = await pg.evaluate(f"(()=>{{const a={A};return [a.appVersion, a.projekter.length, a.swOk]}})()")
+        # En anden app på samme origin (fx Elskolen under /elskole/) må ikke blive gemt som denne apps index.html
+        await pg.goto(lok + 'elskole/'); await pg.goto(lok + 'elskole/index.html'); await pg.wait_for_timeout(300)
+        # Fuld adresse, fordi siden nu står under /elskole/, og et relativt opslag ville pege derind
+        gemt = await pg.evaluate("caches.keys().then(ks => Promise.all(ks.filter(k => k.startsWith('el-oversigt-') && k !== 'el-oversigt-fonte').map(k => caches.open(k).then(c => c.match(location.origin + '/index.html')).then(s => s ? s.text() : '')))).then(t => t.join(''))")
+        tjek('anden app på samme origin (/elskole/) overskriver ikke den gemte index.html', 'x-data="app()"' in gemt, gemt[:200])
+        await pg.goto(lok); await pg.wait_for_function("window.__alpineOk")
         await ctx.set_offline(True)
         await pg.reload(); await pg.wait_for_timeout(800)
         efter = await pg.evaluate(f"(()=>{{const a={A};return [a.appVersion, a.projekter.length, a.online, a.db.grupper.length > 0, getComputedStyle(document.querySelector('header')).display]}})()")

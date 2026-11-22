@@ -9,7 +9,7 @@ Webapp til elektrikerarbejde: tavler, grupper, lokaler, kabler, samlepunkter, af
   - `js/data.js`: konstanter, `APP_VERSION`, `SCHEMA`, lagernøgler, tabeller (`IZ`, `EFFEKT`, `SF` …), `norm()` og eksempeldata.
   - `js/beregning.js` (`APP_BEREGNING`), `js/diagram.js` (`APP_DIAGRAM`), `js/lagring.js` (`APP_LAGRING`): metoder, der samles i `app()`.
   - `js/app.js`: `app()` med tilstand, `init()` og resten af brugerfladen. `bland()` lægger metoderne fra de andre filer på.
-  - `sw.js`, `manifest.webmanifest`, `ikoner/`: offline-app. `sw.js` gemmer app-filerne til brug uden net. En ny fil i `css/` eller `js/` skal også stå i listen `SKAL` i `sw.js`.
+  - `sw.js`, `manifest.webmanifest`, `ikoner/`: offline-app. `sw.js` gemmer app-filerne til brug uden net. En ny fil i `css/` eller `js/` skal også stå i listen `SKAL` i `sw.js`. Service workeren håndterer kun appens egne adresser (`EGNE` i `sw.js`), fordi andre apps (fx Elskolen under `/elskole/`) ligger på samme origin. En ny mappe på øverste niveau, som appen bruger, skal tilføjes i `EGNE`.
 - Ny metode lægges i den fil, hvis emne den hører til. Navne skal være unikke på tværs af filerne, fordi de samles i ét objekt.
 - Opbygning og datamodel: `docs/ARKITEKTUR.md`. Historik: `CHANGELOG.md`. Forslag og prioritering: `docs/forslag.md`. Planer: `docs/planer/`.
 
