@@ -2,6 +2,14 @@
 
 Nyeste øverst. Versionsnummeret står også i appen som `APP_VERSION`. Hver version siger, hvilken model der lavede den.
 
+## 10.28.0 · 2026-11-24 · Claude Opus 5.5
+
+Brandklasser som afkrydsning og nyt lokale fra rackskab. Plan: `docs/planer/2026-11-24-brandklasser-rack-lokale.md`.
+
+- Brandlukning: brandklasserne (EI15 … EI60-S, listen `BRANDKLASSER` i `js/data.js`) vælges med afkrydsningsfelter som produkterne. Andre klasser skrives i feltet "Anden brandklasse (fritekst)". Kort, søgning og dokumentation viser de afkrydsede klasser plus fritekst.
+- Svagstrøm: lokalelisten i rackskabets formular har "+ Opret nyt lokale …" som de andre formularer.
+- Skema 18: nyt felt `brandklasser[]`. Ved opgradering flyttes en gammel brandklasse til afkrydsning, når alle dele er klasser fra listen (fx "EI60" eller "EI30 / EI90"). Ellers bliver teksten stående i fritekstfeltet. Der tages backup ved første start.
+
 ## 10.27.0 · 2026-11-22 · Claude Opus 5.5
 
 Omdøb projekt og flueben for trukket kabel i Lokaler. Plan: `docs/planer/2026-11-22-omdoeb-trukket-lokale.md`.

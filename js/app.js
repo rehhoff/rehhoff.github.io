@@ -501,7 +501,7 @@ function app() {
         daase: { antal:1, navn:'', type:'Membrandåse', gruppeId:this.sel || '', parentId:'', lokaleId:'', hoejde:'', placering:'', trukket:false, note:'', kabel:'PVC', ledere:'3G', tv:1.5, laengde:5, billeder:[] },
         rack: { navn:'R' + (this.db.racks.length + 1), type:'19" vægskab', he:9, lokaleId:'', gruppeId:'' },
         udstyr: { rackId:(this.db.racks[0] || {}).id || '', navn:'', art:'switch', he:1, pos:1, porte:24, poe:false, poeBudget:0, effekt:20 },
-        brand: { nr:1, lokaleId:'', placering:'', beskrivelse:'', brandklasse:'', produkt:'', produkter:[], udfoert:false, maerkat:false, note:'', billeder:[] },
+        brand: { nr:1, lokaleId:'', placering:'', beskrivelse:'', brandklasse:'', brandklasser:[], produkt:'', produkter:[], udfoert:false, maerkat:false, note:'', billeder:[] },
         link: { antal:1, art:'data', navn:'', lokaleId:'', kabel:'Cat6A', laengde:20, panelId:'', panelPort:0, switchId:'', switchPort:0, patch:0.5, poeW:0, kamType:'Dome', oploesning:'4 MP', nvrId:'' }
       }[type];
       this.form = item ? JSON.parse(JSON.stringify(item)) : Object.assign(std, pre || {});
@@ -666,7 +666,7 @@ function app() {
       d.racks.forEach(r => add('rack', 'Rackskab', r, r.navn, r.type + ' · ' + this.lokaleNavn(r.lokaleId), 'k:' + r.id));
       d.udstyr.forEach(u => add('udstyr', 'Rackudstyr', u, u.navn, this.udstArt[u.art] + ' · ' + this.rackNavn(u.rackId), 'u:' + u.id));
       d.links.forEach(l => add('link', l.art === 'cctv' ? 'Kamera' : 'PDS-udtag', l, l.navn, this.lokaleNavn(l.lokaleId) + ' · ' + l.kabel, this.udst(l.switchId) || this.udst(l.panelId) ? 'x:' + l.id : ''));
-      d.brandlukninger.forEach(b => add('brand', 'Brandlukning', b, 'Nr. ' + b.nr + ' ' + (b.placering || b.beskrivelse), [b.lokaleId ? this.lokaleNavn(b.lokaleId) : '', b.beskrivelse, b.brandklasse].filter(Boolean).join(' · '), ''));
+      d.brandlukninger.forEach(b => add('brand', 'Brandlukning', b, 'Nr. ' + b.nr + ' ' + (b.placering || b.beskrivelse), [b.lokaleId ? this.lokaleNavn(b.lokaleId) : '', b.beskrivelse, this.brandKlasseTxt(b)].filter(Boolean).join(' · '), ''));
       return out.slice(0, 40);
     },
     soegVaelg(r) {

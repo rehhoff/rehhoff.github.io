@@ -1,7 +1,7 @@
 /* Konstanter, lagernøgler, tabeller, norm() og eksempeldata. Indlæses først; alt her er globalt og bruges af de andre filer og markup. */
 const KEY = 'tavleoversigt.v2', OLD = 'tavleoversigt.v1', TKEY = 'tavleoversigt.tema', IDX = 'tavleoversigt.projekter';
 /* Versioner: APP_VERSION følger CHANGELOG.md. SCHEMA hæves kun, når datamodellen ændres, og udløser en automatisk backup før migrering. */
-const APP_VERSION = '10.27.0', SCHEMA = 17, BKEY = 'tavleoversigt.backups', BMAX = 3;
+const APP_VERSION = '10.28.0', SCHEMA = 18, BKEY = 'tavleoversigt.backups', BMAX = 3;
 const PK = id => 'tavleoversigt.p.' + id, MEM = {};
 /* Synkronisering: en hemmelig GitHub Gist med en markørfil og én fil pr. projekt. Se docs/planer/2026-11-15-gist-synk.md. */
 const SKEY = 'tavleoversigt.sync', GFIL = 'tavleoversigt.json', GP = id => 'tavleoversigt-' + id + '.json', GPRE = /^tavleoversigt-([A-Za-z0-9_-]+)\.json$/, GH = 'https://api.github.com';
@@ -88,6 +88,8 @@ const KABLER = ['Brandkabel', 'XLPE', 'PVC', 'PKAJ', 'PKL'];
 const DAASER = ['Membrandåse', 'Indmuringsdåse', 'Forfradåse', 'Underlag', 'Europadåse', 'PL-dåse'];
 /* Brandtætningsprodukter til afkrydsning ved brandlukning (aftalt med Alexander 2026-11-19) */
 const BRANDPRODUKTER = ['FR Brandkit', 'FR Brandplade', 'FR Gipsmørtel', 'FR Manchet', 'FR Pakning', 'FR Akryl', 'FR Grafit', 'FR Brandspjæld', 'FR Trækrør'];
+/* Brandklasser til afkrydsning ved brandlukning (skema 18, 2026-11-24). Andre klasser skrives i fritekstfeltet brandklasse */
+const BRANDKLASSER = ['EI15', 'EI30', 'EI45', 'EI60', 'EI90', 'EI120', 'EI240', 'E30', 'E60', 'E90', 'EI30-S', 'EI60-S'];
 const kabMap = k => KABLER.includes(k) ? k : /noik|halogen|xlpe/i.test(k || '') ? 'XLPE' : 'PVC';
 const daaMap = t => DAASER.includes(t) ? t : /underlag|fuga/i.test(t || '') ? 'Underlag' : /membran|ip44|brønd/i.test(t || '') ? 'Membrandåse' : 'PL-dåse';
 const TIMERS = {};
@@ -180,6 +182,13 @@ function norm(d) {
     for (const k of ['placering', 'beskrivelse', 'brandklasse', 'produkt', 'note']) b[k] = String(b[k] == null ? '' : b[k]);
     /* skema 17: afkrydsede produkter fra den faste liste BRANDPRODUKTER; fritekstfeltet produkt bevares */
     b.produkter = BRANDPRODUKTER.filter(p => Array.isArray(b.produkter) && b.produkter.includes(p));
+    /* skema 18: afkrydsede brandklasser fra BRANDKLASSER. Gammel tekst flyttes kun, hvis alle dele er klasser fra listen; ellers bliver den stående i fritekstfeltet */
+    if (!Array.isArray(b.brandklasser)) {
+      const dele = b.brandklasse.split(/[\s,;\/+&]+/).filter(Boolean), fund = dele.map(x => BRANDKLASSER.find(k => k.toLowerCase() === x.toLowerCase()));
+      b.brandklasser = dele.length && fund.every(Boolean) ? fund : [];
+      if (b.brandklasser.length) b.brandklasse = '';
+    }
+    b.brandklasser = BRANDKLASSER.filter(k => b.brandklasser.includes(k));
     b.udfoert = !!b.udfoert; b.maerkat = !!b.maerkat; b.billeder = bIdListe(b.billeder); });
   /* skema 16: billeder på tavler, lokaler og samledåser (forslag 15). Kun id'erne; billederne ligger i IndexedDB */
   for (const k of ['tavler', 'lokaler', 'daaser']) o[k].forEach(x => { x.billeder = bIdListe(x.billeder); });
