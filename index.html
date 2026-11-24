@@ -14,8 +14,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=10.27.0">
-<link rel="stylesheet" href="css/tailwind.css?v=10.27.0">
+<link rel="stylesheet" href="css/app.css?v=10.28.0">
+<link rel="stylesheet" href="css/tailwind.css?v=10.28.0">
 </head>
 <body class="min-h-full">
 <p id="fail" hidden style="margin:16px;padding:12px;border:1px solid var(--crit);color:var(--crit)">Appen kunne ikke starte, fordi Alpine.js ikke blev indlæst. Genindlæs siden.</p>
@@ -512,7 +512,7 @@
           <div class="bl-nr num" x-text="b.nr"></div>
           <div class="flex-1 min-w-0">
             <div class="font-semibold" x-text="b.placering || 'Placering ikke angivet'"></div>
-            <div class="text-xs text-muted" x-text="[b.lokaleId ? lokaleNavn(b.lokaleId) : 'Lokale ikke angivet', b.brandklasse, brandProduktTxt(b)].filter(Boolean).join(' · ')"></div>
+            <div class="text-xs text-muted" x-text="[b.lokaleId ? lokaleNavn(b.lokaleId) : 'Lokale ikke angivet', brandKlasseTxt(b), brandProduktTxt(b)].filter(Boolean).join(' · ')"></div>
             <p class="text-sm" x-show="b.beskrivelse" x-text="b.beskrivelse"></p>
             <p class="text-xs text-muted" x-show="b.note" x-text="'Note: ' + b.note"></p>
             <div class="flex flex-wrap gap-1 pt-1" x-show="b.billeder.length">
@@ -1559,7 +1559,7 @@
                 <template x-for="k in rackTyper" :key="k"><option :value="k" :selected="form.type===k" x-text="k"></option></template></select></label>
             <label class="f" for="m-rkhe">Højde (HE)<input id="m-rkhe" class="inp num" type="number" min="1" max="48" step="1" x-model.number="form.he" required></label>
             <label class="f" for="m-rklok">Lokale
-              <select id="m-rklok" class="inp" x-model="form.lokaleId"><option value="">Ikke tildelt</option>
+              <select id="m-rklok" class="inp" x-model="form.lokaleId" @change="nyValg($event, 'lokale', 'lokaleId')"><option value="">Ikke tildelt</option><option value="__ny">+ Opret nyt lokale …</option>
                 <template x-for="l in db.lokaler" :key="l.id"><option :value="l.id" :selected="form.lokaleId===l.id" x-text="l.navn"></option></template></select></label>
             <label class="f sm:col-span-2" for="m-rkgr">Forsynes fra gruppe
               <select id="m-rkgr" class="inp" x-model="form.gruppeId"><option value="">Ikke angivet</option>
@@ -1593,8 +1593,15 @@
                 <template x-for="l in db.lokaler" :key="l.id"><option :value="l.id" :selected="form.lokaleId===l.id" x-text="l.navn"></option></template></select></label>
             <label class="f sm:col-span-2" for="m-navn">Placering<input id="m-navn" class="inp" x-model="form.placering" placeholder="Væg mod trappe, 30 cm under loft"></label>
             <label class="f sm:col-span-2" for="m-bbesk">Beskrivelse<textarea id="m-bbesk" class="inp" rows="2" x-model="form.beskrivelse" placeholder="3 kabler + 1 rør gennem EI60-væg"></textarea></label>
-            <label class="f" for="m-bklasse">Brandklasse<input id="m-bklasse" class="inp" x-model="form.brandklasse" list="bl-klasser" placeholder="EI60"></label>
-            <datalist id="bl-klasser"><template x-for="k in brandKlasser()" :key="k"><option :value="k"></option></template></datalist>
+            <fieldset class="sm:col-span-2 border border-line rounded p-2">
+              <legend class="px-1 text-xs font-semibold uppercase tracking-wider text-muted">Brandklasse</legend>
+              <div class="grid grid-cols-2 sm:grid-cols-3 gap-x-3 gap-y-1">
+                <template x-for="k in brandKlasser()" :key="k">
+                  <label class="flex items-center gap-2 text-sm py-0.5" :for="'bk-' + k"><input type="checkbox" :id="'bk-' + k" :value="k" x-model="form.brandklasser"> <span x-text="k"></span></label>
+                </template>
+              </div>
+            </fieldset>
+            <label class="f sm:col-span-2" for="m-bklasse">Anden brandklasse (fritekst)<input id="m-bklasse" class="inp" x-model="form.brandklasse" placeholder="REI60 …"></label>
             <fieldset class="sm:col-span-2 border border-line rounded p-2">
               <legend class="px-1 text-xs font-semibold uppercase tracking-wider text-muted">Produkter</legend>
               <div class="grid grid-cols-2 sm:grid-cols-3 gap-x-3 gap-y-1">
@@ -1799,16 +1806,16 @@
   </div>
 </div>
 
-<script src="js/data.js?v=10.27.0"></script>
-<script src="js/beregning.js?v=10.27.0"></script>
-<script src="js/diagram.js?v=10.27.0"></script>
-<script src="js/lagring.js?v=10.27.0"></script>
-<script src="js/historik.js?v=10.27.0"></script>
-<script src="js/billeder.js?v=10.27.0"></script>
-<script src="js/brand.js?v=10.27.0"></script>
-<script src="js/import.js?v=10.27.0"></script>
-<script src="js/aflevering.js?v=10.27.0"></script>
-<script src="js/app.js?v=10.27.0"></script>
+<script src="js/data.js?v=10.28.0"></script>
+<script src="js/beregning.js?v=10.28.0"></script>
+<script src="js/diagram.js?v=10.28.0"></script>
+<script src="js/lagring.js?v=10.28.0"></script>
+<script src="js/historik.js?v=10.28.0"></script>
+<script src="js/billeder.js?v=10.28.0"></script>
+<script src="js/brand.js?v=10.28.0"></script>
+<script src="js/import.js?v=10.28.0"></script>
+<script src="js/aflevering.js?v=10.28.0"></script>
+<script src="js/app.js?v=10.28.0"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.14.1/cdn.min.js"></script>
 </body>
 </html>

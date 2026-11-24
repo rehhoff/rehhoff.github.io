@@ -794,7 +794,7 @@ async def main():
         r0 = await pg.evaluate(f"""(()=>{{const a={A};const k=document.getElementById('bl-kamera'), g=document.getElementById('bl-galleri');
           return {{nr:a.form.nr, type:a.modal.type, kamera:[k.accept,k.getAttribute('capture'),k.multiple], galleri:[g.accept,g.getAttribute('capture'),g.multiple]}}}})()""")
         await pg.fill('#m-navn', 'Væg mod trappe, 30 cm under loft'); await pg.fill('#m-bbesk', '3 kabler + 1 rør gennem EI60-væg')
-        await pg.fill('#m-bklasse', 'EI60'); await pg.fill('#m-bprod', 'Brandfugemasse')
+        await pg.check('#bk-EI60'); await pg.check('#bk-EI90'); await pg.fill('#m-bklasse', 'REI60'); await pg.fill('#m-bprod', 'Brandfugemasse')
         await pg.set_input_files('#bl-kamera', files=[{'name': 'kamera.png', 'mimeType': 'image/png', 'buffer': png}])
         await pg.wait_for_function(f"{A}.form.billeder.length===1 && !{A}.billedArbejder", timeout=15000)
         await pg.set_input_files('#bl-galleri', files=[{'name': 'g1.png', 'mimeType': 'image/png', 'buffer': png}, {'name': 'g2.png', 'mimeType': 'image/png', 'buffer': png}])
@@ -804,7 +804,7 @@ async def main():
         await pg.click('.bl-mini-f >> nth=2 >> .bl-fjern')
         await pg.click('footer button[type=submit]'); await pg.wait_for_timeout(200)
         r = await pg.evaluate(f"""async()=>{{const a={A};const T=n=>new Promise(f=>setTimeout(f,n));const o={{}};const b=a.db.brandlukninger[0];
-          o.n=a.db.brandlukninger.length; o.felter=[b.nr,b.placering,b.beskrivelse,b.brandklasse,b.produkt,b.udfoert,b.maerkat,b.billeder.length,a.modal];
+          o.n=a.db.brandlukninger.length; o.felter=[b.nr,b.placering,b.beskrivelse,a.brandKlasseTxt(b),b.produkt,b.udfoert,b.maerkat,b.billeder.length,a.modal];
           const lok=a.db.lokaler[0].id; a.brandNy(); o.nr2=a.form.nr; Object.assign(a.form,{{placering:'Loft i teknikrum',lokaleId:lok,beskrivelse:'Kabelbakke gennem EI30-dæk'}}); a.saveForm(); await T(150);
           const rec=await bdbKoer(['billeder'],'readonly',tx=>tx.objectStore('billeder').get(b.billeder[0])), mini=await bdbKoer(['mini'],'readonly',tx=>tx.objectStore('mini').get(b.billeder[0]));
           const im=await a.billedBillede(rec.data), mi=await a.billedBillede(mini.data);
@@ -818,7 +818,7 @@ async def main():
         tjek('brandlukning: kamera med capture="environment", galleri med flere billeder, foreslået nummer',
              r0['nr'] == 1 and r0['type'] == 'brand' and r0['kamera'] == ['image/*', 'environment', False] and r0['galleri'] == ['image/*', None, True] and r['nr2'] == 2, (r0, r['nr2']))
         tjek('brandlukning: oprettet via formularen med felter og to billeder (ét fjernet med ×), vises i listen',
-             r['n'] == 1 and r['felter'] == [1, 'Væg mod trappe, 30 cm under loft', '3 kabler + 1 rør gennem EI60-væg', 'EI60', 'Brandfugemasse', False, False, 2, None]
+             r['n'] == 1 and r['felter'] == [1, 'Væg mod trappe, 30 cm under loft', '3 kabler + 1 rør gennem EI60-væg', 'EI60, EI90, REI60', 'Brandfugemasse', False, False, 2, None]
              and minier == 3 and r['liste'] == 2 and r['listeMini'] == 2 and r['optael'] == ['Udført 0 af 2', 'Mærkat 0 af 2'], (r, minier))
         tjek('billeder: komprimeret til JPEG højst 1600 px og 300 KB, miniature 320 px, i IndexedDB, kun id i localStorage',
              r['fuld'][0] == 'data:image/jpeg;base64,' and r['fuld'][1:3] == [1600, 1200] and 20 <= r['fuld'][3] <= 300 and r['mini'][0] == 'data:image/jpeg;base64,' and r['mini'][1] == 320
@@ -922,6 +922,33 @@ async def main():
              r['tavle'] == 1 and r['lokaler'] == 1 and r['samlepunkter'] == 1 and r['dup'] == 0, r)
         tjek('dokumentation: afsnit Billeder med små billeder af tavle, lokale og samlepunkt, manglende billede vises som tekst', r['doc'] == [True, 3, True, True] and r['mangler'], r['doc'])
         tjek('lageradvarsel (navigator.storage.estimate) over 80 % vises under Datasikring, ellers ikke', r['lager'] == [True, True], r['lager'])
+
+        # 4o. Skema 18: opgradering fra skema 17, brandklasse som fritekst flyttes til afkrydsning, når alle dele er klasser fra listen; ellers uændret
+        r0 = await pg.evaluate("""(()=>{const i=JSON.parse(localStorage.getItem('tavleoversigt.projekter'));i.schema=17;const id=i.aktiv;
+          const p=JSON.parse(localStorage.getItem('tavleoversigt.p.'+id));p.projekt.navn='Skema 17-projekt';
+          const kl=['EI60','ei30 / EI90','REI60','EI60 og noget',''];
+          p.brandlukninger.forEach((b,n)=>{delete b.brandklasser;b.brandklasse=kl[n%kl.length];});
+          for(let n=p.brandlukninger.length;n<kl.length;n++)p.brandlukninger.push({id:'s17_'+n,nr:900+n,lokaleId:'',placering:'S17 '+n,beskrivelse:'',brandklasse:kl[n],produkt:'',produkter:[],udfoert:false,maerkat:false,note:'',billeder:[]});
+          localStorage.setItem('tavleoversigt.p.'+id,JSON.stringify(p));localStorage.setItem('tavleoversigt.projekter',JSON.stringify(i));localStorage.removeItem('tavleoversigt.backups');
+          return {p:JSON.stringify(p)}})()""")
+        await pg.goto(URL); await pg.wait_for_timeout(500)
+        r = await pg.evaluate(f"""(()=>{{const a={A};const d=JSON.parse(JSON.stringify(a.db)), p=JSON.parse({json.dumps(r0['p'])});
+          const ens=['tavler','lokaler','daaser','grupper','enheder','brandlukninger'].every(k=>p[k].length===d[k].length&&p[k].every((x,n)=>Object.keys(x).filter(f=>f!=='brandklasse').every(f=>JSON.stringify(x[f])===JSON.stringify(d[k][n][f]))));
+          const kl=d.brandlukninger.slice(0,5).map(b=>[b.brandklasse,b.brandklasser]);
+          a.save(); return {{navn:d.projekt.navn, b:a.backups.length, s:JSON.parse(localStorage.getItem('tavleoversigt.projekter')).schema, ens, kl,
+            txt:a.brandKlasseTxt(d.brandlukninger[1]), doc:a.docHtml().includes('<td>EI30, EI90</td>')}}}})()""")
+        tjek('opgradering fra skema 17: backup taget, data intakte, brandklasse flyttet til afkrydsning kun når alle dele kendes',
+             r['navn'] == 'Skema 17-projekt' and r['b'] >= 1 and r['s'] == SKEMA and r['ens'] and r['txt'] == 'EI30, EI90' and r['doc']
+             and r['kl'] == [['', ['EI60']], ['', ['EI30', 'EI90']], ['REI60', []], ['EI60 og noget', []], ['', []]], r)
+        r = await pg.evaluate(f"""async()=>{{const a={A};const T=n=>new Promise(f=>setTimeout(f,n));const o={{}};
+          a.db.brandlukninger=a.db.brandlukninger.filter(b=>!/^s17_/.test(b.id)); a.save();
+          a.openForm('brand',null,{{}}); await T(100); o.bokse=document.querySelectorAll('[id^="bk-"]').length; a.modal=null; await T(50);
+          a.go('svag'); await T(80); a.openForm('rack',null,{{}}); await T(100); const sel=document.getElementById('m-rklok');
+          o.ny=[...sel.options].some(x=>x.value==='__ny'); sel.value='__ny'; sel.dispatchEvent(new Event('change')); await T(80);
+          o.hurtig=[a.hurtig&&a.hurtig.aaben, a.hurtig&&a.hurtig.type, a.modal&&a.modal.type]; a.hurtig.aaben=false; a.modal=null; a.go('tavle'); await T(50);
+          return o}}""")
+        tjek('brandklasser som afkrydsningsfelter; rackskabets lokaleliste kan oprette nyt lokale',
+             r['bokse'] == 12 and r['ny'] and r['hurtig'] == [True, 'lokale', 'rack'], r)
 
         await pg.evaluate(f"{A}.go('tavle')")
 
