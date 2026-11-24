@@ -14,8 +14,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=10.28.0">
-<link rel="stylesheet" href="css/tailwind.css?v=10.28.0">
+<link rel="stylesheet" href="css/app.css?v=10.29.0">
+<link rel="stylesheet" href="css/tailwind.css?v=10.29.0">
 </head>
 <body class="min-h-full">
 <p id="fail" hidden style="margin:16px;padding:12px;border:1px solid var(--crit);color:var(--crit)">Appen kunne ikke starte, fordi Alpine.js ikke blev indlæst. Genindlæs siden.</p>
@@ -586,7 +586,7 @@
 
     <div class="panel overflow-hidden">
       <header class="flex flex-wrap items-center justify-between gap-2 border-b border-line bg-raised px-3 py-2">
-        <h2 class="hd text-xl">Forbindelser og port-mapping</h2>
+        <h2 class="hd text-xl">Forbindelser og port-mapping <span class="tag num align-middle" x-show="svLinks().length" :class="svLinks().some(l => !l.trukket) && 'warn'" x-text="svLinks().filter(l => l.trukket).length + ' af ' + svLinks().length + ' trukket'"></span></h2>
         <div class="flex gap-1">
           <button class="btn" :class="svFilter==='' && 'sel'" @click="svFilter=''">Alle</button>
           <button class="btn" :class="svFilter==='data' && 'sel'" @click="svFilter='data'"><span x-html="ikon('pds')"></span> PDS</button>
@@ -595,7 +595,7 @@
       </header>
       <div class="overflow-x-auto">
         <table class="kt">
-          <thead><tr><th>Art</th><th>Betegnelse</th><th>Lokale</th><th>Kabel</th><th class="r">Længde</th><th>Patchpanel</th><th>Switch</th><th class="r">PoE</th><th>Kamera / NVR</th><th>Status</th><th></th></tr></thead>
+          <thead><tr><th>Art</th><th>Betegnelse</th><th>Lokale</th><th>Kabel</th><th>Trukket</th><th class="r">Længde</th><th>Patchpanel</th><th>Switch</th><th class="r">PoE</th><th>Kamera / NVR</th><th>Status</th><th></th></tr></thead>
           <tbody>
             <template x-for="l in svLinks()" :key="l.id">
               <tr>
@@ -603,6 +603,7 @@
                 <td class="font-medium" x-text="l.navn"></td>
                 <td x-text="lokaleNavn(l.lokaleId)"></td>
                 <td class="num" x-text="l.kabel"></td>
+                <td><input type="checkbox" class="sv-trukket" :checked="!!l.trukket" @change="fvSaet({ kind:'link', o:l }, 'trukket', $event.target.checked)" :aria-label="'Kabel trukket: ' + l.navn" title="Kablet er trukket"></td>
                 <td class="num r" x-text="fmt(l.laengde) + ' m'"></td>
                 <td class="num" x-text="portTxt(l, 'panel')"></td>
                 <td class="num" x-text="portTxt(l, 'switch')"></td>
@@ -612,7 +613,7 @@
                 <td class="text-right whitespace-nowrap"><button class="btn btn-ghost" @click="sporTil('x:' + l.id)">Spor</button><button class="btn btn-ghost" @click="openForm('link', l)">Rediger</button></td>
               </tr>
             </template>
-            <tr x-show="!svLinks().length"><td colspan="11" class="text-muted py-6 text-center">Ingen forbindelser.</td></tr>
+            <tr x-show="!svLinks().length"><td colspan="12" class="text-muted py-6 text-center">Ingen forbindelser.</td></tr>
           </tbody>
         </table>
       </div>
@@ -799,7 +800,7 @@
             <ul class="flex flex-col text-sm" x-show="linksILokale(l.id, '').length">
               <template x-for="x in linksILokale(l.id, '')" :key="x.id">
                 <li class="typed stripe flex items-baseline justify-between gap-2 border-b border-line last:border-b-0 py-1 pl-2" :class="x.art">
-                  <button class="text-left hover:underline" @click="openForm('link', x)"><span :class="x.art === 'cctv' ? 'c-cctv' : 'c-pds'" x-html="ikon(x.art === 'cctv' ? 'cctv' : 'pds')"></span> <span x-text="x.navn"></span></button>
+                  <span class="flex items-baseline gap-2 min-w-0"><input type="checkbox" class="lok-trukket shrink-0" :checked="!!x.trukket" @change="fvSaet({ kind:'link', o:x }, 'trukket', $event.target.checked)" :aria-label="'Kabel trukket: ' + x.navn" title="Kablet er trukket"><button class="text-left hover:underline" @click="openForm('link', x)"><span :class="x.art === 'cctv' ? 'c-cctv' : 'c-pds'" x-html="ikon(x.art === 'cctv' ? 'cctv' : 'pds')"></span> <span x-text="x.navn"></span></button></span>
                   <span class="num text-xs text-muted whitespace-nowrap" x-text="x.kabel + ' · ' + portTxt(x, 'switch')"></span></li>
               </template>
             </ul>
@@ -1629,6 +1630,7 @@
               <select id="m-lkabel" class="inp" x-model="form.kabel">
                 <template x-for="k in datakabler" :key="k"><option :value="k" :selected="form.kabel===k" x-text="k"></option></template></select></label>
             <label class="f" for="m-llen">Længde, fast link (m)<input id="m-llen" class="inp num" type="number" min="0" step="0.5" x-model.number="form.laengde" required></label>
+            <label class="flex items-center gap-2 text-sm self-end pb-2" for="m-ltrukket"><input type="checkbox" id="m-ltrukket" x-model="form.trukket"> Kablet er trukket</label>
             <label class="f" for="m-antal" x-show="!mid()">Antal (nummereres automatisk)<input id="m-antal" class="inp num" type="number" min="1" max="20" step="1" x-model.number="form.antal"></label>
             <label class="f" for="m-lpatch">Patchkabel i rack (m)<input id="m-lpatch" class="inp num" type="number" min="0" step="0.25" x-model.number="form.patch"></label>
             <label class="f" for="m-lpp">Patchpanel
@@ -1806,16 +1808,16 @@
   </div>
 </div>
 
-<script src="js/data.js?v=10.28.0"></script>
-<script src="js/beregning.js?v=10.28.0"></script>
-<script src="js/diagram.js?v=10.28.0"></script>
-<script src="js/lagring.js?v=10.28.0"></script>
-<script src="js/historik.js?v=10.28.0"></script>
-<script src="js/billeder.js?v=10.28.0"></script>
-<script src="js/brand.js?v=10.28.0"></script>
-<script src="js/import.js?v=10.28.0"></script>
-<script src="js/aflevering.js?v=10.28.0"></script>
-<script src="js/app.js?v=10.28.0"></script>
+<script src="js/data.js?v=10.29.0"></script>
+<script src="js/beregning.js?v=10.29.0"></script>
+<script src="js/diagram.js?v=10.29.0"></script>
+<script src="js/lagring.js?v=10.29.0"></script>
+<script src="js/historik.js?v=10.29.0"></script>
+<script src="js/billeder.js?v=10.29.0"></script>
+<script src="js/brand.js?v=10.29.0"></script>
+<script src="js/import.js?v=10.29.0"></script>
+<script src="js/aflevering.js?v=10.29.0"></script>
+<script src="js/app.js?v=10.29.0"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.14.1/cdn.min.js"></script>
 </body>
 </html>

@@ -502,7 +502,7 @@ function app() {
         rack: { navn:'R' + (this.db.racks.length + 1), type:'19" vægskab', he:9, lokaleId:'', gruppeId:'' },
         udstyr: { rackId:(this.db.racks[0] || {}).id || '', navn:'', art:'switch', he:1, pos:1, porte:24, poe:false, poeBudget:0, effekt:20 },
         brand: { nr:1, lokaleId:'', placering:'', beskrivelse:'', brandklasse:'', brandklasser:[], produkt:'', produkter:[], udfoert:false, maerkat:false, note:'', billeder:[] },
-        link: { antal:1, art:'data', navn:'', lokaleId:'', kabel:'Cat6A', laengde:20, panelId:'', panelPort:0, switchId:'', switchPort:0, patch:0.5, poeW:0, kamType:'Dome', oploesning:'4 MP', nvrId:'' }
+        link: { antal:1, art:'data', navn:'', lokaleId:'', kabel:'Cat6A', laengde:20, panelId:'', panelPort:0, switchId:'', switchPort:0, patch:0.5, poeW:0, kamType:'Dome', oploesning:'4 MP', nvrId:'', trukket:false }
       }[type];
       this.form = item ? JSON.parse(JSON.stringify(item)) : Object.assign(std, pre || {});
       this.dAuto = { type:true, lok:true }; this.eAuto = !item;
@@ -550,6 +550,7 @@ function app() {
       if (this.billedFelt(type)) rec.billeder = bIdListe(rec.billeder);  /* skema 16 */
       if (type === 'daase' && (rec.parentId === id || (id && this.erUnder(rec.parentId, id)))) rec.parentId = '';
       if (type === 'link' && rec.art !== 'cctv') rec.nvrId = '';
+      if (type === 'link') rec.trukket = !!rec.trukket;
       if (type === 'udstyr') rec.poe = rec.art === 'switch' && !!rec.poe;
       if (type === 'afbryder') {
         const ok = new Set(rec.gruppeId ? this.enhederFor(rec.gruppeId).map(e => e.id) : []);
@@ -808,7 +809,7 @@ function app() {
         const iGr = (x, g) => !!x && x.gruppeId === g;
         es.forEach(e => { const g = ng(e.gruppeId); d.enheder.push(Object.assign(kopi(e), { id:em[e.id], lokaleId:ny.id, gruppeId:g, daaseId:dm[e.daaseId] || (iGr(this.daase(e.daaseId), g) ? e.daaseId : ''),
           fraEnhed:em[e.fraEnhed] || (iGr(this.enhed(e.fraEnhed), g) ? e.fraEnhed : ''), trukket:false, note:'' })); });
-        ls.forEach(l => { const c = Object.assign(kopi(l), { id:uid(), lokaleId:ny.id, navn:this.naeste(l.navn, d.links) }); this.givPorte(c); d.links.push(c); });
+        ls.forEach(l => { const c = Object.assign(kopi(l), { id:uid(), lokaleId:ny.id, navn:this.naeste(l.navn, d.links), trukket:false }); this.givPorte(c); d.links.push(c); });
       });
       this.say(ny.navn + ' oprettet med ' + es.length + ' brugsgenstande, ' + ds.length + ' samledåser og ' + ls.length + ' udtag/kameraer.', true);
     },

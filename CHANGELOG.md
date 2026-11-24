@@ -2,6 +2,16 @@
 
 Nyeste øverst. Versionsnummeret står også i appen som `APP_VERSION`. Hver version siger, hvilken model der lavede den.
 
+## 10.29.0 · 2026-11-24 · Claude Opus 5.5
+
+Svagstrømskabler kan markeres som trukket. Plan: `docs/planer/2026-11-24-svag-trukket.md`.
+
+- Formularen for dataudtag og kamera har "Kablet er trukket" som installationskablerne.
+- Fanen Svagstrøm: kolonne med flueben for trukket ved hvert dataudtag og kamera, og "x af y trukket" i overskriften.
+- Fanen Lokaler: flueben foran hvert dataudtag og kamera.
+- Aflevering: dataudtag og kameraer, hvis kabel ikke er trukket, står under "Kabler, der ikke er trukket".
+- Skema 19: nyt felt `trukket` på `links` (standard: ikke trukket). Kopier og kloner er ikke trukket. Der tages backup ved første start.
+
 ## 10.28.0 · 2026-11-24 · Claude Opus 5.5
 
 Brandklasser som afkrydsning og nyt lokale fra rackskab. Plan: `docs/planer/2026-11-24-brandklasser-rack-lokale.md`.
