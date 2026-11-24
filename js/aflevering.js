@@ -28,6 +28,7 @@ const APP_AFLEVERING = () => ({
     const tr = d.enheder.concat(d.daaser, d.afbrydere).filter(x => Number(x.laengde) > 0 && !x.trukket).map(x => ({ k:'tr' + x.id,
       txt:(x.type ? x.type + ' ' : '') + x.navn + ': kablet er ikke trukket.', nav:{ type:d.afbrydere.includes(x) ? 'afbryder' : d.daaser.includes(x) ? 'daase' : 'enhed', obj:x } }));
     d.tavler.filter(t => Number(t.tLaengde) > 0 && !t.tTrukket).forEach(t => tr.push({ k:'tt' + t.id, txt:t.navn + ': tilgangskablet er ikke trukket.', nav:{ type:'tavle', obj:t } }));
+    d.links.filter(l => Number(l.laengde) > 0 && !l.trukket).forEach(l => tr.push({ k:'tx' + l.id, txt:(l.art === 'cctv' ? 'Kamera ' : 'Dataudtag ') + l.navn + ': kablet er ikke trukket.', nav:{ type:'link', obj:l } }));
     K('trukket', 'Kabler, der ikke er trukket', tr);
     K('brand', 'Brandlukninger, der ikke er udført eller mangler mærkat', d.brandlukninger.slice().sort((a, b) => a.nr - b.nr).filter(b => !b.udfoert || !b.maerkat)
       .map(b => ({ k:'bl' + b.id, txt:'Brandlukning ' + b.nr + (b.placering ? ' (' + b.placering + ')' : '') + ': ' + [!b.udfoert && 'ikke udført', !b.maerkat && 'mangler mærkat'].filter(Boolean).join(', ') + '.', nav:{ type:'brand', obj:b } })));

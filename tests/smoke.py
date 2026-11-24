@@ -950,6 +950,30 @@ async def main():
         tjek('brandklasser som afkrydsningsfelter; rackskabets lokaleliste kan oprette nyt lokale',
              r['bokse'] == 12 and r['ny'] and r['hurtig'] == [True, 'lokale', 'rack'], r)
 
+        # 4p. Skema 19: svagstrømsforbindelser har status trukket. Opgradering fra skema 18, flueben i Svagstrøm og Lokaler, formular og aflevering
+        r0 = await pg.evaluate("""(()=>{const i=JSON.parse(localStorage.getItem('tavleoversigt.projekter'));i.schema=18;const id=i.aktiv;
+          const p=JSON.parse(localStorage.getItem('tavleoversigt.p.'+id));p.projekt.navn='Skema 18-projekt';p.links.forEach(l=>delete l.trukket);
+          localStorage.setItem('tavleoversigt.p.'+id,JSON.stringify(p));localStorage.setItem('tavleoversigt.projekter',JSON.stringify(i));localStorage.removeItem('tavleoversigt.backups');
+          return {p:JSON.stringify(p), n:p.links.length}})()""")
+        await pg.goto(URL); await pg.wait_for_timeout(500)
+        r = await pg.evaluate(f"""async()=>{{const a={A};const T=n=>new Promise(f=>setTimeout(f,n));const d=JSON.parse(JSON.stringify(a.db)), p=JSON.parse({json.dumps(r0['p'])}), o={{}};
+          o.ens=['tavler','lokaler','daaser','grupper','enheder','links','racks','udstyr','brandlukninger'].every(k=>p[k].length===d[k].length&&p[k].every((x,n)=>Object.keys(x).every(f=>JSON.stringify(x[f])===JSON.stringify(d[k][n][f]))));
+          o.std=d.links.every(l=>l.trukket===false); a.save();
+          o.meta=[d.projekt.navn, a.backups.length>=1, JSON.parse(localStorage.getItem('tavleoversigt.projekter')).schema];
+          a.go('svag'); await T(120); const bokse=[...document.querySelectorAll('input.sv-trukket')].filter(x=>x.offsetParent); o.bokse=bokse.length;
+          const l0=a.svLinks()[0]; bokse[0].click(); await T(80); a.gemNu(); o.sat=[l0.trukket, JSON.parse(localStorage.getItem('tavleoversigt.p.'+a.pid)).links.find(x=>x.id===l0.id).trukket];
+          a.undo(); await T(60); o.fortrudt=a.db.links.find(x=>x.id===l0.id).trukket===false;
+          const afl=()=>((a.aflTjek().find(k=>k.k==='trukket')||{{punkter:[]}}).punkter).filter(x=>x.k==='tx'+l0.id).length; o.afl=[afl()];
+          a.openForm('link', a.db.links.find(x=>x.id===l0.id)); await T(100); o.felt=!!document.getElementById('m-ltrukket'); document.getElementById('m-ltrukket').click(); a.saveForm(); await T(80);
+          o.form=a.db.links.find(x=>x.id===l0.id).trukket; o.afl.push(afl());
+          a.go('lokaler'); await T(120); const lb=[...document.querySelectorAll('input.lok-trukket')].filter(x=>x.offsetParent&&/Kabel trukket: /.test(x.getAttribute('aria-label'))&&a.db.links.some(l=>'Kabel trukket: '+l.navn===x.getAttribute('aria-label')));
+          o.lok=lb.length>0;
+          a.mutate(()=>{{a.db.links.forEach(l=>l.trukket=false);}}); a.go('tavle'); await T(50);
+          return o}}""")
+        tjek('opgradering fra skema 18: backup taget, svagstrømsforbindelser intakte og ikke trukket; flueben i Svagstrøm, Lokaler og formularen gemmes og kan fortrydes',
+             r['meta'] == ['Skema 18-projekt', True, SKEMA] and r['ens'] and r['std'] and r0['n'] > 0 and r['bokse'] == r0['n'] and r['sat'] == [True, True]
+             and r['fortrudt'] and r['felt'] and r['form'] is True and r['lok'] and r['afl'] == [1, 0], r)
+
         await pg.evaluate(f"{A}.go('tavle')")
 
         # 5. Backupfil kan hentes og indlæses uden at overskrive. Den indeholder billederne

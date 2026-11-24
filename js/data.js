@@ -1,7 +1,7 @@
 /* Konstanter, lagernøgler, tabeller, norm() og eksempeldata. Indlæses først; alt her er globalt og bruges af de andre filer og markup. */
 const KEY = 'tavleoversigt.v2', OLD = 'tavleoversigt.v1', TKEY = 'tavleoversigt.tema', IDX = 'tavleoversigt.projekter';
 /* Versioner: APP_VERSION følger CHANGELOG.md. SCHEMA hæves kun, når datamodellen ændres, og udløser en automatisk backup før migrering. */
-const APP_VERSION = '10.28.0', SCHEMA = 18, BKEY = 'tavleoversigt.backups', BMAX = 3;
+const APP_VERSION = '10.29.0', SCHEMA = 19, BKEY = 'tavleoversigt.backups', BMAX = 3;
 const PK = id => 'tavleoversigt.p.' + id, MEM = {};
 /* Synkronisering: en hemmelig GitHub Gist med en markørfil og én fil pr. projekt. Se docs/planer/2026-11-15-gist-synk.md. */
 const SKEY = 'tavleoversigt.sync', GFIL = 'tavleoversigt.json', GP = id => 'tavleoversigt-' + id + '.json', GPRE = /^tavleoversigt-([A-Za-z0-9_-]+)\.json$/, GH = 'https://api.github.com';
@@ -190,6 +190,8 @@ function norm(d) {
     }
     b.brandklasser = BRANDKLASSER.filter(k => b.brandklasser.includes(k));
     b.udfoert = !!b.udfoert; b.maerkat = !!b.maerkat; b.billeder = bIdListe(b.billeder); });
+  /* skema 19: svagstrømsforbindelser har status trukket som installationskablerne */
+  o.links.forEach(l => { if (l && typeof l === 'object') l.trukket = !!l.trukket; });
   /* skema 16: billeder på tavler, lokaler og samledåser (forslag 15). Kun id'erne; billederne ligger i IndexedDB */
   for (const k of ['tavler', 'lokaler', 'daaser']) o[k].forEach(x => { x.billeder = bIdListe(x.billeder); });
   o.tavler.forEach(t => { const g = o.grupper.find(x => x.id === t.fraGruppe); if (g && g.tavleId !== t.id) t.fra = g.tavleId; else t.fraGruppe = ''; });
