@@ -975,6 +975,32 @@ async def main():
              r['meta'] == ['Skema 18-projekt', True, SKEMA] and r['ens'] and r['std'] and r0['n'] > 0 and r['bokse'] == r0['n'] and r['sat'] == [True, True]
              and r['fortrudt'] and r['felt'] and r['form'] is True and r['lok'] and r['afl'] == [1, 0], r)
 
+        # 4q. Datasikring (gennemgang 2026-11-25): anden fanes ændring læses frisk, Gist med 300 filer afvises, backup-id kontrolleres, ulæseligt projekt overskrives ikke
+        r = await pg.evaluate(f"""async()=>{{const a={A};const o={{}};
+          const x=a.projekter.find(p=>p.id!==a.pid); o.har=!!x;
+          if(x){{ const d=a.laes(x.id), gl=d.projekt.navn; MEM[x.id]=JSON.stringify(Object.assign({{}},d,{{projekt:Object.assign({{}},d.projekt,{{navn:'Forældet'}})}})); const ny=JSON.stringify(Object.assign({{}},d,{{projekt:Object.assign({{}},d.projekt,{{navn:'Fra anden fane'}})}}));
+            localStorage.setItem(PK(x.id),ny); window.dispatchEvent(new StorageEvent('storage',{{key:PK(x.id),newValue:ny}})); o.frisk=a.laes(x.id).projekt.navn; a.skriv(x.id,d); o.gl=a.laes(x.id).projekt.navn===gl; }}
+          const gh=a.gh, s0=a.synk, n0=a.projekter.length, files={{'tavleoversigt.json':{{content:'{{"schema":1}}'}}}};
+          for(let i=0;i<299;i++) files['tavleoversigt-p'+i+'.json']={{content:'x'}};
+          a.gh=async()=>({{files}}); a.synk={{token:'t',gistId:'g',base:{{}}}};
+          try{{ await a.synkKoer(); o.mange='ingen fejl'; }}catch(e){{ o.mange=/for mange filer/.test(e.message); }}
+          a.gh=gh; a.synk=s0; o.n=a.projekter.length===n0;
+          a.importBackup({{format:'tavleoversigt-backup',projekter:[{{id:'ugyldigt.id',data:{{tavler:[],grupper:[],enheder:[],projekt:{{navn:'Id-test'}}}}}}]}});
+          const im=a.projekter.find(p=>p.navn==='Id-test'); o.id=!!im&&BID.test(im.id)&&im.id!=='ugyldigt.id'; if(im) a.sletProjekt(im.id);
+          return o}}""")
+        tjek('datasikring: projekt ændret i anden fane læses frisk, Gist med 300 filer afvises uden ændringer, ugyldigt projekt-id fra backup udskiftes',
+             r['har'] and r['frisk'] == 'Fra anden fane' and r['gl'] and r['mange'] is True and r['n'] and r['id'], r)
+        r0 = await pg.evaluate("""(()=>{const i=JSON.parse(localStorage.getItem('tavleoversigt.projekter')), id=i.aktiv, gl=localStorage.getItem('tavleoversigt.p.'+id);
+          localStorage.setItem('tavleoversigt.p.'+id,'{"tavler":[null]}'); return {id, gl}})()""")
+        await pg.goto(URL); await pg.wait_for_timeout(500)
+        r = await pg.evaluate(f"""(()=>{{const a={A};return {{pid:a.pid, raa:localStorage.getItem('tavleoversigt.p.'+{json.dumps(r0['id'])}), liste:a.projekter.some(p=>p.id==={json.dumps(r0['id'])}), fejl:a.toasts.some(t=>t.fejl&&/kunne ikke læses/.test(t.txt))}}}})()""")
+        await pg.evaluate(f"""(()=>{{const a={A};localStorage.setItem('tavleoversigt.p.'+{json.dumps(r0['id'])},{json.dumps(r0['gl'])});const ny=a.pid;a.sletProjekt(ny);a.gemNu();
+          const i=JSON.parse(localStorage.getItem('tavleoversigt.projekter'));i.aktiv={json.dumps(r0['id'])};localStorage.setItem('tavleoversigt.projekter',JSON.stringify(i));}})()""")
+        await pg.goto(URL); await pg.wait_for_timeout(500)
+        tilbage = await pg.evaluate(f"{A}.pid")
+        tjek('start: et ulæseligt projekt overskrives ikke, et nyt tomt projekt åbnes, og der vises en fejl',
+             r['pid'] != r0['id'] and r['raa'] == '{"tavler":[null]}' and r['liste'] and r['fejl'] and tilbage == r0['id'], (r, tilbage))
+
         await pg.evaluate(f"{A}.go('tavle')")
 
         # 5. Backupfil kan hentes og indlæses uden at overskrive. Den indeholder billederne

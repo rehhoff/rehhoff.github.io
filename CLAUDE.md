@@ -6,7 +6,7 @@ Webapp til elektrikerarbejde: tavler, grupper, lokaler, kabler, samlepunkter, af
 - Ét lille byggetrin: Tailwind-CSS'en bygges med `python tools/byg_css.py` (Tailwinds officielle program v3.4.17, hentes automatisk til `~/.cache/el-oversigt/`). Alpine.js 3.14.1 fra cdnjs. Almindelige scripts, der deler globalt scope, indlæst i denne rækkefølge:
   - `index.html`: markup med Alpine-direktiver.
   - `css/app.css`: farvetokens, lyst og mørkt tema, egne klasser. `css/tailwind.css`: bygget fra `tailwind.config.js` og `css/tailwind.input.css`. Ret den aldrig i hånden.
-  - `js/data.js`: konstanter, `APP_VERSION`, `SCHEMA`, lagernøgler, tabeller (`IZ`, `EFFEKT`, `SF` …), `norm()` og eksempeldata.
+  - `js/data.js`: konstanter, `APP_VERSION`, `SCHEMA`, lagernøgler, tabeller (`IZT`, `EFFEKT`, `SF` …), `norm()` og eksempeldata.
   - `js/beregning.js` (`APP_BEREGNING`), `js/diagram.js` (`APP_DIAGRAM`), `js/lagring.js` (`APP_LAGRING`): metoder, der samles i `app()`.
   - `js/app.js`: `app()` med tilstand, `init()` og resten af brugerfladen. `bland()` lægger metoderne fra de andre filer på.
   - `sw.js`, `manifest.webmanifest`, `ikoner/`: offline-app. `sw.js` gemmer app-filerne til brug uden net. En ny fil i `css/` eller `js/` skal også stå i listen `SKAL` i `sw.js`. Service workeren håndterer kun appens egne adresser (`EGNE` i `sw.js`), fordi andre apps (fx Elskolen under `/elskole/`) ligger på samme origin. En ny mappe på øverste niveau, som appen bruger, skal tilføjes i `EGNE`.

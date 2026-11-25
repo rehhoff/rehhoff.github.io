@@ -1,7 +1,7 @@
 /* Konstanter, lagernøgler, tabeller, norm() og eksempeldata. Indlæses først; alt her er globalt og bruges af de andre filer og markup. */
 const KEY = 'tavleoversigt.v2', OLD = 'tavleoversigt.v1', TKEY = 'tavleoversigt.tema', IDX = 'tavleoversigt.projekter';
 /* Versioner: APP_VERSION følger CHANGELOG.md. SCHEMA hæves kun, når datamodellen ændres, og udløser en automatisk backup før migrering. */
-const APP_VERSION = '10.29.1', SCHEMA = 19, BKEY = 'tavleoversigt.backups', BMAX = 3;
+const APP_VERSION = '10.29.2', SCHEMA = 19, BKEY = 'tavleoversigt.backups', BMAX = 3;
 const PK = id => 'tavleoversigt.p.' + id, MEM = {};
 /* Synkronisering: en hemmelig GitHub Gist med en markørfil og én fil pr. projekt. Se docs/planer/2026-11-15-gist-synk.md. */
 const SKEY = 'tavleoversigt.sync', GFIL = 'tavleoversigt.json', GP = id => 'tavleoversigt-' + id + '.json', GPRE = /^tavleoversigt-([A-Za-z0-9_-]+)\.json$/, GH = 'https://api.github.com';
@@ -55,8 +55,6 @@ const IZT = {
          D2:[23, 30, 39, 49, 65, 84, 107, 129, 153, 188, 226, 257], E:[23, 32, 42, 54, 75, 100, 127, 158, 192, 246, 298, 346] }
   }
 };
-/* Gammel tabel (PVC, metode C, 30 °C) som opslag pr. tværsnit. Beholdes til kode, der ikke kender metoder. */
-const IZ = { 2:Object.fromEntries(TV.map((a, i) => [a, IZT.PVC[2].C[i]])), 3:Object.fromEntries(TV.map((a, i) => [a, IZT.PVC[3].C[i]])) };
 /* Installationsmetoder (DS/HD 60364-5-52, tabel B.52.1). Metode F er udeladt: den gælder kun enlederkabler. */
 const METODER = { A1:'A1 · isolerede ledere i rør i isoleret væg', A2:'A2 · flerlederkabel i rør i isoleret væg', B1:'B1 · isolerede ledere i rør på væg', B2:'B2 · flerlederkabel i rør på væg',
   C:'C · flerlederkabel direkte på eller i væg', D1:'D1 · kabel i rør i jord', D2:'D2 · kabel direkte i jord', E:'E · flerlederkabel i fri luft' };
