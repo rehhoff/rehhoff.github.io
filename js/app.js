@@ -59,7 +59,9 @@ function app() {
       if (idx && idx.sidstBackup) this.sidstBackup = idx.sidstBackup;
       if (idx && Array.isArray(idx.liste) && idx.liste.length) {
         this.projekter = idx.liste; this.pid = idx.liste.some(p => p.id === idx.aktiv) ? idx.aktiv : idx.liste[0].id;
-        this.db = this.laes(this.pid) || tom();
+        const d = this.laes(this.pid);
+        /* kan projektet ikke læses, må det ikke overskrives: et tomt projekt åbnes under et nyt id, og den gamle nøgle bliver stående */
+        if (d) this.db = d; else { this.db = tom(); this.db.projekt.navn = 'Nyt projekt'; this.pid = uid(); this.projekter = this.projekter.concat([{ id:this.pid }]); this.say('Det sidst åbne projekt kunne ikke læses og er ikke åbnet. Det er ikke slettet. Hent en backup, eller gendan fra historikken.', false, true); }
       } else {
         let old = null; try { old = JSON.parse(localStorage.getItem(KEY) || localStorage.getItem(OLD)); } catch (e) {}
         const harOld = !!(old && Array.isArray(old.tavler));
@@ -82,6 +84,8 @@ function app() {
       window.addEventListener('offline', () => { this.online = false; });
       try { if (navigator.storage && navigator.storage.persist) navigator.storage.persisted().then(p => p || navigator.storage.persist()).then(p => { this.persistent = !!p; }).catch(() => {}); } catch (e) {}
       window.addEventListener('storage', ev => {
+        /* en anden fane har gemt et projekt: hukommelsens kopi er forældet, så laes() skal hente fra localStorage */
+        if (ev.key && ev.key.startsWith(PK('')) && ev.key !== PK(this.pid)) delete MEM[ev.key.slice(PK('').length)];
         if (ev.key === PK(this.pid) && ev.newValue) {
           delete MEM[this.pid]; if (SAVEP && SAVEP.id === this.pid) { clearTimeout(TIMERS.gem); SAVEP = null; } const d = this.laes(this.pid);
           if (d) { this.db = d; this.dbRev++; this.hist = []; this.fremtid = []; this.billedStart(); this.say('Projektet blev ændret i en anden fane og er indlæst igen.'); }

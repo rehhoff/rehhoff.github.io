@@ -2,6 +2,18 @@
 
 Nyeste øverst. Versionsnummeret står også i appen som `APP_VERSION`. Hver version siger, hvilken model der lavede den.
 
+## 10.29.2 · 2026-11-25 · Claude Opus 5.5
+
+Rettelser efter gennemgang af datasikringen. Plan: `docs/planer/2026-11-25-gennemgang-datasikring.md`.
+
+- To faner: når en anden fane gemmer et projekt, læses det frisk fra browserens lager. Før kunne en gammel kopi i hukommelsen overskrive den anden fanes ændringer, også i Gist'en.
+- Synkronisering: en Gist med 300 filer eller flere afvises med en fejl. GitHub sender højst 300 filer, og projekter uden for listen ville ellers blive slettet lokalt som om de var slettet på en anden enhed.
+- Start: kan det sidst åbne projekt ikke læses, åbnes et nyt tomt projekt, og det gamle bliver stående urørt med en fejlbesked. Før blev det overskrevet med et tomt projekt.
+- Backupfil: et projekt-id med ukendte tegn udskiftes med et nyt id, så projektet genkendes ved synkronisering.
+- Service worker: kun et gyldigt svar (status 200–299) gemmes som `index.html` til offline brug.
+- Den ubrugte tabel `IZ` er fjernet.
+- Ingen ændring i datamodellen.
+
 ## 10.29.1 · 2026-11-25 · Claude Opus 5.5
 
 - Rettelse: en brugsgenstand med "tilgang" som ord et sted i navnet (fx "Køkken tilgang 1" eller "Tilgangskabel bad") regnes nu som tilgang, ikke kun navne, der starter med "Tilgang". Den vises som tilgang (tilgangskabel) i enstregsdiagrammet, har ingen last og tælles ikke som brugsgenstand. Et symbol valgt i hånden går stadig forud.

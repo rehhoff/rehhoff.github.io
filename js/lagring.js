@@ -105,8 +105,9 @@ const APP_LAGRING = () => ({
       const ps = Array.isArray(d.projekter) ? d.projekter : []; let n = 0, spring = 0; this.gemNu();
       for (const p of ps) {
         const raw = p && (p.data || p); if (!raw || !Array.isArray(raw.tavler)) { spring++; continue; }
-        const dd = norm(raw), id = p.id && !this.projekter.some(x => x.id === p.id) ? p.id : uid();
-        if (p.id && this.projekter.some(x => x.id === p.id)) { const cur = this.laes(p.id); if (cur && JSON.stringify(cur) === JSON.stringify(dd)) { spring++; continue; } dd.projekt.navn = (dd.projekt.navn || 'Projekt') + ' (importeret)'; }
+        const pid = typeof p.id === 'string' && BID.test(p.id) ? p.id : '';  /* id'et bliver nøgle og filnavn i Gist'en; ukendte tegn ville ikke blive genkendt ved næste synkronisering */
+        const dd = norm(raw), id = pid && !this.projekter.some(x => x.id === pid) ? pid : uid();
+        if (pid && this.projekter.some(x => x.id === pid)) { const cur = this.laes(pid); if (cur && JSON.stringify(cur) === JSON.stringify(dd)) { spring++; continue; } dd.projekt.navn = (dd.projekt.navn || 'Projekt') + ' (importeret)'; }
         this.skriv(id, dd); this.projekter.push(this.meta(id, dd)); n++;
       }
       this.skrivIdx(); this.io = '';
@@ -173,6 +174,8 @@ const APP_LAGRING = () => ({
       const g = await this.gh('/gists/' + this.synk.gistId), fjern = {}, ugyldig = new Set();
       /* En ældre version må aldrig læse eller skrive data gemt med et nyere skema: dens norm() kender ikke de nye felter og ville fjerne dem ved næste afsendelse. */
       let mSchema = 0; try { mSchema = Number(JSON.parse(g.files[GFIL].content).schema) || 0; } catch (e) {}
+      /* GitHub sender højst 300 filer pr. Gist. Et projekt uden for listen ville ligne en sletning på en anden enhed og blive slettet her */
+      if (g.truncated || Object.keys(g.files || {}).length >= 300) { const e = new Error('Gist\'en har for mange filer til at blive synkroniseret sikkert (højst 299). Intet er ændret. Slet gamle projekter eller konfliktkopier.'); e.status = 'mange'; throw e; }
       if (mSchema > SCHEMA) { const e = new Error('Projekterne på GitHub er gemt af en nyere version af appen (skema ' + mSchema + ', denne har ' + SCHEMA + '). Genindlæs siden med Ctrl+F5 for at hente den nyeste version. Indtil da synkroniseres der ikke fra denne enhed.'); e.status = 'skema'; throw e; }
       for (const [navn, f] of Object.entries(g.files || {})) {
         const m = GPRE.exec(navn); if (!m) continue;
