@@ -579,6 +579,7 @@ async def main():
             d.enheder.push(E('S4','Stik 4','U4','stik'),E('U3','Udtag 3','U2','gen'),E('S1','Stik 1','U1','stik'),E('U1','Udtag 1','TQ1','gen'),E('U4','Udtag 4','U3','gen'),
               E('S2','Stik 2','U2','stik'),E('U2','Udtag 2','U1','gen'),E('S3','Stik 3','U3','stik'),E('TQ1','Tilgang køkken','','auto'));
             o.tilg=[a.symbolFor(a.enhed('TQ1')),a.effektForslag({{navn:'Tilgang',symbol:'auto'}}).W,a.effektForslag({{navn:'Stik',symbol:'tilgang'}}).W,a.symNavn.tilgang?1:0];
+            o.tilgNavn=['Køkken tilgang 1','Tilgangskabel bad','tilgang','Stik ved vask','Udtilgang'].map(n=>a.symbolFor({{navn:n,symbol:'auto',gruppeId:''}}));
             o.taelling=[a.stats().find(x=>x.l==='Brugsgenstande').v-st0, bg().reduce((s,l)=>s+l.antal,0)-m0, bg().some(l=>/Tilgang/.test(l.tekst)),
               a.materialer().find(x=>x.gruppe==='Kabler').linjer.reduce((s,l)=>s+l.antal,0)-k0];
             const P=html=>new DOMParser().parseFromString(html,'image/svg+xml'), mine=['TQ1','U1','U2','U3','U4','S1','S2','S3','S4'];
@@ -601,7 +602,7 @@ async def main():
         tjek('enstreg: sløjfekæde i rækkefølge, forgreningsprikker, sporing gennem kæden, lokalefilter; Tilgang uden last og ikke talt som brugsgenstand',
              r['orden'] == ['TQ1', 'U1', 'S1', 'U2', 'S2', 'U3', 'S3', 'U4', 'S4'] and r['fra'] == ['', 'TQ1', 'U1', 'U1', 'U2', 'U2', 'U3', 'U3', 'U4']
              and r['prikker'] == ['U1', 'U2', 'U3', 'U4'] and r['geo'] and r['raekker'] and r['spor'] == ['e:TQ1', 'e:U1', 'e:U2', 'e:U3', 'e:U4', 'e:S4']
-             and r['live'] == [True, False, False, True, False] and r['tilg'] == ['tilgang', 0, 0, 1] and r['taelling'] == [8, 8, False, 27] and r['ryddet'], r)
+             and r['live'] == [True, False, False, True, False] and r['tilg'] == ['tilgang', 0, 0, 1] and r['tilgNavn'][:3] == ['tilgang'] * 3 and 'tilgang' not in r['tilgNavn'][3:] and r['taelling'] == [8, 8, False, 27] and r['ryddet'], r)
 
         # 4h3. Enstreg: Tilgang i serie mellem gruppeafbryder og sløjfer; flyt forbindelse (sløjfe, dåse, gruppe), kreds og anden gruppe afvist, fortryd, træk med pointer events
         r = await pg.evaluate(f"""(async()=>{{const a={A};const T=n=>new Promise(f=>setTimeout(f,n));const d=a.db, n0=JSON.stringify([d.tavler.length,d.grupper.length,d.enheder.length,d.daaser.length]), o={{}};

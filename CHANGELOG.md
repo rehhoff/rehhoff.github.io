@@ -2,6 +2,11 @@
 
 Nyeste øverst. Versionsnummeret står også i appen som `APP_VERSION`. Hver version siger, hvilken model der lavede den.
 
+## 10.29.1 · 2026-11-25 · Claude Opus 5.5
+
+- Rettelse: en brugsgenstand med "tilgang" som ord et sted i navnet (fx "Køkken tilgang 1" eller "Tilgangskabel bad") regnes nu som tilgang, ikke kun navne, der starter med "Tilgang". Den vises som tilgang (tilgangskabel) i enstregsdiagrammet, har ingen last og tælles ikke som brugsgenstand. Et symbol valgt i hånden går stadig forud.
+- Ingen ændring i datamodellen.
+
 ## 10.29.0 · 2026-11-24 · Claude Opus 5.5
 
 Svagstrømskabler kan markeres som trukket. Plan: `docs/planer/2026-11-24-svag-trukket.md`.
