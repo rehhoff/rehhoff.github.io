@@ -6,7 +6,8 @@ const APP_DIAGRAM = () => ({
     symbolFor(e) {
       if (e.symbol && e.symbol !== 'auto' && this.symNavn[e.symbol]) return e.symbol;
       const n = String(e.navn || '').toLowerCase(), t = this.typeOf(e);
-      if (/^\s*tilgang/.test(n)) return 'tilgang';
+      /* "tilgang" som ord hvor som helst i navnet, fx "Tilgang", "Køkken tilgang 1" eller "Tilgangskabel bad" (2026-11-25) */
+      if (/(^|[^a-z0-9æøå])tilgang/.test(n)) return 'tilgang';
       if (/stik/.test(n)) return 'stik';
       if (/lade/.test(n)) return 'ev';
       if (/frys/.test(n)) return 'frys';
