@@ -80,7 +80,7 @@ Skema 16 (`docs/planer/2026-11-18-billeder.md`): højst `BMAKS` = 250 billeder p
 | `udstyr` | `id, rackId, navn, art, he, pos, porte, poe, poeBudget, effekt` |
 | `links` | `id, art (data, cctv), navn, lokaleId, kabel, laengde, panelId, panelPort, switchId, switchPort, patch, poeW, kamType, oploesning, nvrId`, `trukket` (skema 19, kablet er trukket) |
 | `brandlukninger` | Skema 15: `id, nr, lokaleId, placering, beskrivelse, brandklasse, produkt` (fritekst), `brandklasser[]` (skema 18, afkrydsede fra `BRANDKLASSER`), `produkter[]` (skema 17, afkrydsede fra `BRANDPRODUKTER`), `udfoert, maerkat` (brandmærkat sat), `note`, `billeder[]` (billed-id'er; selve billederne ligger i IndexedDB) |
-| `tegninger` | Skema 21: `id, navn, lokaleId, billede` (billed-id i IndexedDB og billed-Gist), `forhold` (højde/bredde), `skala` (meter pr. billedbredde, 0 = ingen målestok), `punkter[]`: `{ k, x, y }` med `k` som i enstreg (`t:`, `d:`, `e:`, `x:`) plus `b:` for brandlukning, og `x`, `y` som brøkdel af billedets bredde. Indgår i `billedIds()` |
+| `tegninger` | Skema 21: `id, navn, lokaleId, etage` (skema 23, fritekst, vælges ved upload), `billede` (billed-id i IndexedDB og billed-Gist), `forhold` (højde/bredde), `skala` (meter pr. billedbredde, 0 = ingen målestok), `punkter[]`: `{ k, x, y }` med `k` som i enstreg (`t:`, `d:`, `e:`, `x:`) plus `b:` for brandlukning, og `x`, `y` som brøkdel af billedets bredde. Indgår i `billedIds()` |
 
 Relationer: gruppe → tavle, gruppe → HPFI, brugsgenstand → gruppe, lokale og evt. samledåse eller en anden brugsgenstand (sløjfe), afbryder → evt. dåse eller brugsgenstand (træk), samledåse → gruppe og evt. overordnet dåse, undertavle → tavle og evt. gruppe (`fraGruppe`), link → patchpanel, switch og NVR.
 

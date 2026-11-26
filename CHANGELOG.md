@@ -2,6 +2,11 @@
 
 Nyeste øverst. Versionsnummeret står også i appen som `APP_VERSION`. Hver version siger, hvilken model der lavede den.
 
+## 10.41.0 · 2026-11-26 · Claude Sonnet 5.5
+
+- Plantegning: vælg etage, når en tegning indsættes (feltet "Etage for ny tegning"; gælder alle sider i en PDF). Etagen vises på tegningen og i dokumentationen og kan rettes i sidepanelet. Feltet foreslår de etager, lokalerne allerede bruger.
+- Datamodel: skema 23, nyt felt `etage` på tegninger (tomt på gamle tegninger). Plan: `docs/planer/2026-11-26-tegning-etage.md`.
+
 ## 10.40.0 · 2026-11-26 · Claude Sonnet 5.5
 
 - Svagstrøm, Forbindelser og port-mapping: tryk på en kolonneoverskrift for at sortere (stigende), tryk igen for omvendt, og tredje tryk nulstiller. Der sorteres inden for hver etage.
