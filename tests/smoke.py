@@ -1116,10 +1116,15 @@ async def main():
             const sidste=li[li.length-1]; sidste.dispatchEvent(new DragEvent('dragover',{{bubbles:true,cancelable:true,dataTransfer:dt}})); sidste.dispatchEvent(new DragEvent('drop',{{bubbles:true,cancelable:true,dataTransfer:dt}})); await T(80);
             const g1=ids(); o.traek=g1[g1.length-1]===g0[0]&&g1[0]===g0[1]&&g1.length===g0.length&&a.db.lokaler.map(x=>x.id).join()===lokOrd; a.undo(); await T(40); o.traekFortryd=JSON.stringify(ids())===JSON.stringify(g0); }}
           {{ const li=[...art.querySelectorAll('.lok-lister ul')[0].children].filter(x=>x.tagName==='LI'), bg=x=>getComputedStyle(x).backgroundColor; o.zebra=bg(li[0])!==bg(li[1])&&bg(li[0])===bg(li[2]||li[0]); }}
+          {{ const k=[...art.querySelectorAll('.lok-kilde')], lys=()=>art.querySelectorAll('li.lok-lys').length, n=i=>a.enhederILokale(l.id).filter(e=>e.gruppeId===a.grupperILokale(l.id)[i].id).length,
+            mus=(el,t,p)=>el.dispatchEvent(new PointerEvent(t,{{pointerType:p}}));
+            mus(k[0],'pointerenter','touch'); await T(40); const t0=lys(); mus(k[0],'pointerenter','mouse'); await T(40); const h=lys(); mus(k[0],'pointerleave','mouse'); await T(40); const h0=lys();
+            k[0].click(); await T(40); const p=lys(); let p2=true; if(k.length>1) {{ k[1].click(); await T(40); p2=lys()===n(1); k[0].click(); await T(40); }} k[0].click(); await T(40);
+            o.kilde=[t0===0, h===n(0)&&h>0, h0===0, p===n(0), p2, lys()===0, a.view==='lokaler']; }}
           a.lokAlleUd=false; a.go('tavle'); await T(50);
           return o}}""")
         tjek('lokaler: + Dataudtag og + Kamera med lokalet valgt; brugsgenstande flyttes op og ned inden for lokalet og kan fortrydes',
-             r['data'] == ['link', 'data', True] and r['kam'] == ['cctv', True] and r['ned'] and r['op'] and r['fortryd'] and r['traek'] and r['traekFortryd'] and r['zebra'], r)
+             r['data'] == ['link', 'data', True] and r['kam'] == ['cctv', True] and r['ned'] and r['op'] and r['fortryd'] and r['traek'] and r['traekFortryd'] and r['zebra'] and all(r['kilde']), r)
 
         await pg.evaluate(f"{A}.go('tavle')")
 

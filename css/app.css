@@ -60,6 +60,7 @@ kbd{font-family:"IBM Plex Mono",monospace;font-size:.7rem;border:1px solid var(-
   font-size:.75rem;font-weight:600;background:color-mix(in srgb,var(--t) 14%,transparent);color:var(--ink);white-space:nowrap}
 .chip::before{content:"";width:.5rem;height:.5rem;background:var(--t);border-radius:1px}
 button.chip{cursor:pointer} button.chip:hover{background:color-mix(in srgb,var(--t) 30%,transparent)}
+button.chip.on{background:color-mix(in srgb,var(--t) 40%,transparent);box-shadow:0 0 0 2px var(--t)}
 .tag{display:inline-block;border:1px solid var(--line);border-radius:2px;padding:.05rem .4rem;font-size:.75rem;color:var(--muted);background:var(--raised)}
 .warn{color:var(--crit);font-weight:600}
 .meter{height:6px;background:var(--line);border-radius:1px;overflow:hidden}
@@ -119,6 +120,7 @@ button.din-item{cursor:pointer}
 /* enstregsdiagram */
 /* Lokaler: hver anden linje en tand anderledes (lysere i mørkt tema), så navn, tværsnit og længde kan læses vandret. nth-of-type, fordi x-for's template også er et barn */
 .lok-lister ul > li:nth-of-type(even){background:color-mix(in srgb,var(--ink) 7%,transparent)}
+.lok-lister ul > li.lok-lys.lok-lys{background:color-mix(in srgb,var(--t) 35%,transparent)}
 /* Plantegning: tegning som SVG med nummererede prikker (grøn = færdig, orange = mangler) og kabelvej under måling */
 .plan-boks{max-height:75vh;overflow:auto;background:var(--raised);touch-action:pan-x pan-y pinch-zoom} .plan-svg{display:block;width:100%;height:auto;background:#fff}
 .plan-mode{cursor:crosshair} .plan-svg .pp{cursor:pointer} .plan-svg .pp circle{stroke:#fff;stroke-width:3} .plan-svg .pp.ok circle{fill:var(--cctv)} .plan-svg .pp.ikke circle{fill:var(--kraft)}

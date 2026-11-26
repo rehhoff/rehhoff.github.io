@@ -14,8 +14,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=10.35.1">
-<link rel="stylesheet" href="css/tailwind.css?v=10.35.1">
+<link rel="stylesheet" href="css/app.css?v=10.36.0">
+<link rel="stylesheet" href="css/tailwind.css?v=10.36.0">
 </head>
 <body class="min-h-full">
 <p id="fail" hidden style="margin:16px;padding:12px;border:1px solid var(--crit);color:var(--crit)">Appen kunne ikke starte, fordi Alpine.js ikke blev indlæst. Genindlæs siden.</p>
@@ -855,7 +855,9 @@
               <div class="flex flex-wrap gap-1">
                 <span x-show="!grupperILokale(l.id).length" class="text-sm text-muted">Ingen grupper</span>
                 <template x-for="g in grupperILokale(l.id)" :key="g.id">
-                  <button class="typed chip" :class="g.type" @click="goGruppe(g.id)" x-text="gruppeTxt(g.id)"></button>
+                  <span class="flex gap-1"><button type="button" class="typed chip lok-kilde" :class="[g.type, lokLys(l.id, g.id) && 'on']" :aria-pressed="String(lokP === l.id + '|' + g.id)" title="Vis brugsgenstandene, der forsynes herfra"
+                    @pointerenter="$event.pointerType === 'mouse' && (lokH = l.id + '|' + g.id)" @pointerleave="lokH = ''" @click="lokP = lokP === l.id + '|' + g.id ? '' : l.id + '|' + g.id; lokH = ''" x-text="gruppeTxt(g.id)"></button>
+                    <button type="button" class="btn btn-ghost px-1 lok-gaa" x-show="lokP === l.id + '|' + g.id" @click="goGruppe(g.id)" :aria-label="'Gå til gruppen ' + gruppeTxt(g.id)" title="Gå til gruppen">→</button></span>
                 </template>
               </div>
             </div>
@@ -866,7 +868,7 @@
             <div class="lok-lister flex flex-col gap-3" :class="!(lokUd[l.id] ?? lokAlleUd) && 'max-h-80 overflow-y-auto'">
             <ul class="flex flex-col text-sm">
               <template x-for="e in enhederILokale(l.id)" :key="e.id">
-                <li class="typed stripe flex items-baseline justify-between gap-2 border-b border-line last:border-b-0 py-1 pl-2" :class="[typeOf(e), dragE && overE===e.id && dragE!==e.id && 'ring-2 ring-accent']"
+                <li class="typed stripe flex items-baseline justify-between gap-2 border-b border-line last:border-b-0 py-1 pl-2" :class="[typeOf(e), lokLys(l.id, e.gruppeId) && 'lok-lys', dragE && overE===e.id && dragE!==e.id && 'ring-2 ring-accent']"
                   @dragover.stop="dragE && enhed(dragE) && enhed(dragE).lokaleId === e.lokaleId && ($event.preventDefault(), overE=e.id)" @drop.stop="slipEnhed(e.id, $event)">
                   <span class="flex items-baseline gap-2 min-w-0"><span class="drag lok-traek text-muted cursor-grab" draggable="true" title="Træk for at flytte brugsgenstanden" aria-hidden="true" @dragstart.stop="dragE=e.id; $event.dataTransfer.effectAllowed='move'; $event.dataTransfer.setData('text/plain', e.id)" @dragend="dragE=null; overE=null">⠿</span><input type="checkbox" class="lok-trukket shrink-0" :checked="!!e.trukket" @change="fvSaet({ kind:'enhed', o:e }, 'trukket', $event.target.checked)" :aria-label="'Kabel trukket: ' + e.navn" title="Kablet er trukket"><button class="text-left hover:underline" @click="openForm('enhed', e)" x-text="e.navn"></button></span>
                   <span class="flex items-baseline gap-1 shrink-0"><span class="num text-xs text-muted whitespace-nowrap" x-text="kabelDim(e) + ' · ' + fmt(e.laengde) + ' m'"></span>
@@ -1899,17 +1901,17 @@
   </div>
 </div>
 
-<script src="js/data.js?v=10.35.1"></script>
-<script src="js/beregning.js?v=10.35.1"></script>
-<script src="js/diagram.js?v=10.35.1"></script>
-<script src="js/lagring.js?v=10.35.1"></script>
-<script src="js/historik.js?v=10.35.1"></script>
-<script src="js/billeder.js?v=10.35.1"></script>
-<script src="js/brand.js?v=10.35.1"></script>
-<script src="js/import.js?v=10.35.1"></script>
-<script src="js/aflevering.js?v=10.35.1"></script>
-<script src="js/plan.js?v=10.35.1"></script>
-<script src="js/app.js?v=10.35.1"></script>
+<script src="js/data.js?v=10.36.0"></script>
+<script src="js/beregning.js?v=10.36.0"></script>
+<script src="js/diagram.js?v=10.36.0"></script>
+<script src="js/lagring.js?v=10.36.0"></script>
+<script src="js/historik.js?v=10.36.0"></script>
+<script src="js/billeder.js?v=10.36.0"></script>
+<script src="js/brand.js?v=10.36.0"></script>
+<script src="js/import.js?v=10.36.0"></script>
+<script src="js/aflevering.js?v=10.36.0"></script>
+<script src="js/plan.js?v=10.36.0"></script>
+<script src="js/app.js?v=10.36.0"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.14.1/cdn.min.js"></script>
 </body>
 </html>
