@@ -733,6 +733,12 @@ function app() {
       const L = this.db.enheder, i = L.findIndex(e => e.id === fra), j = L.findIndex(e => e.id === til); if (i < 0 || j < 0 || L[i].lokaleId !== L[j].lokaleId) return;
       this.mutate(() => { const x = L[i]; L.splice(i, 1); L.splice(j, 0, x); });
     },
+    /* rul siden, mens et lokale trækkes nær top eller bund. dragover gentages, også når musen holdes stille */
+    dragRul(ev) {
+      if (!this.dragL) return;
+      const z = 100, y = ev.clientY, d = y < z ? y - z : Math.max(0, y - (innerHeight - z));
+      if (d) scrollBy(0, Math.round(d / 4));
+    },
     slipLokale(til, ev) {
       const fra = this.dragL; this.dragL = null; this.overL = null; if (!fra) return; ev.preventDefault(); if (fra === til) return;
       const L = this.db.lokaler, i = L.findIndex(l => l.id === fra), j = L.findIndex(l => l.id === til); if (i < 0 || j < 0) return;
