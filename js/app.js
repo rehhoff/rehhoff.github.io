@@ -404,6 +404,10 @@ function app() {
     kameraerPaa(nid) { return this.db.links.filter(l => l.art === 'cctv' && l.nvrId === nid).length; },
     linksILokale(lid, art) { return this.db.links.filter(l => l.lokaleId === lid && (!art || l.art === art)); },
     svLinks() { return this.db.links.filter(l => (!this.svFilter || l.art === this.svFilter) && (!this.lokF || l.lokaleId === this.lokF)); },
+    svEtager() {
+      const et = new Map(this.db.lokaler.map(r => [r.id, String(r.etage || '').trim()])), ls = this.svLinks();
+      return [...new Set([...et.values(), ''])].sort((a, b) => !a - !b).map(e => ({ etage:e, links:ls.filter(l => (et.get(l.lokaleId) || '') === e) })).filter(g => g.links.length);
+    },
     felt(u) { return u.art === 'patchpanel' ? 'panel' : u.art === 'switch' ? 'switch' : ''; },
     porte(u) { return this.felt(u) ? Array.from({ length: Math.min(96, Number(u.porte) || 0) }, (_, i) => i + 1) : []; },
     portLinks(uid, n, f) { return this.db.links.filter(l => l[f + 'Id'] === uid && Number(l[f + 'Port']) === n); },

@@ -14,8 +14,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=10.38.0">
-<link rel="stylesheet" href="css/tailwind.css?v=10.38.0">
+<link rel="stylesheet" href="css/app.css?v=10.39.0">
+<link rel="stylesheet" href="css/tailwind.css?v=10.39.0">
 </head>
 <body class="min-h-full">
 <p id="fail" hidden style="margin:16px;padding:12px;border:1px solid var(--crit);color:var(--crit)">Appen kunne ikke starte, fordi Alpine.js ikke blev indlæst. Genindlæs siden.</p>
@@ -672,8 +672,10 @@
       <div class="overflow-x-auto">
         <table class="kt">
           <thead><tr><th>Art</th><th>Betegnelse</th><th>Lokale</th><th>Kabel</th><th>Trukket</th><th class="r">Længde</th><th>Patchpanel</th><th>Switch</th><th class="r">PoE</th><th>Kamera / NVR</th><th>Status</th><th></th></tr></thead>
-          <tbody>
-            <template x-for="l in svLinks()" :key="l.id">
+          <template x-for="g in svEtager()" :key="g.etage">
+          <tbody class="sv-etage">
+            <tr><th scope="rowgroup" colspan="12" x-text="(g.etage ? 'Etage: ' + g.etage : 'Uden etage') + ' · ' + g.links.length + ' stk.'"></th></tr>
+            <template x-for="l in g.links" :key="l.id">
               <tr>
                 <td class="typed stripe whitespace-nowrap" :class="l.art"><span :class="l.art === 'cctv' ? 'c-cctv' : 'c-pds'" x-html="ikon(l.art === 'cctv' ? 'cctv' : 'pds')"></span> <span x-text="l.art === 'cctv' ? 'CCTV' : 'PDS'"></span></td>
                 <td class="font-medium" x-text="l.navn"></td>
@@ -689,8 +691,9 @@
                 <td class="text-right whitespace-nowrap"><button class="btn btn-ghost" @click="sporTil('x:' + l.id)">Spor</button><button class="btn btn-ghost" @click="openForm('link', l)">Rediger</button></td>
               </tr>
             </template>
-            <tr x-show="!svLinks().length"><td colspan="12" class="text-muted py-6 text-center">Ingen forbindelser.</td></tr>
           </tbody>
+          </template>
+          <tbody x-show="!svLinks().length"><tr><td colspan="12" class="text-muted py-6 text-center">Ingen forbindelser.</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -1915,17 +1918,17 @@
   </div>
 </div>
 
-<script src="js/data.js?v=10.38.0"></script>
-<script src="js/beregning.js?v=10.38.0"></script>
-<script src="js/diagram.js?v=10.38.0"></script>
-<script src="js/lagring.js?v=10.38.0"></script>
-<script src="js/historik.js?v=10.38.0"></script>
-<script src="js/billeder.js?v=10.38.0"></script>
-<script src="js/brand.js?v=10.38.0"></script>
-<script src="js/import.js?v=10.38.0"></script>
-<script src="js/aflevering.js?v=10.38.0"></script>
-<script src="js/plan.js?v=10.38.0"></script>
-<script src="js/app.js?v=10.38.0"></script>
+<script src="js/data.js?v=10.39.0"></script>
+<script src="js/beregning.js?v=10.39.0"></script>
+<script src="js/diagram.js?v=10.39.0"></script>
+<script src="js/lagring.js?v=10.39.0"></script>
+<script src="js/historik.js?v=10.39.0"></script>
+<script src="js/billeder.js?v=10.39.0"></script>
+<script src="js/brand.js?v=10.39.0"></script>
+<script src="js/import.js?v=10.39.0"></script>
+<script src="js/aflevering.js?v=10.39.0"></script>
+<script src="js/plan.js?v=10.39.0"></script>
+<script src="js/app.js?v=10.39.0"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.14.1/cdn.min.js"></script>
 </body>
 </html>

@@ -975,6 +975,18 @@ async def main():
              r['meta'] == ['Skema 18-projekt', True, SKEMA] and r['ens'] and r['std'] and r0['n'] > 0 and r['bokse'] == r0['n'] and r['sat'] == [True, True]
              and r['fortrudt'] and r['felt'] and r['form'] is True and r['lok'] and r['afl'] == [1, 0], r)
 
+        r = await pg.evaluate(f"""async()=>{{const a={A};const T=n=>new Promise(f=>setTimeout(f,n));const o={{}};
+          const foer=JSON.stringify(a.db), gl=a.db.lokaler.map(l=>l.etage), l0=a.db.links.find(l=>l.art==='data'), l1=a.db.links.find(l=>l.art==='cctv');
+          a.db.lokaler.forEach(l=>l.etage=''); const lok=id=>a.db.lokaler.find(l=>l.id===id); lok(l0.lokaleId).etage=' 1. sal '; if(l1.lokaleId!==l0.lokaleId) lok(l1.lokaleId).etage='';
+          a.go('svag'); o.f=[];
+          for(const f of ['data','cctv','']){{ a.svFilter=f; await T(100); const g=[...document.querySelectorAll('tbody.sv-etage')].filter(x=>x.offsetParent);
+            const navne=g.map(x=>x.querySelector('th').textContent.split(' · ')[0]), n=g.reduce((s,x)=>s+x.querySelectorAll('input.sv-trukket').length,0);
+            o.f.push([n===a.svLinks().length&&n>0, new Set(navne).size===navne.length, navne.every((x,i)=>x!=='Uden etage'||i===navne.length-1), navne]); }}
+          a.db.lokaler.forEach((l,i)=>l.etage=gl[i]); o.ens=JSON.stringify(a.db)===foer; a.go('tavle'); await T(50);
+          return o}}""")
+        tjek('svagstrøm: PDS, CCTV og Alle grupperet efter etage, Uden etage sidst, data uændrede',
+             all(all(x[:3]) for x in r['f']) and r['f'][0][3][0] == 'Etage: 1. sal' and r['f'][1][3][-1] == 'Uden etage' and r['ens'], r)
+
         # 4q. Datasikring (gennemgang 2026-11-25): anden fanes ændring læses frisk, Gist med 300 filer afvises, backup-id kontrolleres, ulæseligt projekt overskrives ikke
         r = await pg.evaluate(f"""async()=>{{const a={A};const o={{}};
           const x=a.projekter.find(p=>p.id!==a.pid); o.har=!!x;
