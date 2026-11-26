@@ -2,6 +2,12 @@
 
 Nyeste øverst. Versionsnummeret står også i appen som `APP_VERSION`. Hver version siger, hvilken model der lavede den.
 
+## 10.32.0 · 2026-11-26 · Claude Opus 5.5
+
+- Enstregsdiagram: knappen **Fuld skærm** lader diagrammet fylde hele vinduet. **Luk fuld skærm** eller Esc lukker igen.
+- Enstregsdiagram: valget **Baggrund som appen / Lys baggrund / Mørk baggrund** gælder kun diagrammet. Valget huskes i browseren under den nye nøgle `tavleoversigt.diagramtema`. Udskrift og SVG er uændrede.
+- Ingen ændring i datamodellen.
+
 ## 10.31.0 · 2026-11-26 · Claude Opus 5.5
 
 Højtalerkabel fra forstærker. Plan: `docs/planer/2026-11-26-hoejtalerkabel.md`.

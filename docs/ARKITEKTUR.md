@@ -52,6 +52,7 @@ Faner i `views`: Tavle, Enstregsdiagram, Tændingsdiagram, Samlepunkter & dåser
 | `tavleoversigt.backups` | Op til tre automatiske backups `{ tid, grund, app, schema, idx, raw:{id:json} }` |
 | `tavleoversigt.firma` | Firmaoplysninger til dokumentationen: `{ navn, cvr, adresse, telefon, logo }` (logo som data-URL, højst 400 px bred). Gælder alle projekter og synkroniseres ikke |
 | `tavleoversigt.tema` | `auto`, `light` eller `dark` |
+| `tavleoversigt.diagramtema` | Enstregsdiagrammets baggrund: `''` (som appen), `lys` eller `moerk` (`DTKEY`, 10.32.0) |
 | `tavleoversigt.sync` | Synkronisering: `{ token, gistId, login, base:{ id: hash }, sidst, bGist, bSendt:[id] }`. `bGist` er denne enheds billed-Gist, og `bSendt` er de billed-id'er, der vides at ligge i en billed-Gist (skema 15). Findes kun, når synkronisering er slået til |
 | IndexedDB `tavleoversigt-billeder` | Version 1. Tabellen `billeder`: `{ id, data }` (JPEG som data-URL, længste side højst 1600 px, ca. 100–300 KB). Tabellen `mini`: `{ id, data, oprettet }` (miniature, 320 px). Billeder slettes aldrig automatisk, kun af oprydningen efter brugerens bekræftelse (skema 16) |
 | `tavleoversigt.v1`, `.v2` | Gamle formater, migreres ved første start |

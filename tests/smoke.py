@@ -1040,6 +1040,20 @@ async def main():
              and r['rec'] == ['Højtalerkabel', '2X', 0.75, True] and r['calc'] == [0, True, True, False, 0, False, True, None, None] and r['sld'] and r['mat']
              and r['norm'] == '[["Højtalerkabel","2X",1.5],["PVC",null,null]]', r)
 
+        # 4t. Enstreg: fuld skærm (Esc lukker) og egen lys/mørk baggrund kun på diagrammet, husket i browseren
+        r = await pg.evaluate(f"""async()=>{{const a={A};const T=n=>new Promise(f=>setTimeout(f,n));const o={{}};
+          a.go('enstreg'); await T(200); const box=()=>document.querySelector('.sldbox'), v=(el,k)=>getComputedStyle(el).getPropertyValue(k).trim();
+          const sel=document.getElementById('sld-tema'); const rodFoer=v(document.documentElement,'--raised');
+          for (const t of ['lys','moerk']) {{ sel.value=t; sel.dispatchEvent(new Event('change')); await T(60); o[t]=[box().classList.contains('sld-'+t), v(box(),'--raised'), localStorage.getItem('tavleoversigt.diagramtema')]; }}
+          o.rod=v(document.documentElement,'--raised')===rodFoer;
+          document.getElementById('sld-stor').click(); await T(120); const pn=box().parentElement, rc=pn.getBoundingClientRect();
+          o.stor=[getComputedStyle(pn).position, Math.round(rc.height)===innerHeight, Math.round(rc.width)===innerWidth, box().getBoundingClientRect().height>innerHeight-120];
+          document.dispatchEvent(new KeyboardEvent('keydown',{{key:'Escape',bubbles:true}})); window.dispatchEvent(new KeyboardEvent('keydown',{{key:'Escape'}})); await T(80); o.lukket=!a.sldStor&&getComputedStyle(pn).position!=='fixed';
+          a.skiftSldTema(''); a.go('tavle'); await T(50);
+          return o}}""")
+        tjek('enstreg: fuld skærm fylder vinduet og lukkes med Esc; lys og mørk baggrund kun på diagrammet, husket i browseren',
+             r['lys'] == [True, '#ffffff', 'lys'] and r['moerk'] == [True, '#242b30', 'moerk'] and r['rod'] and r['stor'] == ['fixed', True, True, True] and r['lukket'], r)
+
         await pg.evaluate(f"{A}.go('tavle')")
 
         # 5. Backupfil kan hentes og indlæses uden at overskrive. Den indeholder billederne

@@ -14,8 +14,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=10.31.0">
-<link rel="stylesheet" href="css/tailwind.css?v=10.31.0">
+<link rel="stylesheet" href="css/app.css?v=10.32.0">
+<link rel="stylesheet" href="css/tailwind.css?v=10.32.0">
 </head>
 <body class="min-h-full">
 <p id="fail" hidden style="margin:16px;padding:12px;border:1px solid var(--crit);color:var(--crit)">Appen kunne ikke starte, fordi Alpine.js ikke blev indlæst. Genindlæs siden.</p>
@@ -296,7 +296,7 @@
 
   <!-- ============ ENSTREGSDIAGRAM ============ -->
   <template x-if="view==='enstreg'"><section class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem] items-start">
-    <div class="panel overflow-hidden min-w-0">
+    <div class="panel overflow-hidden min-w-0" :class="sldStor && 'sld-stor'">
       <header class="flex flex-wrap items-center justify-between gap-2 border-b border-line bg-raised px-3 py-2">
         <h2 class="hd text-xl">Enstregsdiagram</h2>
         <div class="flex flex-wrap items-center gap-1">
@@ -306,10 +306,12 @@
           <button class="btn" @click="tilpas()">Tilpas bredde</button>
           <button class="btn" @click="z={x:8,y:8,k:1}">100 %</button>
           <button class="btn" @click="hent(filnavn('enstregsdiagram','svg'), sld(true))">Hent SVG</button>
+          <select id="sld-tema" class="inp inp-s" aria-label="Diagrammets baggrund" :value="sldTema" @change="skiftSldTema($event.target.value)"><option value="">Baggrund som appen</option><option value="lys">Lys baggrund</option><option value="moerk">Mørk baggrund</option></select>
+          <button class="btn" id="sld-stor" @click="sldStor = !sldStor; $nextTick(() => tilpas())" :aria-pressed="String(sldStor)" x-text="sldStor ? 'Luk fuld skærm' : 'Fuld skærm'"></button>
         </div>
       </header>
       <div class="traekmrk" :class="traek && traek.ok ? 'ok' : ''" x-show="traek" x-cloak :style="traek ? 'left:' + (traek.x + 14) + 'px;top:' + (traek.y + 14) + 'px' : ''" x-text="traek ? traek.txt : ''"></div>
-      <div x-ref="sldBox" class="sldbox" @pointerdown="panStart($event)" @pointermove.window="panMove($event)" @pointerup.window="panEnd($event)" @pointercancel.window="panEnd($event)" @wheel="hjul($event)" @click="sldClick($event)" @dblclick="sldDbl($event)" @contextmenu="sldMenu($event)">
+      <div x-ref="sldBox" class="sldbox" :class="sldTema && 'sld-' + sldTema" @pointerdown="panStart($event)" @pointermove.window="panMove($event)" @pointerup.window="panEnd($event)" @pointercancel.window="panEnd($event)" @wheel="hjul($event)" @click="sldClick($event)" @dblclick="sldDbl($event)" @contextmenu="sldMenu($event)">
         <div class="sld" :style="'transform:translate(' + z.x + 'px,' + z.y + 'px) scale(' + z.k + ');transform-origin:0 0'" x-html="view==='enstreg' ? sld(false) : ''"></div>
       </div>
       <p class="px-3 py-2 text-xs text-muted border-t border-line">Træk for at panorere. Ctrl + musehjul, to fingre eller knapperne zoomer. Hold en brugsgenstand nede et øjeblik, og træk den hen på en anden brugsgenstand (sløjfe), en dåse eller gruppen for at flytte forbindelsen. Sløjfer tegnes under den brugsgenstand, de er sløjfet fra, med en prik, hvor de går fra. Klik viser detaljer, dobbeltklik åbner redigering. Afbrydere er vist på lederen foran de lamper, de styrer. Røde streger har en advarsel.</p>
@@ -1815,16 +1817,16 @@
   </div>
 </div>
 
-<script src="js/data.js?v=10.31.0"></script>
-<script src="js/beregning.js?v=10.31.0"></script>
-<script src="js/diagram.js?v=10.31.0"></script>
-<script src="js/lagring.js?v=10.31.0"></script>
-<script src="js/historik.js?v=10.31.0"></script>
-<script src="js/billeder.js?v=10.31.0"></script>
-<script src="js/brand.js?v=10.31.0"></script>
-<script src="js/import.js?v=10.31.0"></script>
-<script src="js/aflevering.js?v=10.31.0"></script>
-<script src="js/app.js?v=10.31.0"></script>
+<script src="js/data.js?v=10.32.0"></script>
+<script src="js/beregning.js?v=10.32.0"></script>
+<script src="js/diagram.js?v=10.32.0"></script>
+<script src="js/lagring.js?v=10.32.0"></script>
+<script src="js/historik.js?v=10.32.0"></script>
+<script src="js/billeder.js?v=10.32.0"></script>
+<script src="js/brand.js?v=10.32.0"></script>
+<script src="js/import.js?v=10.32.0"></script>
+<script src="js/aflevering.js?v=10.32.0"></script>
+<script src="js/app.js?v=10.32.0"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.14.1/cdn.min.js"></script>
 </body>
 </html>
