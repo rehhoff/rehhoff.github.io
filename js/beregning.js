@@ -15,22 +15,24 @@ const APP_BEREGNING = () => ({
       if (ps.length === 1) return this.duSeg(v[ps[0]], L, A, false);
       return Math.max(...PH.map((p, i) => 2 * v[p] - 0.5 * (v[PH[(i + 1) % 3]] + v[PH[(i + 2) % 3]]))) * RHO * L / A / (400 / Math.sqrt(3)) * 100;
     },
-    strom(e) { const P = Number(e.effekt) || 0; return this.tre(e) ? P / (Math.sqrt(3) * 400) : P / 230; },
+    erHoejt(e) { return !!e && e.kabel === HOEJT; },  /* højtaler på forstærker: ingen 230 V-last, ΔU, Iz eller Ik */
+    strom(e) { if (this.erHoejt(e)) return 0; const P = Number(e.effekt) || 0; return this.tre(e) ? P / (Math.sqrt(3) * 400) : P / 230; },
     du(e, tv) { const g = this.gruppe(e.gruppeId); return this.duLokal(e, tv) + (g ? this.tavleDu(g.tavleId, 0) : 0); },
     duLokal(e, tv) {
       const did = this.enhedDaase(e);
       return this.duEget(e, tv) + this.duSloejfe(e) + (did ? this.duOp(did) : 0);
     },
     duGraense(e) { return LYS_TYPER.includes(this.typeOf(e)) ? 3 : 5; },
-    duOver(e) { return !!Number(e.effekt) && this.du(e) > this.duGraense(e); },
+    duOver(e) { return !this.erHoejt(e) && !!Number(e.effekt) && this.du(e) > this.duGraense(e); },
     lmax(e) {
+      if (this.erHoejt(e)) return null;
       const pr = this.duEget(e, null, 1), did = this.enhedDaase(e), g = Math.max(0, this.duGraense(e) - (did ? this.duOp(did) : 0) - this.duSloejfe(e) - this.tavleDu((this.gruppe(e.gruppeId) || {}).tavleId, 0)); if (!pr) return null;
       return g / pr;
     },
-    iz(e, tv) { return this.izBeregn(e.kabel, tv || e.tv, this.tre(e), this.forhold(this.gruppe(e.gruppeId))); },
+    iz(e, tv) { return this.erHoejt(e) ? 0 : this.izBeregn(e.kabel, tv || e.tv, this.tre(e), this.forhold(this.gruppe(e.gruppeId))); },
     izFejl(e) { const g = this.gruppe(e.gruppeId); return !!g && !!this.iz(e) && g.In > this.iz(e); },
     forslag(e) {
-      const g = this.gruppe(e.gruppeId); if (!g) return null;
+      const g = this.gruppe(e.gruppeId); if (!g || this.erHoejt(e)) return null;
       return TV.find(s => this.iz(e, s) >= g.In && this.du(e, s) <= this.duGraense(e)) || null;
     },
     /* Iz med installationsmetode og korrektionsfaktorer (DS/HD 60364-5-52 anneks B). Iz = tabelværdi × k_temp × k_samlet. */
@@ -88,11 +90,11 @@ const APP_BEREGNING = () => ({
     },
     harFase1(gid) { return this.enhederFor(gid).some(e => this.fase1(e)); },
     maxDu(gid) {
-      const es = this.enhederFor(gid).filter(e => Number(e.effekt)); if (!es.length) return { v:null, over:false };
+      const es = this.enhederFor(gid).filter(e => Number(e.effekt) && !this.erHoejt(e)); if (!es.length) return { v:null, over:false };
       return { v: Math.max(...es.map(e => this.du(e))), over: es.some(e => this.duOver(e)) };
     },
     minIz(gid) { const v = this.enhederFor(gid).map(e => this.iz(e)).filter(Boolean); return v.length ? Math.min(...v) : 0; },
-    tavleW(tid) { const ids = new Set(this.grupperFor(tid).map(g => g.id)); return this.db.enheder.filter(e => ids.has(e.gruppeId)).reduce((s, e) => s + (Number(e.effekt) || 0), 0) + this.db.racks.filter(r => ids.has(r.gruppeId)).reduce((s, r) => s + this.rackW(r.id), 0); },
+    tavleW(tid) { const ids = new Set(this.grupperFor(tid).map(g => g.id)); return this.db.enheder.filter(e => ids.has(e.gruppeId) && !this.erHoejt(e)).reduce((s, e) => s + (Number(e.effekt) || 0), 0) + this.db.racks.filter(r => ids.has(r.gruppeId)).reduce((s, r) => s + this.rackW(r.id), 0); },
     subFaser(tid, seen) {
       const tot = { L1:0, L2:0, L3:0 }; if (seen.has(tid)) return tot; seen.add(tid);
       for (const g of this.grupperFor(tid)) { const f = this.gruppeFaser(g, seen); for (const p of PH) tot[p] += f[p]; }
@@ -147,7 +149,7 @@ const APP_BEREGNING = () => ({
     enhedR(e) { let r = this.rSloejfe(e.kabel, e.laengde, e.tv) + this.sloejfeVej(e).reduce((s, p) => s + this.rSloejfe(p.kabel, p.laengde, p.tv), 0), d = this.daase(this.enhedDaase(e)), n = 0; while (d && n++ < 20) { r += this.rSloejfe(d.kabel, d.laengde, d.tv); d = this.daase(d.parentId); } return r; },
     ikMin(g) {
       const ze = this.tavleZe(g.tavleId); if (ze == null) return null;
-      const rs = this.enhederFor(g.id).map(e => this.enhedR(e)).concat(this.underTavler(g.id).filter(u => Number(u.tLaengde) > 0).map(u => this.rSloejfe(u.tKabel, u.tLaengde, u.tTv)));
+      const rs = this.enhederFor(g.id).filter(e => !this.erHoejt(e)).map(e => this.enhedR(e)).concat(this.underTavler(g.id).filter(u => Number(u.tLaengde) > 0).map(u => this.rSloejfe(u.tKabel, u.tLaengde, u.tTv)));
       if (!rs.length) return null;
       const R = Math.max(...rs), Ia = this.ia(g), ik = 0.95 * 230 / (ze + R);
       return { ze, R, ik, Ia, ok: Ia ? ik >= Ia : null };

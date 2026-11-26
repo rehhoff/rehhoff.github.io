@@ -134,6 +134,7 @@ button.din-item{cursor:pointer}
 .sld .h{fill:var(--ink);font:600 17px "Barlow Condensed",sans-serif;letter-spacing:.04em} .sld .s{font-size:9px}
 .sld .hit{fill:transparent} .sld .dot{fill:var(--ink);stroke:none} .sld .tc{fill:var(--t)} .sld .k{cursor:pointer}
 .sld .bad .l{stroke:var(--crit)} .sld .bad .t{fill:var(--crit)}
+.sld .l.hj{stroke:var(--cctv);stroke-dasharray:5 3} .sld .t.hjt{fill:var(--cctv)}  /* højtalerkabel fra forstærker: ikke 230 V */
 .sld .k:hover .hit{fill:color-mix(in srgb,var(--accent) 10%,transparent)}
 .sld .k.on .hit{fill:color-mix(in srgb,var(--accent) 20%,transparent);stroke:var(--accent);stroke-width:1.5}
 /* træk i enstregsdiagrammet: gyldige slipmål stiplet, målet under pointeren fyldt, ugyldigt mål rødt */

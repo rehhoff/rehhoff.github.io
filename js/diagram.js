@@ -8,6 +8,7 @@ const APP_DIAGRAM = () => ({
       const n = String(e.navn || '').toLowerCase(), t = this.typeOf(e);
       /* "tilgang" som ord hvor som helst i navnet, fx "Tilgang", "Køkken tilgang 1" eller "Tilgangskabel bad" (2026-11-25) */
       if (/(^|[^a-z0-9æøå])tilgang/.test(n)) return 'tilgang';
+      if (/højtaler|hoejtaler/.test(n)) return 'hoejt';
       if (/stik/.test(n)) return 'stik';
       if (/lade/.test(n)) return 'ev';
       if (/frys/.test(n)) return 'frys';
@@ -47,6 +48,7 @@ const APP_DIAGRAM = () => ({
         case 'vask': return R + ring(cx, y, 6);
         case 'toerre': return R + ring(cx, y, 6) + ring(cx, y, 1.8, 'dot');
         case 'tilgang': return `<path class="l f" d="M ${x - 10} ${y} L ${x} ${y - 10} L ${x + 10} ${y} L ${x} ${y + 10} Z"/>` + ring(x, y, 3.6, 'dot');
+        case 'hoejt': return `<rect class="l f" x="${x - 9}" y="${y - 4}" width="6" height="8"/><path class="l f" d="M ${x - 3} ${y - 4} L ${x + 5} ${y - 9} L ${x + 5} ${y + 9} L ${x - 3} ${y + 4} Z"/>`;
         case 'emhaette': return `<path class="l f" d="M ${x - 9} ${y + 8} L ${x + 17} ${y + 8} L ${x + 10} ${y - 8} L ${x - 2} ${y - 8} Z"/>` + ln(x - 5, y + 3, x + 13, y + 3);
         default: return `<rect class="l f" x="${x - 9}" y="${y - 8}" width="26" height="16"/>` + tx(cx, ({ ev:'EV', it:'IT', rk:'RK', rj:'RJ', sw:'SW', nvr:'NVR', rt:'RT', vvb:'VVB', vp:'VP', ut:'UT' })[kind] || '');
       }
@@ -250,20 +252,20 @@ const APP_DIAGRAM = () => ({
         let r = yy, last = yy;
         const cl = key => (sporSet.has(key) ? ' tr' : '') + (lokSet && !lokSet.has(key) ? ' dim' : '');
         const tegnE = (e, sx, fra, eSet) => {
-          eSet.add(e.id); const ry = r, eb = (this.duOver(e) || this.izFejl(e)) ? 'bad' : '', af = afbAf.get(e.id), gab = af ? afGab(af.art) : null;
+          eSet.add(e.id); const ry = r, eb = (this.duOver(e) || this.izFejl(e)) ? 'bad' : '', af = afbAf.get(e.id), gab = af ? afGab(af.art) : null, hj = this.erHoejt(e) ? 'hj' : '';
           const kids = this.sloejfer(e.id).filter(x => !eSet.has(x.id)), px = Math.min(sx + 24, XA - 60);
           kids.sort((a, b) => (this.sloejfer(a.id).length ? 1 : 0) - (this.sloejfer(b.id).length ? 1 : 0));
-          o.push(k('e:' + e.id, eb, (af ? ln(sx, r, XA - gab[0], r) + ln(XA + gab[1], r, XE - 9, r) : ln(sx, r, XE - 9, r)) + load(this.symbolFor(e), XE, r) +
+          o.push(k('e:' + e.id, eb, (af ? ln(sx, r, XA - gab[0], r, hj) + ln(XA + gab[1], r, XE - 9, r, hj) : ln(sx, r, XE - 9, r, hj)) + load(this.symbolFor(e), XE, r) +
             (kids.length ? `<circle class="dot sp" data-sp="${e.id}" cx="${px}" cy="${r}" r="3"/>` : '') +
-            tx(sx + 10, r - 6, (fra ? '' : 'G' + gr.nr + ' | ' + gr.In + 'A | ') + e.ledere + this.fmt(e.tv) + ' ' + kort(e.kabel, 9) + ' | ' + this.fmt(e.laengde) + 'm') +
-            tx(XE + 26, r - 1, kort(e.navn, 38)) + tx(XE + 26, r + 12, this.lokaleNavn(e.lokaleId) + ' · ' + (e.effekt ? e.effekt + ' W · ΔU ' + this.fmt(this.du(e), 2) + ' %' : 'ingen fast last') + (fra ? ' · sløjfe fra ' + kort(fra.navn, 18) : ''), 'm'), sx + 3, r, W - sx - 10, ' data-fra="' + (fra ? fra.id : '') + '"'));
+            tx(sx + 10, r - 6, (fra ? '' : 'G' + gr.nr + ' | ' + gr.In + 'A | ') + e.ledere + this.fmt(e.tv, 2) + ' ' + (hj ? 'højtalerkabel' : kort(e.kabel, 9)) + ' | ' + this.fmt(e.laengde) + 'm', hj ? 't hjt' : '') +
+            tx(XE + 26, r - 1, kort(e.navn, 38)) + tx(XE + 26, r + 12, this.lokaleNavn(e.lokaleId) + ' · ' + (hj ? 'højtaler, ikke 230 V' + (fra ? ' · fra forstærker ' + kort(fra.navn, 18) : ' · ingen forstærker valgt') : (e.effekt ? e.effekt + ' W · ΔU ' + this.fmt(this.du(e), 2) + ' %' : 'ingen fast last') + (fra ? ' · sløjfe fra ' + kort(fra.navn, 18) : '')), 'm'), sx + 3, r, W - sx - 10, ' data-fra="' + (fra ? fra.id : '') + '"'));
           if (af) o.push(`<g class="k af${sel === 'a:' + af.id ? ' on' : ''}${cl('a:' + af.id)}" data-k="a:${af.id}"><title>${esc(af.navn + ' · ' + afTxt(af))}</title>` +
             `<rect class="hit" x="${XA - 15}" y="${r - ROW / 2 + 2}" width="30" height="${ROW - 4}" rx="3"/>${afSym(af.art, XA, r)}${af.art === 'krone' ? tx(XA, r + 15, af.a.includes(e.id) ? '1' : '2', 'm', 'middle') : ''}</g>`);
           r += ROW;
           const stik = [];
           for (const c of kids) { if (eSet.has(c.id)) continue; stik.push([c.id, r]); tegnE(c, px, e, eSet); }
           /* lodrette sløjfestreger: længste først, så en fremhævet kort streg ikke dækkes af en længere */
-          stik.reverse().forEach(([cid, cy]) => o.push(`<g class="k sl${cl('e:' + cid)}">${ln(px, ry, px, cy)}</g>`));
+          stik.reverse().forEach(([cid, cy]) => o.push(`<g class="k sl${cl('e:' + cid)}">${ln(px, ry, px, cy, this.erHoejt(this.enhed(cid)) ? 'hj' : '')}</g>`));
         };
         /* Tilgang i serie: tegnes som et mellemled på linjen (som en dåse), og det, der er sløjfet fra den, udgår fra en skinne efter symbolet */
         const tegnT = e => {
@@ -379,7 +381,7 @@ const APP_DIAGRAM = () => ({
       const H = y + 30;
       const css = print ? '<style>.l{stroke:#111;stroke-width:1.3;fill:none}.f{fill:#fff}.b{stroke-width:3}.b2{stroke-width:2}.t{fill:#111;font:11px monospace;stroke:none}.m{fill:#555;font:10px monospace}' +
         '.h{fill:#111;font:bold 15px Arial,sans-serif}.s{font-size:9px}.hit{fill:none}.dot{fill:#111;stroke:none}.tc{fill:#666}.cctv .tc{fill:#0f7d58}.lys .tc{fill:#c99700}.lysstik .tc{fill:#6b8a00}.kraft .tc{fill:#d4500a}.stik .tc{fill:#1c6bb0}.data .tc{fill:#7446b8}' +
-        '.bad .l{stroke:#b3204f}.bad .t{fill:#b3204f}</style><rect width="' + W + '" height="' + H + '" fill="#fff"/>' : '';
+        '.bad .l{stroke:#b3204f}.bad .t{fill:#b3204f}.hj{stroke:#0f7d58;stroke-dasharray:5 3}.hjt{fill:#0f7d58}</style><rect width="' + W + '" height="' + H + '" fill="#fff"/>' : '';
       return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" ${print ? '' : 'width="' + W + '" height="' + H + '"'}>${css}${o.join('')}</svg>`;
     },
     sldInfo() {

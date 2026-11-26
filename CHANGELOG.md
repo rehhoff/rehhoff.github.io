@@ -2,6 +2,19 @@
 
 Nyeste øverst. Versionsnummeret står også i appen som `APP_VERSION`. Hver version siger, hvilken model der lavede den.
 
+## 10.31.0 · 2026-11-26 · Claude Opus 5.5
+
+Højtalerkabel fra forstærker. Plan: `docs/planer/2026-11-26-hoejtalerkabel.md`.
+
+- Ny kabeltype **Højtalerkabel** for brugsgenstande med symbolet **Højtaler (fra forstærker)**. Symbolet vælges automatisk, når navnet indeholder "højtaler". Kabeltypen kan kun vælges for en højtaler, og ikke for tavler, samledåser eller afbrydere.
+- Tværsnit 2 × 0,75, 1,5, 2,5 eller 4 mm². Ledere er altid 2X.
+- Forstærkeren er en almindelig 230 V-brugsgenstand, og højtalerne sløjfes fra den. Højtalerkablet giver ingen last på gruppen eller tavlen og har ingen ΔU, Iz eller Ik. Det kommer heller ikke med i advarsler eller forslag til tværsnit.
+- Enstregsdiagrammet tegner højtalerkablet stiplet i grønt med teksten "højtaler, ikke 230 V · fra forstærker …", også på udskriften.
+- Materialelisten har højtalerkablet som egen linje, fx "Højtalerkabel 2X1,5 mm²".
+- Tværsnit vises med op til to decimaler (0,75 mm²).
+- Fanen Lokaler: ⊞/⊟ vises kun på lokaler med mere end 10 linjer.
+- Skema 20: `kabel` på brugsgenstande kan være `Højtalerkabel`. En ældre version af appen ville gøre det til PVC, så den må ikke synkronisere med en Gist med skema 20. Der tages backup ved første start.
+
 ## 10.30.0 · 2026-11-26 · Claude Opus 5.5
 
 - Fanen Lokaler: knappen **+ Samledåse** på hvert lokale åbner samlepunktets formular med lokalet valgt, som **+ Brugsgenstand**.

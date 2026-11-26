@@ -1,7 +1,7 @@
 /* Konstanter, lagernøgler, tabeller, norm() og eksempeldata. Indlæses først; alt her er globalt og bruges af de andre filer og markup. */
 const KEY = 'tavleoversigt.v2', OLD = 'tavleoversigt.v1', TKEY = 'tavleoversigt.tema', IDX = 'tavleoversigt.projekter';
 /* Versioner: APP_VERSION følger CHANGELOG.md. SCHEMA hæves kun, når datamodellen ændres, og udløser en automatisk backup før migrering. */
-const APP_VERSION = '10.30.0', SCHEMA = 19, BKEY = 'tavleoversigt.backups', BMAX = 3;
+const APP_VERSION = '10.31.0', SCHEMA = 20, BKEY = 'tavleoversigt.backups', BMAX = 3;
 const PK = id => 'tavleoversigt.p.' + id, MEM = {};
 /* Synkronisering: en hemmelig GitHub Gist med en markørfil og én fil pr. projekt. Se docs/planer/2026-11-15-gist-synk.md. */
 const SKEY = 'tavleoversigt.sync', GFIL = 'tavleoversigt.json', GP = id => 'tavleoversigt-' + id + '.json', GPRE = /^tavleoversigt-([A-Za-z0-9_-]+)\.json$/, GH = 'https://api.github.com';
@@ -88,6 +88,8 @@ const DAASER = ['Membrandåse', 'Indmuringsdåse', 'Forfradåse', 'Underlag', 'E
 const BRANDPRODUKTER = ['FR Brandkit', 'FR Brandplade', 'FR Gipsmørtel', 'FR Manchet', 'FR Pakning', 'FR Akryl', 'FR Grafit', 'FR Brandspjæld', 'FR Trækrør'];
 /* Brandklasser til afkrydsning ved brandlukning (skema 18, 2026-11-24). Andre klasser skrives i fritekstfeltet brandklasse */
 const BRANDKLASSER = ['EI15', 'EI30', 'EI45', 'EI60', 'EI90', 'EI120', 'EI240', 'E30', 'E60', 'E90', 'EI30-S', 'EI60-S'];
+/* Højtalerkabel (skema 20, aftalt 2026-11-26): kun til brugsgenstande, der forsynes fra en forstærker. Ikke en del af KABLER og indgår ikke i 230 V-beregningerne */
+const HOEJT = 'Højtalerkabel', HTV = [0.75, 1.5, 2.5, 4];
 const kabMap = k => KABLER.includes(k) ? k : /noik|halogen|xlpe/i.test(k || '') ? 'XLPE' : 'PVC';
 const daaMap = t => DAASER.includes(t) ? t : /underlag|fuga/i.test(t || '') ? 'Underlag' : /membran|ip44|brønd/i.test(t || '') ? 'Membrandåse' : 'PL-dåse';
 const TIMERS = {};
@@ -164,7 +166,7 @@ function norm(d) {
   });
   /* skema 13: føringsvej. Hver post har ét indgående træk med status (trukket, note) og placering (fx "Væg A") og højde (cm) */
   const traek = x => { x.hoejde = Number(x.hoejde) > 0 ? Number(x.hoejde) : ''; x.placering = String(x.placering || ''); x.trukket = !!x.trukket; x.note = String(x.note || ''); };
-  o.enheder.forEach(e => { e.gruppeId = e.gruppeId || ''; e.lokaleId = e.lokaleId || ''; e.daaseId = e.daaseId || ''; e.kabel = kabMap(e.kabel); e.symbol = e.symbol || 'auto'; e.fraEnhed = e.fraEnhed || ''; /* skema 14: 1-faset tilslutning på 3-faset gruppe ('' = som gruppen) */ e.fase = PH.includes(e.fase) ? e.fase : ''; traek(e); });
+  o.enheder.forEach(e => { e.gruppeId = e.gruppeId || ''; e.lokaleId = e.lokaleId || ''; e.daaseId = e.daaseId || ''; if (e.kabel === HOEJT) { e.ledere = '2X'; e.tv = HTV.includes(Number(e.tv)) ? Number(e.tv) : 1.5; } else e.kabel = kabMap(e.kabel); e.symbol = e.symbol || 'auto'; e.fraEnhed = e.fraEnhed || ''; /* skema 14: 1-faset tilslutning på 3-faset gruppe ('' = som gruppen) */ e.fase = PH.includes(e.fase) ? e.fase : ''; traek(e); });
   o.daaser.forEach(d => { d.gruppeId = d.gruppeId || ''; d.parentId = d.parentId || ''; d.lokaleId = d.lokaleId || ''; d.kabel = kabMap(d.kabel); d.type = daaMap(d.type); traek(d); });
   const eid = new Set(o.enheder.map(e => e.id));
   /* skema 13: sløjfe fra en anden brugsgenstand. Ukendt eller sig selv = ingen sløjfe; kredse brydes */

@@ -62,6 +62,7 @@ Faste lister, som ikke må ændres uden aftale:
 - Samlepunkttyper: Membrandåse, Indmuringsdåse, Forfradåse, Underlag, Europadåse, PL-dåse.
 - Brandtætningsprodukter til afkrydsning (`BRANDPRODUKTER`, aftalt 2026-11-19): FR Brandkit, FR Brandplade, FR Gipsmørtel, FR Manchet, FR Pakning, FR Akryl, FR Grafit, FR Brandspjæld, FR Trækrør. Andre produkter skrives i fritekstfeltet.
 - Datakabler under svagstrøm (Cat6, Cat6A, Cat7, fiber) er undtaget fra kabellisten.
+- Højtalerkabel (`HOEJT`, aftalt 2026-11-26): kun til en brugsgenstand med symbolet Højtaler, sløjfet fra en forstærker (en almindelig 230 V-brugsgenstand). 2 × 0,75, 1,5, 2,5 eller 4 mm². Ingen last, ΔU, I<sub>z</sub> eller I<sub>k</sub>; egen linje i materialelisten. Står ikke i `KABLER`.
 
 Forudsætninger i beregningerne. Alt er vejledende og står også i appen:
 
