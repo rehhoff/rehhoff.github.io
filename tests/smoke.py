@@ -1191,6 +1191,25 @@ async def main():
         await pa.evaluate(f"""async()=>{{const a={A};a.sletProjekt(a.projekter.find(p=>/fra anden enhed/.test(p.navn)).id);await a.synkNu();}}""")
         await pb.evaluate(f"""async()=>{{await {A}.synkNu();}}""")
         tjek('synk: sletning på A slår igennem på B', [n for n in await navne(pb) if 'Synkprojekt' in n] == ['Synkprojekt'] and len(projekter_i_gist()) == 1, (await navne(pb), projekter_i_gist()))
+        # 6a. Ingen falske konflikter. B's data og base laves som fra en ældre version uden feltet tegninger
+        GAMMEL = """(()=>{const a=%s;a.gemNu();const s=JSON.parse(localStorage.getItem('tavleoversigt.sync'));const id=a.projekter.find(p=>p.navn==='Synkprojekt').id;
+          const d=JSON.parse(localStorage.getItem('tavleoversigt.p.'+id));delete d.tegninger;const t=JSON.stringify(d);localStorage.setItem('tavleoversigt.p.'+id,t);s.base[id]=hashTxt(t);
+          localStorage.setItem('tavleoversigt.sync',JSON.stringify(s));return [id,t]})()""" % A
+        antal = f"{A}.projekter.filter(p=>/Synkprojekt/.test(p.navn)).length"
+        pid, gammel = await pb.evaluate(GAMMEL); GIST['tavleoversigt-' + pid + '.json'] = gammel
+        await pa.evaluate(f"""async()=>{{const a={A};await a.synkNu();a.skift('{pid}');a.mutate(()=>{{a.db.projekt.kunde='Efter opdatering'}});await a.synkNu();}}""")
+        await pb.reload(); await pb.wait_for_timeout(400)
+        r = await pb.evaluate(f"""async()=>{{const a={A};await a.synkNu();return [{antal},a.laes('{pid}').projekt.kunde]}}""")
+        tjek('synk: urørt enhed efter opdatering med nye felter henter ændringen uden kopi', r == [1, 'Efter opdatering'], r)
+        pid, gammel = await pb.evaluate(GAMMEL); GIST['tavleoversigt-' + pid + '.json'] = gammel
+        r = await pb.evaluate(f"""async()=>{{const a={A};a.skift('{pid}');a.mutate(()=>{{a.db.projekt.kunde='Lokal efter opdatering'}});await a.synkNu();return {antal}}}""")
+        tjek('synk: gammelt format i Gist og lokal ændring sendes uden kopi', r == 1 and json.loads(GIST['tavleoversigt-' + pid + '.json'])['projekt']['kunde'] == 'Lokal efter opdatering', r)
+        # svaret på afsendelsen går tabt, efter at GitHub har modtaget den; næste ændring må ikke give en kopi
+        r = await pb.evaluate(f"""async()=>{{const a={A},f=window.fetch;window.fetch=async(u,o)=>{{const x=await f(u,o);if(o&&o.method==='PATCH')throw new Error('net');return x}};
+          a.mutate(()=>{{a.db.projekt.kunde='Svar tabt'}});await a.synkNu();const fejl=!!a.synkFejl;window.fetch=f;
+          a.mutate(()=>{{a.db.projekt.kunde='Næste'}});await a.synkNu();return [fejl,a.synkFejl,{antal}]}}""")
+        tjek('synk: tabt svar fra GitHub giver ingen kopi', r == [True, '', 1] and json.loads(GIST['tavleoversigt-' + pid + '.json'])['projekt']['kunde'] == 'Næste', r)
+        await pa.evaluate(f"""async()=>{{await {A}.synkNu();}}""")
         foer = dict(GIST)
         GIST['tavleoversigt.json'] = json.dumps({'format': 'tavleoversigt-sync', 'schema': 999})
         r = await pb.evaluate(f"""async()=>{{const a={A};const n=a.projekter.length;a.mutate(()=>{{a.db.projekt.kunde='Må ikke sendes'}});await a.synkNu();return {{f:a.synkFejl,n0:n,n1:a.projekter.length}}}}""")

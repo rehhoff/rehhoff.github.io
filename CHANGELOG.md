@@ -2,6 +2,12 @@
 
 Nyeste øverst. Versionsnummeret står også i appen som `APP_VERSION`. Hver version siger, hvilken model der lavede den.
 
+## 10.36.1 · 2026-11-26 · Claude Sonnet 5.5
+
+- Synkronisering: ændringer på én enhed opdaterer nu den anden uden kopiprojektet "fra anden enhed", når der kun er ændret ét sted. Før kunne en urørt enhed regnes som ændret efter en opdatering af appen med nye datafelter, eller når svaret fra GitHub gik tabt (fx lukket app eller dårligt net).
+- Er et projekt reelt ændret begge steder, beholdes begge udgaver som før.
+- Ingen ændring i datamodellen.
+
 ## 10.36.0 · 2026-11-26 · Claude Sonnet 5.5
 
 - Fanen Lokaler: holdes musen over en kilde under "Forsynes fra", lyser de brugsgenstande i lokalet op, som forsynes derfra. Et tryk holder dem oplyst, indtil der trykkes på samme kilde igen eller på en anden. På mobil trykkes der.

@@ -73,6 +73,7 @@ function app() {
         if (!this.db.projekt.navn) this.db.projekt.navn = 'Mit projekt';
         if (!harOld) { const id2 = uid(), d2 = seed2(); this.skriv(id2, d2); this.projekter.push(this.meta(id2, d2)); }
       }
+      this.synkOmregn();
       this.save(); this.gemNu();
       this.sel = (this.gruppe('g7') || this.sorteredeGrupper()[0] || {}).id || null;
       this.brugTema(); this.firma = this.firmaLaes(); this.billedStart();
