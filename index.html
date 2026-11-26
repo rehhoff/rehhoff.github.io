@@ -14,8 +14,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=10.32.0">
-<link rel="stylesheet" href="css/tailwind.css?v=10.32.0">
+<link rel="stylesheet" href="css/app.css?v=10.32.1">
+<link rel="stylesheet" href="css/tailwind.css?v=10.32.1">
 </head>
 <body class="min-h-full">
 <p id="fail" hidden style="margin:16px;padding:12px;border:1px solid var(--crit);color:var(--crit)">Appen kunne ikke starte, fordi Alpine.js ikke blev indlæst. Genindlæs siden.</p>
@@ -1456,13 +1456,14 @@
               <legend class="px-1 text-xs font-semibold uppercase tracking-wider text-muted">Sløjfekabel mellem dem</legend>
               <p class="text-xs text-muted sm:col-span-2" x-text="'Kablet ovenfor går til den første (' + (form.navn || 'nr. 1') + '). Sløjfekablet går fra hver til den næste.'"></p>
               <label class="f" for="m-kkabel">Kabeltype
-                <select id="m-kkabel" class="inp" x-model="form.kKabel">
-                  <template x-for="k in kabeltyper" :key="k"><option :value="k" :selected="form.kKabel===k" x-text="k"></option></template></select></label>
-              <label class="f" for="m-kled">Ledere
+                <select id="m-kkabel" class="inp" x-model="form.kKabel" @change="if (form.kKabel === hoejtKabel) { form.kLedere = '2X'; if (!htvs.includes(form.kTv)) form.kTv = 1.5; } else if (!tvs.includes(form.kTv)) form.kTv = 1.5">
+                  <template x-for="k in kabeltyper" :key="k"><option :value="k" :selected="form.kKabel===k" x-text="k"></option></template>
+                  <template x-if="symbolFor(form) === 'hoejt' || form.kKabel === hoejtKabel"><option :value="hoejtKabel" :selected="form.kKabel===hoejtKabel" x-text="hoejtKabel + ' (fra forstærker)'"></option></template></select></label>
+              <label class="f" for="m-kled" x-show="form.kKabel !== hoejtKabel">Ledere
                 <select id="m-kled" class="inp num" x-model="form.kLedere"><template x-for="l in ['2X','3G','4G','5G']" :key="l"><option :value="l" :selected="form.kLedere===l" x-text="l"></option></template></select></label>
               <label class="f" for="m-ktv">Tværsnit (mm²)
                 <select id="m-ktv" class="inp num" x-model.number="form.kTv">
-                  <template x-for="a in tvs" :key="a"><option :value="a" :selected="form.kTv==a" x-text="fmt(a)"></option></template></select></label>
+                  <template x-for="a in (form.kKabel === hoejtKabel ? htvs : tvs)" :key="a"><option :value="a" :selected="form.kTv==a" x-text="(form.kKabel === hoejtKabel ? '2 × ' : '') + fmt(a, 2)"></option></template></select></label>
               <label class="f" for="m-klen">Længde pr. sløjfe (m)<input id="m-klen" class="inp num" type="number" min="0" step="0.5" x-model.number="form.kLaengde"></label>
             </fieldset></template>
             <label class="f" for="m-eplac">Placering<input id="m-eplac" class="inp" x-model="form.placering" placeholder="Væg A, loft …"></label>
@@ -1817,16 +1818,16 @@
   </div>
 </div>
 
-<script src="js/data.js?v=10.32.0"></script>
-<script src="js/beregning.js?v=10.32.0"></script>
-<script src="js/diagram.js?v=10.32.0"></script>
-<script src="js/lagring.js?v=10.32.0"></script>
-<script src="js/historik.js?v=10.32.0"></script>
-<script src="js/billeder.js?v=10.32.0"></script>
-<script src="js/brand.js?v=10.32.0"></script>
-<script src="js/import.js?v=10.32.0"></script>
-<script src="js/aflevering.js?v=10.32.0"></script>
-<script src="js/app.js?v=10.32.0"></script>
+<script src="js/data.js?v=10.32.1"></script>
+<script src="js/beregning.js?v=10.32.1"></script>
+<script src="js/diagram.js?v=10.32.1"></script>
+<script src="js/lagring.js?v=10.32.1"></script>
+<script src="js/historik.js?v=10.32.1"></script>
+<script src="js/billeder.js?v=10.32.1"></script>
+<script src="js/brand.js?v=10.32.1"></script>
+<script src="js/import.js?v=10.32.1"></script>
+<script src="js/aflevering.js?v=10.32.1"></script>
+<script src="js/app.js?v=10.32.1"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.14.1/cdn.min.js"></script>
 </body>
 </html>
