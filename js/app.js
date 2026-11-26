@@ -547,6 +547,7 @@ function app() {
       const id = this.modal.id;
       const antal = !id && this.kanDup(type) && type !== 'afbryder' ? Math.min(20, Math.max(1, Math.round(Number(rec.antal)) || 1)) : 1; delete rec.antal;
       let serie = []; const kaede = !!rec.kaede, kk = { kabel:rec.kKabel || rec.kabel, ledere:rec.kLedere || rec.ledere, tv:Number(rec.kTv) || rec.tv, laengde:Number(rec.kLaengde) >= 0 && rec.kLaengde !== '' && rec.kLaengde != null ? Number(rec.kLaengde) : rec.laengde };
+      if (kk.kabel === HOEJT) { kk.ledere = '2X'; if (!HTV.includes(kk.tv)) kk.tv = 1.5; } else if (!TV.includes(kk.tv)) kk.tv = 1.5;
       ['kaede', 'kKabel', 'kLedere', 'kTv', 'kLaengde'].forEach(k => delete rec[k]);
       if (type === 'tavle') { const v = String(rec.forsyn || ''); delete rec.forsyn; const g = v.startsWith('g:') ? this.gruppe(v.slice(2)) : null; rec.fraGruppe = g ? g.id : ''; rec.fra = g ? g.tavleId : v.startsWith('t:') ? v.slice(2) : ''; }
       if (type === 'tavle' && rec.fra === id) { rec.fra = ''; rec.fraGruppe = ''; }

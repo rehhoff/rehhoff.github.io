@@ -2,6 +2,11 @@
 
 Nyeste øverst. Versionsnummeret står også i appen som `APP_VERSION`. Hver version siger, hvilken model der lavede den.
 
+## 10.32.1 · 2026-11-26 · Claude Opus 5.5
+
+- Rettelse: Højtalerkabel kan nu også vælges som sløjfekabel under **Sløjf efter hinanden**, med tværsnit 2 × 0,75–4 mm², og ledere er altid 2X. Krydses sløjfning af for højtalere med højtalerkabel, foreslås højtalerkabel. Et ugyldigt tværsnit for sløjfekablet rettes til 1,5 mm².
+- Ingen ændring i datamodellen.
+
 ## 10.32.0 · 2026-11-26 · Claude Opus 5.5
 
 - Enstregsdiagram: knappen **Fuld skærm** lader diagrammet fylde hele vinduet. **Luk fuld skærm** eller Esc lukker igen.

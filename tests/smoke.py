@@ -1029,6 +1029,10 @@ async def main():
           Object.assign(a.form,{{kabel:'Højtalerkabel',ledere:'3G',tv:0.75,laengde:30,belVal:60,belEnh:'W',effekt:60,fraEnhed:fs.id}}); a.sloejfeValg(); await T(60);
           o.tvValg=[...document.querySelectorAll('#m-tv option')].map(x=>Number(x.value)); a.saveForm(); await T(80);
           const h=a.db.enheder.find(e=>e.navn==='Højtaler test'); o.rec=h&&[h.kabel,h.ledere,h.tv,h.fraEnhed===fs.id];
+          a.openForm('enhed',null,{{gruppeId:g.id}}); await T(60); Object.assign(a.form,{{navn:'Højtaler kæde',antal:3,kabel:'Højtalerkabel',tv:1.5,fraEnhed:fs.id}}); await T(60); document.getElementById('m-kaede').click(); await T(80);
+          const kv=document.getElementById('m-kkabel'); o.kaedeValg=[...kv.options].some(x=>x.value==='Højtalerkabel')&&a.form.kKabel==='Højtalerkabel';
+          a.form.kTv=0.75; a.form.kLedere='3G'; a.saveForm(); await T(80); const ks=a.db.enheder.filter(e=>/^Højtaler kæde/.test(e.navn));
+          o.kaede=[ks.length, ks.every(e=>e.kabel==='Højtalerkabel'&&e.ledere==='2X'), ks.slice(1).every(e=>e.tv===0.75)]; a.db.enheder=a.db.enheder.filter(e=>!/^Højtaler kæde/.test(e.navn)); a.save();
           o.calc=[a.strom(h), a.gruppeI(g.id)===I0, a.tavleW(g.tavleId)===W0, a.duOver(h), a.iz(h), a.izFejl(h), JSON.stringify(a.ikMin(g))===JSON.stringify(ik0), a.lmax(h), a.forslag(h)];
           o.sld=a.sld(false).includes('class="l hj"')&&a.sld(true).includes('.hj{{');
           o.mat=JSON.stringify(a.materialer()).includes('Højtalerkabel 2X0,75 mm²');
@@ -1037,7 +1041,7 @@ async def main():
           return o}}""")
         tjek('opgradering fra skema 19: backup taget, data intakte; højtalerkabel kun for højtaler, ingen 230 V-last, ΔU, Iz eller Ik, stiplet i enstreg, egen linje i materialelisten',
              r['meta'] == ['Skema 19-projekt', True, SKEMA] and r['ens'] and r['valg'] == [False, True, 'hoejt'] and r['tvValg'] == [0.75, 1.5, 2.5, 4]
-             and r['rec'] == ['Højtalerkabel', '2X', 0.75, True] and r['calc'] == [0, True, True, False, 0, False, True, None, None] and r['sld'] and r['mat']
+             and r['rec'] == ['Højtalerkabel', '2X', 0.75, True] and r['kaedeValg'] and r['kaede'] == [3, True, True] and r['calc'] == [0, True, True, False, 0, False, True, None, None] and r['sld'] and r['mat']
              and r['norm'] == '[["Højtalerkabel","2X",1.5],["PVC",null,null]]', r)
 
         # 4t. Enstreg: fuld skærm (Esc lukker) og egen lys/mørk baggrund kun på diagrammet, husket i browseren
