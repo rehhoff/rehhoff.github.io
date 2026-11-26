@@ -34,7 +34,7 @@ Scriptsene er almindelige scripts (ikke ES-moduler) og deler globalt scope. Ræk
 
 Under 1024 px står hovedets titel og værktøjer under hinanden, og fanerne er én række, der kan rulles sidelæns (`.faner`, `lg:contents` fra 1024 px). Under 640 px vises måleskemaet som kort (`.mk`) i stedet for tabellen. Desktop-layoutet er uændret.
 
-Faner i `views`: Tavle, Enstregsdiagram, Tændingsdiagram, Samlepunkter & dåser, Svagstrøm, Beregning, Lokaler, Kabler, Dokumentation, Fejlfinder, Brandlukning, Plantegning (de to sidste uden tast). Tasterne 1 til 9 og 0 skifter fane. Under Lokaler har hver brugsgenstand et afkrydsningsfelt for `trukket` (samme felt som i Føringsvej, sættes med `fvSaet`), og lokalets overskrift viser "x af y trukket". Listerne i hvert lokale har en fast højde med rulning; ⊞/⊟ udvider ét lokale (`lokUd[id]`), og "Udvid alle" sætter `lokAlleUd`. Tilstanden gemmes ikke. "+ Samledåse" åbner samlepunktets formular med lokalet valgt.
+Faner i `views`: Tavle, Enstregsdiagram, Tændingsdiagram, Samlepunkter & dåser, Svagstrøm, Beregning, Lokaler, Kabler, Dokumentation, Fejlfinder, Brandlukning, Plantegning (de to sidste uden tast). Tasterne 1 til 9 og 0 skifter fane. Under Lokaler har hver brugsgenstand et afkrydsningsfelt for `trukket` (samme felt som i Føringsvej, sættes med `fvSaet`), og lokalets overskrift viser "x af y trukket". Listerne i hvert lokale har en fast højde med rulning; ⊞/⊟ udvider ét lokale (`lokUd[id]`), og "Udvid alle" sætter `lokAlleUd`. Tilstanden gemmes ikke. "+ Samledåse", "+ Dataudtag" og "+ Kamera" åbner formularen med lokalet valgt. ▲/▼ ved en brugsgenstand bytter den med naboen i samme lokale i `enheder` (`ryk`).
 
 ## Ydelse
 

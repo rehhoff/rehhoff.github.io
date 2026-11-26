@@ -2,6 +2,12 @@
 
 Nyeste øverst. Versionsnummeret står også i appen som `APP_VERSION`. Hver version siger, hvilken model der lavede den.
 
+## 10.34.0 · 2026-11-26 · Claude Opus 5.5
+
+- Fanen Lokaler: knapperne **+ Dataudtag** og **+ Kamera** på hvert lokale åbner svagstrømsformularen med lokalet valgt.
+- Fanen Lokaler: ▲/▼ ved hver brugsgenstand flytter den op eller ned blandt lokalets brugsgenstande. Det kan fortrydes. Rækkefølgen er den samme som i listen over brugsgenstande, så to brugsgenstande i samme gruppe bytter også plads der.
+- Ingen ændring i datamodellen.
+
 ## 10.33.0 · 2026-11-26 · Claude Opus 5.5
 
 Ny fane **Plantegning**. Plan: `docs/planer/2026-11-26-plantegning.md`.

@@ -14,8 +14,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=10.33.0">
-<link rel="stylesheet" href="css/tailwind.css?v=10.33.0">
+<link rel="stylesheet" href="css/app.css?v=10.34.0">
+<link rel="stylesheet" href="css/tailwind.css?v=10.34.0">
 </head>
 <body class="min-h-full">
 <p id="fail" hidden style="margin:16px;padding:12px;border:1px solid var(--crit);color:var(--crit)">Appen kunne ikke starte, fordi Alpine.js ikke blev indlæst. Genindlæs siden.</p>
@@ -868,7 +868,8 @@
               <template x-for="e in enhederILokale(l.id)" :key="e.id">
                 <li class="typed stripe flex items-baseline justify-between gap-2 border-b border-line last:border-b-0 py-1 pl-2" :class="typeOf(e)">
                   <span class="flex items-baseline gap-2 min-w-0"><input type="checkbox" class="lok-trukket shrink-0" :checked="!!e.trukket" @change="fvSaet({ kind:'enhed', o:e }, 'trukket', $event.target.checked)" :aria-label="'Kabel trukket: ' + e.navn" title="Kablet er trukket"><button class="text-left hover:underline" @click="openForm('enhed', e)" x-text="e.navn"></button></span>
-                  <span class="num text-xs text-muted whitespace-nowrap" x-text="kabelDim(e) + ' · ' + fmt(e.laengde) + ' m'"></span>
+                  <span class="flex items-baseline gap-1 shrink-0"><span class="num text-xs text-muted whitespace-nowrap" x-text="kabelDim(e) + ' · ' + fmt(e.laengde) + ' m'"></span>
+                    <button type="button" class="btn btn-ghost px-1 lok-op" @click="ryk('enheder', e.id, -1, (a, b) => a.lokaleId === b.lokaleId)" :aria-label="'Flyt ' + e.navn + ' op'" title="Flyt op">▲</button><button type="button" class="btn btn-ghost px-1 lok-ned" @click="ryk('enheder', e.id, 1, (a, b) => a.lokaleId === b.lokaleId)" :aria-label="'Flyt ' + e.navn + ' ned'" title="Flyt ned">▼</button></span>
                 </li>
               </template>
             </ul>
@@ -890,6 +891,8 @@
             <div class="mt-auto flex flex-wrap gap-1">
               <button class="btn" @click="openForm('enhed', null, {lokaleId:l.id})">+ Brugsgenstand</button>
               <button class="btn" @click="openForm('daase', null, {lokaleId:l.id})">+ Samledåse</button>
+              <button class="btn lok-data" @click="openForm('link', null, {art:'data', lokaleId:l.id})"><span class="c-pds" x-html="ikon('pds')"></span> + Dataudtag</button>
+              <button class="btn lok-kam" @click="openForm('link', null, {art:'cctv', lokaleId:l.id})"><span class="c-cctv" x-html="ikon('cctv')"></span> + Kamera</button>
               <button class="btn" @click="filterLokale(l.id)">Vis i kabeltabel</button>
               <button class="btn" @click="lokF = lokF===l.id ? '' : l.id" x-text="lokF===l.id ? 'Vis alle lokaler' : 'Filtrér alle faner'"></button>
               <button class="btn" @click="klonAabn(l.id)">Klon lokale</button>
@@ -1895,17 +1898,17 @@
   </div>
 </div>
 
-<script src="js/data.js?v=10.33.0"></script>
-<script src="js/beregning.js?v=10.33.0"></script>
-<script src="js/diagram.js?v=10.33.0"></script>
-<script src="js/lagring.js?v=10.33.0"></script>
-<script src="js/historik.js?v=10.33.0"></script>
-<script src="js/billeder.js?v=10.33.0"></script>
-<script src="js/brand.js?v=10.33.0"></script>
-<script src="js/import.js?v=10.33.0"></script>
-<script src="js/aflevering.js?v=10.33.0"></script>
-<script src="js/plan.js?v=10.33.0"></script>
-<script src="js/app.js?v=10.33.0"></script>
+<script src="js/data.js?v=10.34.0"></script>
+<script src="js/beregning.js?v=10.34.0"></script>
+<script src="js/diagram.js?v=10.34.0"></script>
+<script src="js/lagring.js?v=10.34.0"></script>
+<script src="js/historik.js?v=10.34.0"></script>
+<script src="js/billeder.js?v=10.34.0"></script>
+<script src="js/brand.js?v=10.34.0"></script>
+<script src="js/import.js?v=10.34.0"></script>
+<script src="js/aflevering.js?v=10.34.0"></script>
+<script src="js/plan.js?v=10.34.0"></script>
+<script src="js/app.js?v=10.34.0"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.14.1/cdn.min.js"></script>
 </body>
 </html>
