@@ -7,6 +7,7 @@ function app() {
     planId: '', planMode: '', planVaelg: '', planPts: [], planSkalaM: '', planMaalTil: '', planZoom: 100, planTick: 0,  /* Plantegning (js/plan.js) */
     sldStor: false, sldTema: '',  /* enstreg: fylder hele vinduet; egen lys/mørk baggrund */
     lokAlleUd: false, lokUd: {}, dragE: null, overE: null,  /* dragE/overE: brugsgenstand, der trækkes i Lokaler */  /* Lokaler: listerne er foldet sammen til en fast højde; lokUd[id] overstyrer lokAlleUd for ét lokale */
+    lokP: '', lokH: '',  /* Lokaler: fastholdt og musens forsyningskilde ('lokaleId|gruppeId') */
     fvIkke: false, fvFold: new Set(), fvAaben: new Set(), fvHi: '', fvAnc: [], fvBlink: '', gren: null, sfPop: null, fvRed: null, fvTmp: null,
     views: [ { id:'tavle', l:'Tavle' }, { id:'enstreg', l:'Enstregsdiagram' }, { id:'taending', l:'Tændingsdiagram' }, { id:'samlepunkter', l:'Samlepunkter & dåser' }, { id:'foering', l:'Føringsvej' }, { id:'svag', l:'Svagstrøm' }, { id:'beregning', l:'Beregning' }, { id:'lokaler', l:'Lokaler' }, { id:'kabler', l:'Kabler' }, { id:'dokumentation', l:'Dokumentation' }, { id:'fejlfinder', l:'Fejlfinder' }, { id:'brand', l:'Brandlukning' }, { id:'plan', l:'Plantegning' } ],
     db: tom(), dbRev: 0, hist: [], fremtid: [], klon: null, sel: null, drag: null, over: null,
@@ -175,6 +176,7 @@ function app() {
     enhederILokale(lid) { return this.db.enheder.filter(e => e.lokaleId === lid); },
     lokalerIGruppe(gid) { const ids = new Set(this.enhederFor(gid).map(e => e.lokaleId)); return this.db.lokaler.filter(l => ids.has(l.id)); },
     grupperILokale(lid) { const ids = new Set(this.enhederILokale(lid).map(e => e.gruppeId)); return this.sorteredeGrupper().filter(g => ids.has(g.id)); },
+    lokLys(lid, gid) { return (this.lokH || this.lokP) === lid + '|' + gid; },  /* musen går forud for den fastholdte */
     lokaleMeter(lid) { return this.sumLen(this.enhederILokale(lid).map(e => ({ e }))); },
     kabelDim(e) { return e.ledere + this.fmt(e.tv, 2) + ' mm²'; },  /* to decimaler til højtalerkablets 0,75 mm² */
     gruppeKabler(gid) { return [...new Set(this.daaserFor(gid).concat(this.enhederFor(gid)).map(e => e.ledere + this.fmt(e.tv)))].join(', '); },

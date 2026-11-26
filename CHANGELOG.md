@@ -2,6 +2,12 @@
 
 Nyeste øverst. Versionsnummeret står også i appen som `APP_VERSION`. Hver version siger, hvilken model der lavede den.
 
+## 10.36.0 · 2026-11-26 · Claude Sonnet 5.5
+
+- Fanen Lokaler: holdes musen over en kilde under "Forsynes fra", lyser de brugsgenstande i lokalet op, som forsynes derfra. Et tryk holder dem oplyst, indtil der trykkes på samme kilde igen eller på en anden. På mobil trykkes der.
+- Et tryk på kilden går ikke længere til gruppen. Brug i stedet pilen →, der vises ved den fastholdte kilde.
+- Ingen ændring i datamodellen.
+
 ## 10.35.1 · 2026-11-26 · Claude Opus 5.5
 
 - Fanen Lokaler: hver anden linje i listerne (brugsgenstande, samlepunkter, dataudtag og kameraer) har en lidt anden baggrund, så navn, tværsnit og længde er lettere at læse vandret. Den er lidt lysere i mørkt tema og lidt mørkere i lyst tema.
