@@ -14,8 +14,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=10.39.0">
-<link rel="stylesheet" href="css/tailwind.css?v=10.39.0">
+<link rel="stylesheet" href="css/app.css?v=10.40.0">
+<link rel="stylesheet" href="css/tailwind.css?v=10.40.0">
 </head>
 <body class="min-h-full">
 <p id="fail" hidden style="margin:16px;padding:12px;border:1px solid var(--crit);color:var(--crit)">Appen kunne ikke starte, fordi Alpine.js ikke blev indlæst. Genindlæs siden.</p>
@@ -610,7 +610,7 @@
   </section></template>
 
   <!-- ============ SVAGSTRØM ============ -->
-  <template x-if="view==='svag'"><section class="flex flex-col gap-4">
+  <template x-if="view==='svag'"><section class="flex flex-col gap-4" @dragover.window="dragRul($event)">
     <div class="flex flex-wrap gap-2">
       <button class="btn" @click="openForm('rack')"><span x-html="ikon('rack')"></span> + Rackskab</button>
       <button class="btn" @click="openForm('udstyr')" :disabled="!db.racks.length">+ Rackudstyr</button>
@@ -671,13 +671,16 @@
       </header>
       <div class="overflow-x-auto">
         <table class="kt">
-          <thead><tr><th>Art</th><th>Betegnelse</th><th>Lokale</th><th>Kabel</th><th>Trukket</th><th class="r">Længde</th><th>Patchpanel</th><th>Switch</th><th class="r">PoE</th><th>Kamera / NVR</th><th>Status</th><th></th></tr></thead>
+          <thead><tr>
+            <template x-for="k in svKol" :key="k.k"><th :class="k.c" :aria-sort="svSort.key !== k.k ? 'none' : svSort.dir > 0 ? 'ascending' : 'descending'"><button type="button" class="sv-sort" :data-k="k.k" @click="svSorter(k.k)" title="Sortér. Tredje tryk nulstiller"><span x-text="k.l"></span> <span aria-hidden="true" x-text="svSort.key !== k.k ? '' : svSort.dir > 0 ? '▲' : '▼'"></span></button></th></template>
+            <th></th></tr></thead>
           <template x-for="g in svEtager()" :key="g.etage">
           <tbody class="sv-etage">
             <tr><th scope="rowgroup" colspan="12" x-text="(g.etage ? 'Etage: ' + g.etage : 'Uden etage') + ' · ' + g.links.length + ' stk.'"></th></tr>
             <template x-for="l in g.links" :key="l.id">
-              <tr>
-                <td class="typed stripe whitespace-nowrap" :class="l.art"><span :class="l.art === 'cctv' ? 'c-cctv' : 'c-pds'" x-html="ikon(l.art === 'cctv' ? 'cctv' : 'pds')"></span> <span x-text="l.art === 'cctv' ? 'CCTV' : 'PDS'"></span></td>
+              <tr class="sv-raekke" :data-id="l.id" :class="dragS && overS===l.id && dragS!==l.id && 'ring-2 ring-accent'"
+                @dragover="dragS && svEtage(db.links.find(x => x.id === dragS) || {}) === g.etage && ($event.preventDefault(), overS=l.id)" @drop="slipLink(l.id, $event)">
+                <td class="typed stripe whitespace-nowrap" :class="l.art"><span class="drag sv-traek text-muted cursor-grab mr-1" x-show="!svSort.key" draggable="true" title="Træk for at flytte forbindelsen" aria-hidden="true" @dragstart="dragS=l.id; $event.dataTransfer.effectAllowed='move'; $event.dataTransfer.setData('text/plain', l.id)" @dragend="dragS=null; overS=null">⠿</span><span :class="l.art === 'cctv' ? 'c-cctv' : 'c-pds'" x-html="ikon(l.art === 'cctv' ? 'cctv' : 'pds')"></span> <span x-text="l.art === 'cctv' ? 'CCTV' : 'PDS'"></span></td>
                 <td class="font-medium" x-text="l.navn"></td>
                 <td x-text="lokaleNavn(l.lokaleId)"></td>
                 <td class="num" x-text="l.kabel"></td>
@@ -686,9 +689,9 @@
                 <td class="num" x-text="portTxt(l, 'panel')"></td>
                 <td class="num" x-text="portTxt(l, 'switch')"></td>
                 <td class="num r" x-text="Number(l.poeW) ? fmt(l.poeW, 2) + ' W' : '–'"></td>
-                <td x-text="l.art === 'cctv' ? l.kamType + ' ' + l.oploesning + ' · ' + (udstTxt(l.nvrId) || 'ingen NVR') : '–'"></td>
-                <td :class="linkFejl(l).length && 'warn'" x-text="linkFejl(l).length ? '⚠ ' + linkFejl(l)[0] : (udst(l.switchId) ? 'OK' : 'Ikke patchet')"></td>
-                <td class="text-right whitespace-nowrap"><button class="btn btn-ghost" @click="sporTil('x:' + l.id)">Spor</button><button class="btn btn-ghost" @click="openForm('link', l)">Rediger</button></td>
+                <td x-text="svKameraTxt(l)"></td>
+                <td :class="linkFejl(l).length && 'warn'" x-text="svStatusTxt(l)"></td>
+                <td class="text-right whitespace-nowrap"><button type="button" class="btn btn-ghost px-1 sv-op" :disabled="!!svSort.key" @click="svRyk(l.id, -1)" :aria-label="'Flyt ' + l.navn + ' op'" :title="svSort.key ? 'Nulstil sorteringen for at flytte' : 'Flyt op'">▲</button><button type="button" class="btn btn-ghost px-1 sv-ned" :disabled="!!svSort.key" @click="svRyk(l.id, 1)" :aria-label="'Flyt ' + l.navn + ' ned'" :title="svSort.key ? 'Nulstil sorteringen for at flytte' : 'Flyt ned'">▼</button><button class="btn btn-ghost" @click="sporTil('x:' + l.id)">Spor</button><button class="btn btn-ghost" @click="openForm('link', l)">Rediger</button></td>
               </tr>
             </template>
           </tbody>
@@ -1918,17 +1921,17 @@
   </div>
 </div>
 
-<script src="js/data.js?v=10.39.0"></script>
-<script src="js/beregning.js?v=10.39.0"></script>
-<script src="js/diagram.js?v=10.39.0"></script>
-<script src="js/lagring.js?v=10.39.0"></script>
-<script src="js/historik.js?v=10.39.0"></script>
-<script src="js/billeder.js?v=10.39.0"></script>
-<script src="js/brand.js?v=10.39.0"></script>
-<script src="js/import.js?v=10.39.0"></script>
-<script src="js/aflevering.js?v=10.39.0"></script>
-<script src="js/plan.js?v=10.39.0"></script>
-<script src="js/app.js?v=10.39.0"></script>
+<script src="js/data.js?v=10.40.0"></script>
+<script src="js/beregning.js?v=10.40.0"></script>
+<script src="js/diagram.js?v=10.40.0"></script>
+<script src="js/lagring.js?v=10.40.0"></script>
+<script src="js/historik.js?v=10.40.0"></script>
+<script src="js/billeder.js?v=10.40.0"></script>
+<script src="js/brand.js?v=10.40.0"></script>
+<script src="js/import.js?v=10.40.0"></script>
+<script src="js/aflevering.js?v=10.40.0"></script>
+<script src="js/plan.js?v=10.40.0"></script>
+<script src="js/app.js?v=10.40.0"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.14.1/cdn.min.js"></script>
 </body>
 </html>

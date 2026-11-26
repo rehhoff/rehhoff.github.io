@@ -2,6 +2,12 @@
 
 Nyeste øverst. Versionsnummeret står også i appen som `APP_VERSION`. Hver version siger, hvilken model der lavede den.
 
+## 10.40.0 · 2026-11-26 · Claude Sonnet 5.5
+
+- Svagstrøm, Forbindelser og port-mapping: tryk på en kolonneoverskrift for at sortere (stigende), tryk igen for omvendt, og tredje tryk nulstiller. Der sorteres inden for hver etage.
+- Rækkefølgen kan ændres med ▲/▼ og ved at trække i ⠿, inden for samme etage. Det er slået fra, mens listen er sorteret.
+- Ingen ændring af datamodellen (skema 22). Sorteringen gemmes ikke; den manuelle rækkefølge gemmes.
+
 ## 10.39.0 · 2026-11-26 · Claude Sonnet 5.5
 
 - Svagstrøm: listen Forbindelser og port-mapping er opdelt efter lokalets etage, både for PDS, CCTV og Alle. Etagerne står i lokalernes rækkefølge, og "Uden etage" står sidst.
