@@ -1001,6 +1001,19 @@ async def main():
         tjek('start: et ulæseligt projekt overskrives ikke, et nyt tomt projekt åbnes, og der vises en fejl',
              r['pid'] != r0['id'] and r['raa'] == '{"tavler":[null]}' and r['liste'] and r['fejl'] and tilbage == r0['id'], (r, tilbage))
 
+        # 4r. Lokaler: listerne har fast højde med rulning, udvid ét lokale eller alle, og + Samledåse åbner formularen med lokalet valgt
+        r = await pg.evaluate(f"""async()=>{{const a={A};const T=n=>new Promise(f=>setTimeout(f,n));const o={{}};
+          a.lokF=''; a.go('lokaler'); await T(150); const kort=()=>[...document.querySelectorAll('.lok-lister')], fast=()=>kort().map(x=>x.classList.contains('max-h-80'));
+          o.start=fast().every(Boolean)&&kort().length===a.db.lokaler.length;
+          document.querySelector('.lok-fold').click(); await T(60); const f1=fast(); o.en=!f1[0]&&f1.slice(1).every(Boolean);
+          document.getElementById('lok-alle').click(); await T(60); o.alleUd=fast().every(x=>!x)&&document.getElementById('lok-alle').textContent.trim()==='Fold alle sammen';
+          document.getElementById('lok-alle').click(); await T(60); o.alleInd=fast().every(Boolean);
+          const l=a.db.lokaler[0]; [...document.querySelectorAll('article button')].find(b=>b.textContent.trim()==='+ Samledåse').click(); await T(100);
+          o.daase=[a.modal&&a.modal.type, a.form.lokaleId===l.id]; a.modal=null; a.go('tavle'); await T(50);
+          return o}}""")
+        tjek('lokaler: fast højde med rulning, udvid ét eller alle lokaler, + Samledåse med lokalet valgt',
+             r['start'] and r['en'] and r['alleUd'] and r['alleInd'] and r['daase'] == ['daase', True], r)
+
         await pg.evaluate(f"{A}.go('tavle')")
 
         # 5. Backupfil kan hentes og indlæses uden at overskrive. Den indeholder billederne
