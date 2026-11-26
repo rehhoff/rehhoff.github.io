@@ -1101,6 +1101,21 @@ async def main():
              and r['flyttet'] and r['maalLaast'] and r['skala'] == 20 and r['laengde'] == '6 m' and r['m'] and r['brugt'] is True and r['esc'] and r['lokKnap'] and r['filter'] and r['doc']
              and r['norm'] == '{"id":"t1","billede":"","forhold":0.5,"punkter":[{"k":"e:a","x":1,"y":0.5}],"navn":"","lokaleId":"","skala":0}', r)
 
+        # 4v. Lokaler: + Dataudtag og + Kamera med lokalet valgt, og brugsgenstande kan flyttes op og ned inden for lokalet
+        r = await pg.evaluate(f"""async()=>{{const a={A};const T=n=>new Promise(f=>setTimeout(f,n));const o={{}};
+          a.lokF=''; a.lokAlleUd=true; a.go('lokaler'); await T(150);
+          const l=a.db.lokaler.find(l=>a.enhederILokale(l.id).length>=2), art=[...document.querySelectorAll('#lok-'+l.id+', article')].find(x=>x.querySelector('h2')&&x.querySelector('h2').textContent===l.navn);
+          art.querySelector('.lok-data').click(); await T(80); o.data=[a.modal&&a.modal.type, a.form.art, a.form.lokaleId===l.id]; a.modal=null; await T(40);
+          art.querySelector('.lok-kam').click(); await T(80); o.kam=[a.form.art, a.form.lokaleId===l.id]; a.modal=null; await T(40);
+          const ids=()=>a.enhederILokale(l.id).map(e=>e.id), f0=ids();
+          art.querySelectorAll('.lok-ned')[0].click(); await T(80); const f1=ids(); o.ned=f1[0]===f0[1]&&f1[1]===f0[0];
+          art.querySelectorAll('.lok-op')[1].click(); await T(80); o.op=JSON.stringify(ids())===JSON.stringify(f0);
+          a.undo(); await T(40); o.fortryd=JSON.stringify(ids())===JSON.stringify(f1); a.redo(); await T(40);
+          a.lokAlleUd=false; a.go('tavle'); await T(50);
+          return o}}""")
+        tjek('lokaler: + Dataudtag og + Kamera med lokalet valgt; brugsgenstande flyttes op og ned inden for lokalet og kan fortrydes',
+             r['data'] == ['link', 'data', True] and r['kam'] == ['cctv', True] and r['ned'] and r['op'] and r['fortryd'], r)
+
         await pg.evaluate(f"{A}.go('tavle')")
 
         # 5. Backupfil kan hentes og indlæses uden at overskrive. Den indeholder billederne
