@@ -14,8 +14,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=10.30.0">
-<link rel="stylesheet" href="css/tailwind.css?v=10.30.0">
+<link rel="stylesheet" href="css/app.css?v=10.31.0">
+<link rel="stylesheet" href="css/tailwind.css?v=10.31.0">
 </head>
 <body class="min-h-full">
 <p id="fail" hidden style="margin:16px;padding:12px;border:1px solid var(--crit);color:var(--crit)">Appen kunne ikke starte, fordi Alpine.js ikke blev indlæst. Genindlæs siden.</p>
@@ -238,8 +238,9 @@
                       <span x-text="lokaleNavn(e.lokaleId)"></span><span x-text="kabelDim(e) + ' · ' + fmt(e.laengde) + ' m'"></span>
                       <span x-show="e.daaseId" x-text="'via ' + daaseTxt(e.daaseId)"></span>
                       <span x-show="fase1(e)" x-text="faseTxt(e)"></span>
-                      <span x-show="e.effekt" x-text="fmt(strom(e)) + ' A'"></span>
-                      <span x-show="e.effekt" :class="duOver(e) && 'warn'" x-text="'ΔU ' + fmt(du(e), 2) + ' %'"></span>
+                      <span x-show="e.effekt && !erHoejt(e)" x-text="fmt(strom(e)) + ' A'"></span>
+                      <span x-show="e.effekt && !erHoejt(e)" :class="duOver(e) && 'warn'" x-text="'ΔU ' + fmt(du(e), 2) + ' %'"></span>
+                      <span x-show="erHoejt(e)">højtaler, ikke 230 V</span>
                     </div>
                     <select class="inp inp-s mt-1" aria-label="Flyt til gruppe" @change="flytFra($event, e.id)">
                       <option value="-">Flyt til …</option><option value="">Ikke tildelt</option>
@@ -769,7 +770,7 @@
             <span class="flex items-center shrink-0">
               <span class="btn btn-ghost px-1 drag" draggable="true" title="Træk for at flytte lokalet" aria-hidden="true" @dragstart="dragL=l.id; $event.dataTransfer.effectAllowed='move'; $event.dataTransfer.setData('text/plain', l.id)" @dragend="dragL=null; overL=null">⠿</span>
               <button type="button" class="btn btn-ghost px-1" @click="ryk('lokaler', l.id, -1)" aria-label="Flyt lokale op" title="Flyt op">▲</button><button type="button" class="btn btn-ghost px-1" @click="ryk('lokaler', l.id, 1)" aria-label="Flyt lokale ned" title="Flyt ned">▼</button>
-              <button type="button" class="btn btn-ghost px-1 lok-fold" @click="lokUd = Object.assign({}, lokUd, { [l.id]: !(lokUd[l.id] ?? lokAlleUd) })" :aria-expanded="String(lokUd[l.id] ?? lokAlleUd)" :aria-label="(lokUd[l.id] ?? lokAlleUd) ? 'Fold lokalet sammen' : 'Udvid lokalet'" :title="(lokUd[l.id] ?? lokAlleUd) ? 'Fold sammen' : 'Udvid'" x-text="(lokUd[l.id] ?? lokAlleUd) ? '⊟' : '⊞'"></button>
+              <button type="button" class="btn btn-ghost px-1 lok-fold" x-show="enhederILokale(l.id).length + daaserILokale(l.id).length + linksILokale(l.id, '').length > 10" @click="lokUd = Object.assign({}, lokUd, { [l.id]: !(lokUd[l.id] ?? lokAlleUd) })" :aria-expanded="String(lokUd[l.id] ?? lokAlleUd)" :aria-label="(lokUd[l.id] ?? lokAlleUd) ? 'Fold lokalet sammen' : 'Udvid lokalet'" :title="(lokUd[l.id] ?? lokAlleUd) ? 'Fold sammen' : 'Udvid'" x-text="(lokUd[l.id] ?? lokAlleUd) ? '⊟' : '⊞'"></button>
               <button class="btn btn-ghost" @click="openForm('lokale', l)">Rediger</button>
             </span>
           </header>
@@ -882,8 +883,8 @@
               <td class="num r" x-text="fmt(r.e.tv) + ' mm²'"></td>
               <td class="num r" x-text="fmt(r.e.laengde) + ' m'"></td>
               <td class="num r" x-text="r.e.effekt ? r.e.effekt + ' W' : '–'"></td>
-              <td class="num r" x-text="r.e.effekt ? fmt(r.I) + ' A' : '–'"></td>
-              <td class="num r" :class="r.over && 'warn'" x-text="r.e.effekt ? (r.over ? '⚠ ' : '') + fmt(r.du, 2) + ' %' : '–'"></td>
+              <td class="num r" x-text="r.e.effekt && !erHoejt(r.e) ? fmt(r.I) + ' A' : '–'"></td>
+              <td class="num r" :class="r.over && 'warn'" x-text="r.e.effekt && !erHoejt(r.e) ? (r.over ? '⚠ ' : '') + fmt(r.du, 2) + ' %' : '–'"></td>
               <td class="num r" x-text="r.lmax ? fmt(r.lmax, 0) + ' m' : '–'"></td>
               <td :title="r.t ? korrektion(r.t, 't', r.e.kabel).txt : korrektion(r.g, '', r.e.kabel).txt" class="num r" :class="r.izFejl && 'warn'" x-text="r.iz ? (r.izFejl ? '⚠ ' : '') + fmt(r.iz) + ' A' : '–'"></td>
               <td class="text-right whitespace-nowrap"><button class="btn btn-ghost" x-show="r.g" @click="sporTil(r.t ? 't:' + r.t.id : r.d ? 'd:' + r.d.id : 'e:' + r.e.id)">Spor</button><button class="btn btn-ghost" @click="r.t ? openForm('tavle', r.t) : r.d ? openForm('daase', r.d) : openForm('enhed', r.e)">Rediger</button></td>
@@ -1437,13 +1438,15 @@
               </div>
             </div>
             <label class="f" for="m-kabel">Kabeltype
-              <select id="m-kabel" class="inp" x-model="form.kabel">
-                <template x-for="k in kabeltyper" :key="k"><option :value="k" :selected="form.kabel===k" x-text="k"></option></template></select></label>
-            <label class="f" for="m-ledere">Ledere
+              <select id="m-kabel" class="inp" x-model="form.kabel" @change="if (form.kabel === hoejtKabel) { form.ledere = '2X'; if (!htvs.includes(form.tv)) form.tv = 1.5; } else if (!tvs.includes(form.tv)) form.tv = 1.5">
+                <template x-for="k in kabeltyper" :key="k"><option :value="k" :selected="form.kabel===k" x-text="k"></option></template>
+                <template x-if="symbolFor(form) === 'hoejt' || form.kabel === hoejtKabel"><option :value="hoejtKabel" :selected="form.kabel===hoejtKabel" x-text="hoejtKabel + ' (fra forstærker)'"></option></template></select></label>
+            <label class="f" for="m-ledere" x-show="form.kabel !== hoejtKabel">Ledere
               <select id="m-ledere" class="inp num" x-model="form.ledere"><option>2X</option><option>3G</option><option>4G</option><option>5G</option></select></label>
             <label class="f" for="m-tv">Tværsnit (mm²)
               <select id="m-tv" class="inp num" x-model.number="form.tv">
-                <template x-for="a in tvs" :key="a"><option :value="a" :selected="form.tv==a" x-text="fmt(a)"></option></template></select></label>
+                <template x-for="a in (form.kabel === hoejtKabel ? htvs : tvs)" :key="a"><option :value="a" :selected="form.tv==a" x-text="(form.kabel === hoejtKabel ? '2 × ' : '') + fmt(a, 2)"></option></template></select></label>
+            <p class="text-xs text-muted sm:col-span-2" x-show="form.kabel === hoejtKabel">Højtalerkablet forsynes fra en forstærker og indgår ikke i 230 V-beregningerne (last, ΔU, Iz og Ik). Vælg forstærkeren under "Sløjfet fra brugsgenstand".</p>
             <label class="f" for="m-len">Længde (m)<input id="m-len" class="inp num" type="number" min="0" step="0.5" x-model.number="form.laengde" required></label>
             <label class="f" for="m-antal" x-show="!mid()">Antal (nummereres automatisk)<input id="m-antal" class="inp num" type="number" min="1" max="20" step="1" x-model.number="form.antal"></label>
             <label class="flex items-center gap-2 text-sm self-end pb-2" for="m-kaede" x-show="!mid() && form.antal > 1"><input type="checkbox" id="m-kaede" x-model="form.kaede" @change="if (form.kaede && !form.kKabel) Object.assign(form, { kKabel:form.kabel, kLedere:form.ledere, kTv:form.tv, kLaengde:form.laengde })"> Sløjf efter hinanden (1 → 2 → 3 …)</label>
@@ -1464,7 +1467,7 @@
             <label class="f" for="m-ehoejde">Højde over gulv (cm)<input id="m-ehoejde" class="inp num" type="number" min="0" step="1" x-model.number="form.hoejde"></label>
             <label class="flex items-center gap-2 text-sm self-end pb-2" for="m-etrukket"><input type="checkbox" id="m-etrukket" x-model="form.trukket"> Kablet er trukket</label>
             <label class="f" for="m-enote">Note til trækket<input id="m-enote" class="inp" x-model="form.note" placeholder="Venter på tømrer"></label>
-            <div class="text-xs num self-end pb-2" x-show="form.gruppeId">
+            <div class="text-xs num self-end pb-2" x-show="form.gruppeId && form.kabel !== hoejtKabel">
               <div :class="duOver(form) && 'warn'" x-text="'ΔU ' + fmt(du(form), 2) + ' % (grænse ' + duGraense(form) + ' %)'"></div>
               <div :title="korrektion(gruppe(form.gruppeId), '', form.kabel).txt" :class="izFejl(form) && 'warn'" x-text="'Iz ' + fmt(iz(form)) + ' A · sikring ' + (gruppe(form.gruppeId) ? gruppe(form.gruppeId).In : '?') + ' A'"></div>
               <div class="text-muted" x-text="'Iz = ' + fmt(izTabel(form.kabel, form.tv, tre(form), forhold(gruppe(form.gruppeId)).metode)) + ' A × ' + fmt(korrektion(gruppe(form.gruppeId), '', form.kabel).kt, 2) + ' × ' + fmt(korrektion(gruppe(form.gruppeId), '', form.kabel).ks, 2) + ' (' + forholdTxt(gruppe(form.gruppeId)) + ')'"></div>
@@ -1812,16 +1815,16 @@
   </div>
 </div>
 
-<script src="js/data.js?v=10.30.0"></script>
-<script src="js/beregning.js?v=10.30.0"></script>
-<script src="js/diagram.js?v=10.30.0"></script>
-<script src="js/lagring.js?v=10.30.0"></script>
-<script src="js/historik.js?v=10.30.0"></script>
-<script src="js/billeder.js?v=10.30.0"></script>
-<script src="js/brand.js?v=10.30.0"></script>
-<script src="js/import.js?v=10.30.0"></script>
-<script src="js/aflevering.js?v=10.30.0"></script>
-<script src="js/app.js?v=10.30.0"></script>
+<script src="js/data.js?v=10.31.0"></script>
+<script src="js/beregning.js?v=10.31.0"></script>
+<script src="js/diagram.js?v=10.31.0"></script>
+<script src="js/lagring.js?v=10.31.0"></script>
+<script src="js/historik.js?v=10.31.0"></script>
+<script src="js/billeder.js?v=10.31.0"></script>
+<script src="js/brand.js?v=10.31.0"></script>
+<script src="js/import.js?v=10.31.0"></script>
+<script src="js/aflevering.js?v=10.31.0"></script>
+<script src="js/app.js?v=10.31.0"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.14.1/cdn.min.js"></script>
 </body>
 </html>

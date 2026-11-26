@@ -24,7 +24,7 @@ function app() {
     historik: { liste:[], commits:null, i:0, henter:false, fejl:'', pid:'' },
     brandIkke: false, billedTick: 0, billedArbejder: 0, billedOk: true, lysbillede: null, opryd: null, lager: null,
     synk: null, synkTokenInput: '', synkKoerer: false, synkIgen: false, synkFejl: '', iSynk: false,
-    tvs: TV, appVersion: APP_VERSION, backups: [], sidstBackup: '', persistent: false, lokF: '', q: '', soegAaben: false, sk: { key:'koekken', navn:'Køkken', tavleId:'' }, skabeloner: SKABELONER, anlaegNavn: ANLAEG,
+    tvs: TV, hoejtKabel: HOEJT, htvs: HTV, appVersion: APP_VERSION, backups: [], sidstBackup: '', persistent: false, lokF: '', q: '', soegAaben: false, sk: { key:'koekken', navn:'Køkken', tavleId:'' }, skabeloner: SKABELONER, anlaegNavn: ANLAEG,
     enhNavne: [...new Set(EFFEKT.map(x => x[2]))].sort((a, b) => a.localeCompare(b, 'da')), sim: {}, hurtig: { aaben:false, type:'lokale', felt:'', f:{} }, imp: { aaben:false, type:'enhed', tekst:'', hdr:true, hdrRoert:false, map:[], raekker:[], fh:[], opretLok:true }, eAuto: true, faseFs: null, belEnhSidst: 'W', dragL: null, overL: null, mFilter: '', dAuto: { type:true, lok:true },
     manglerKat: { gruppe:'Uden gruppe', tilgang:'Dåse uden tilgang', afgang:'Dåse uden afgang', port:'Mangler port i rack' },
     afbArt: { enpolet:'Enpolet afbryder', krone:'Kroneafbryder', korr:'Korrespondanceafbryder', kryds:'Krydsafbryder', kip:'Kiprelæ med tryk', trappe:'Trappeautomat med tryk', sensor:'Sensor (PIR)' },
@@ -45,7 +45,7 @@ function app() {
       kip: ['Fase og impulsleder til hvert tryk', 'Tændt leder fra relæet, nul og jord'], trappe: ['Fase og impulsleder til hvert tryk', 'Tændt leder fra relæet, nul og jord']
     },
     symNavn: { auto:'Automatisk ud fra navnet', lys:'Lampe', stik:'Stikkontakt', koel:'Køleskab', frys:'Fryser', ovn:'Ovn', koge:'Kogeplade', mikro:'Mikroovn', opvask:'Opvaskemaskine',
-      vask:'Vaskemaskine', toerre:'Tørretumbler', emhaette:'Emhætte', vvb:'Vandvarmer', varme:'Elvarme', vp:'Varmepumpe', motor:'Motor', ev:'Ladeboks', it:'IT-udstyr', tilgang:'Tilgang (ingen last)', gen:'Andet' },
+      vask:'Vaskemaskine', toerre:'Tørretumbler', emhaette:'Emhætte', vvb:'Vandvarmer', varme:'Elvarme', vp:'Varmepumpe', motor:'Motor', ev:'Ladeboks', it:'IT-udstyr', tilgang:'Tilgang (ingen last)', hoejt:'Højtaler (fra forstærker)', gen:'Andet' },
 
     init() {
       window.__alpineOk = true;
@@ -173,7 +173,7 @@ function app() {
     lokalerIGruppe(gid) { const ids = new Set(this.enhederFor(gid).map(e => e.lokaleId)); return this.db.lokaler.filter(l => ids.has(l.id)); },
     grupperILokale(lid) { const ids = new Set(this.enhederILokale(lid).map(e => e.gruppeId)); return this.sorteredeGrupper().filter(g => ids.has(g.id)); },
     lokaleMeter(lid) { return this.sumLen(this.enhederILokale(lid).map(e => ({ e }))); },
-    kabelDim(e) { return e.ledere + this.fmt(e.tv) + ' mm²'; },
+    kabelDim(e) { return e.ledere + this.fmt(e.tv, 2) + ' mm²'; },  /* to decimaler til højtalerkablets 0,75 mm² */
     gruppeKabler(gid) { return [...new Set(this.daaserFor(gid).concat(this.enhederFor(gid)).map(e => e.ledere + this.fmt(e.tv)))].join(', '); },
     skinne(tid) {
       const out = [{ k:'main' + tid, kind:'main' }], gs = this.grupperFor(tid), brugt = new Set();
@@ -555,6 +555,7 @@ function app() {
       if (this.billedFelt(type)) rec.billeder = bIdListe(rec.billeder);  /* skema 16 */
       if (type === 'daase' && (rec.parentId === id || (id && this.erUnder(rec.parentId, id)))) rec.parentId = '';
       if (type === 'link' && rec.art !== 'cctv') rec.nvrId = '';
+      if (type === 'enhed' && rec.kabel === HOEJT) { rec.ledere = '2X'; if (!HTV.includes(rec.tv)) rec.tv = 1.5; }
       if (type === 'link') rec.trukket = !!rec.trukket;
       if (type === 'udstyr') rec.poe = rec.art === 'switch' && !!rec.poe;
       if (type === 'afbryder') {

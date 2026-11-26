@@ -1014,6 +1014,32 @@ async def main():
         tjek('lokaler: fast højde med rulning, udvid ét eller alle lokaler, + Samledåse med lokalet valgt',
              r['start'] and r['en'] and r['alleUd'] and r['alleInd'] and r['daase'] == ['daase', True], r)
 
+        # 4s. Skema 20: højtalerkabel fra en forstærker. Opgradering fra skema 19, formular, ingen 230 V-last, ΔU, Iz eller Ik, egen stil i enstreg, egen linje i materialelisten
+        r0 = await pg.evaluate("""(()=>{const i=JSON.parse(localStorage.getItem('tavleoversigt.projekter'));i.schema=19;const id=i.aktiv;
+          const p=JSON.parse(localStorage.getItem('tavleoversigt.p.'+id));p.projekt.navn='Skema 19-projekt';
+          localStorage.setItem('tavleoversigt.p.'+id,JSON.stringify(p));localStorage.setItem('tavleoversigt.projekter',JSON.stringify(i));localStorage.removeItem('tavleoversigt.backups');
+          return {p:JSON.stringify(p)}})()""")
+        await pg.goto(URL); await pg.wait_for_timeout(500)
+        r = await pg.evaluate(f"""async()=>{{const a={A};const T=n=>new Promise(f=>setTimeout(f,n));const d=JSON.parse(JSON.stringify(a.db)), p=JSON.parse({json.dumps(r0['p'])}), o={{}};
+          o.ens=['tavler','lokaler','daaser','grupper','enheder','links','brandlukninger'].every(k=>p[k].length===d[k].length&&p[k].every((x,n)=>Object.keys(x).every(f=>JSON.stringify(x[f])===JSON.stringify(d[k][n][f]))));
+          a.save(); o.meta=[d.projekt.navn, a.backups.length>=1, JSON.parse(localStorage.getItem('tavleoversigt.projekter')).schema];
+          const g=a.db.grupper[0], fs=a.db.enheder.find(e=>e.gruppeId===g.id&&!a.erHoejt(e)); const I0=a.gruppeI(g.id), W0=a.tavleW(g.tavleId), ik0=a.ikMin(g);
+          a.openForm('enhed',null,{{gruppeId:g.id}}); await T(80); const harFoer=[...document.querySelectorAll('#m-kabel option')].some(x=>x.value==='Højtalerkabel');
+          a.form.navn='Højtaler test'; await T(80); o.valg=[harFoer, [...document.querySelectorAll('#m-kabel option')].some(x=>x.value==='Højtalerkabel'), a.symbolFor(a.form)];
+          Object.assign(a.form,{{kabel:'Højtalerkabel',ledere:'3G',tv:0.75,laengde:30,belVal:60,belEnh:'W',effekt:60,fraEnhed:fs.id}}); a.sloejfeValg(); await T(60);
+          o.tvValg=[...document.querySelectorAll('#m-tv option')].map(x=>Number(x.value)); a.saveForm(); await T(80);
+          const h=a.db.enheder.find(e=>e.navn==='Højtaler test'); o.rec=h&&[h.kabel,h.ledere,h.tv,h.fraEnhed===fs.id];
+          o.calc=[a.strom(h), a.gruppeI(g.id)===I0, a.tavleW(g.tavleId)===W0, a.duOver(h), a.iz(h), a.izFejl(h), JSON.stringify(a.ikMin(g))===JSON.stringify(ik0), a.lmax(h), a.forslag(h)];
+          o.sld=a.sld(false).includes('class="l hj"')&&a.sld(true).includes('.hj{{');
+          o.mat=JSON.stringify(a.materialer()).includes('Højtalerkabel 2X0,75 mm²');
+          o.norm=JSON.stringify(norm({{enheder:[{{id:'x',kabel:'Højtalerkabel',ledere:'5G',tv:6}},{{id:'y',kabel:'Ukendt'}}]}}).enheder.map(e=>[e.kabel,e.ledere,e.tv]));
+          a.db.enheder=a.db.enheder.filter(e=>e.id!==h.id); a.save(); a.modal=null;
+          return o}}""")
+        tjek('opgradering fra skema 19: backup taget, data intakte; højtalerkabel kun for højtaler, ingen 230 V-last, ΔU, Iz eller Ik, stiplet i enstreg, egen linje i materialelisten',
+             r['meta'] == ['Skema 19-projekt', True, SKEMA] and r['ens'] and r['valg'] == [False, True, 'hoejt'] and r['tvValg'] == [0.75, 1.5, 2.5, 4]
+             and r['rec'] == ['Højtalerkabel', '2X', 0.75, True] and r['calc'] == [0, True, True, False, 0, False, True, None, None] and r['sld'] and r['mat']
+             and r['norm'] == '[["Højtalerkabel","2X",1.5],["PVC",null,null]]', r)
+
         await pg.evaluate(f"{A}.go('tavle')")
 
         # 5. Backupfil kan hentes og indlæses uden at overskrive. Den indeholder billederne
