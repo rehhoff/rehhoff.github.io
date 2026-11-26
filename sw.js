@@ -1,7 +1,7 @@
 /* Service worker til El-oversigtsappen: appen virker uden net, når den har været åbnet én gang.
    VERSION skal være lig APP_VERSION i js/data.js og ?v= i index.html. Røgtesten kontrollerer det.
    Plan: docs/planer/2026-11-16-offline.md */
-const VERSION = '10.29.2';
+const VERSION = '10.30.0';
 const CACHE = 'el-oversigt-' + VERSION, FONTE = 'el-oversigt-fonte';
 const V = '?v=' + VERSION;
 const SKAL = ['./', 'index.html', 'manifest.webmanifest', 'ikoner/ikon-192.png', 'ikoner/ikon-512.png', 'ikoner/ikon.svg', 'ikoner/apple-touch-icon.png',

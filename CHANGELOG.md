@@ -2,6 +2,12 @@
 
 Nyeste øverst. Versionsnummeret står også i appen som `APP_VERSION`. Hver version siger, hvilken model der lavede den.
 
+## 10.30.0 · 2026-11-26 · Claude Opus 5.5
+
+- Fanen Lokaler: knappen **+ Samledåse** på hvert lokale åbner samlepunktets formular med lokalet valgt, som **+ Brugsgenstand**.
+- Fanen Lokaler: listerne med brugsgenstande, samlepunkter og svagstrøm har en fast højde (20 rem) og rulles. ⊞ i lokalets overskrift udvider lokalet, ⊟ folder det sammen. Knappen **Udvid alle** / **Fold alle sammen** gælder alle lokaler. Valget gemmes ikke og nulstilles ved genindlæsning.
+- Ingen ændring i datamodellen.
+
 ## 10.29.2 · 2026-11-25 · Claude Opus 5.5
 
 Rettelser efter gennemgang af datasikringen. Plan: `docs/planer/2026-11-25-gennemgang-datasikring.md`.

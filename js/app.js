@@ -4,6 +4,7 @@ function bland(...dele) { const r = {}; for (const d of dele) Object.definePrope
 function app() {
   return bland({
     view: 'tavle',
+    lokAlleUd: false, lokUd: {},  /* Lokaler: listerne er foldet sammen til en fast højde; lokUd[id] overstyrer lokAlleUd for ét lokale */
     fvIkke: false, fvFold: new Set(), fvAaben: new Set(), fvHi: '', fvAnc: [], fvBlink: '', gren: null, sfPop: null, fvRed: null, fvTmp: null,
     views: [ { id:'tavle', l:'Tavle' }, { id:'enstreg', l:'Enstregsdiagram' }, { id:'taending', l:'Tændingsdiagram' }, { id:'samlepunkter', l:'Samlepunkter & dåser' }, { id:'foering', l:'Føringsvej' }, { id:'svag', l:'Svagstrøm' }, { id:'beregning', l:'Beregning' }, { id:'lokaler', l:'Lokaler' }, { id:'kabler', l:'Kabler' }, { id:'dokumentation', l:'Dokumentation' }, { id:'fejlfinder', l:'Fejlfinder' }, { id:'brand', l:'Brandlukning' } ],
     db: tom(), dbRev: 0, hist: [], fremtid: [], klon: null, sel: null, drag: null, over: null,

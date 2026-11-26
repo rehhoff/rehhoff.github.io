@@ -14,8 +14,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=10.29.2">
-<link rel="stylesheet" href="css/tailwind.css?v=10.29.2">
+<link rel="stylesheet" href="css/app.css?v=10.30.0">
+<link rel="stylesheet" href="css/tailwind.css?v=10.30.0">
 </head>
 <body class="min-h-full">
 <p id="fail" hidden style="margin:16px;padding:12px;border:1px solid var(--crit);color:var(--crit)">Appen kunne ikke starte, fordi Alpine.js ikke blev indlæst. Genindlæs siden.</p>
@@ -749,7 +749,7 @@
 
   <!-- ============ LOKALER ============ -->
   <template x-if="view==='lokaler'"><section class="flex flex-col gap-3">
-    <div class="flex flex-wrap gap-2"><button class="btn" @click="openForm('lokale')">+ Lokale <kbd>L</kbd></button><button class="btn" @click="aabnSkabelon()">+ Lokale fra skabelon</button><button class="btn" @click="impAaben('lokale')">Importér fra regneark</button></div>
+    <div class="flex flex-wrap gap-2"><button class="btn" @click="openForm('lokale')">+ Lokale <kbd>L</kbd></button><button class="btn" @click="aabnSkabelon()">+ Lokale fra skabelon</button><button class="btn" @click="impAaben('lokale')">Importér fra regneark</button><button class="btn" id="lok-alle" @click="lokAlleUd = !lokAlleUd; lokUd = {}" x-text="lokAlleUd ? 'Fold alle sammen' : 'Udvid alle'"></button></div>
     <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
       <template x-for="l in db.lokaler.filter(l => !lokF || l.id === lokF)" :key="l.id">
         <article class="panel flex flex-col" :class="dragL && overL===l.id && dragL!==l.id && 'ring-2 ring-accent'" @dragover="dragL && ($event.preventDefault(), overL=l.id)" @drop="slipLokale(l.id, $event)">
@@ -769,6 +769,7 @@
             <span class="flex items-center shrink-0">
               <span class="btn btn-ghost px-1 drag" draggable="true" title="Træk for at flytte lokalet" aria-hidden="true" @dragstart="dragL=l.id; $event.dataTransfer.effectAllowed='move'; $event.dataTransfer.setData('text/plain', l.id)" @dragend="dragL=null; overL=null">⠿</span>
               <button type="button" class="btn btn-ghost px-1" @click="ryk('lokaler', l.id, -1)" aria-label="Flyt lokale op" title="Flyt op">▲</button><button type="button" class="btn btn-ghost px-1" @click="ryk('lokaler', l.id, 1)" aria-label="Flyt lokale ned" title="Flyt ned">▼</button>
+              <button type="button" class="btn btn-ghost px-1 lok-fold" @click="lokUd = Object.assign({}, lokUd, { [l.id]: !(lokUd[l.id] ?? lokAlleUd) })" :aria-expanded="String(lokUd[l.id] ?? lokAlleUd)" :aria-label="(lokUd[l.id] ?? lokAlleUd) ? 'Fold lokalet sammen' : 'Udvid lokalet'" :title="(lokUd[l.id] ?? lokAlleUd) ? 'Fold sammen' : 'Udvid'" x-text="(lokUd[l.id] ?? lokAlleUd) ? '⊟' : '⊞'"></button>
               <button class="btn btn-ghost" @click="openForm('lokale', l)">Rediger</button>
             </span>
           </header>
@@ -782,6 +783,7 @@
                 </template>
               </div>
             </div>
+            <div class="lok-lister flex flex-col gap-3" :class="!(lokUd[l.id] ?? lokAlleUd) && 'max-h-80 overflow-y-auto'">
             <ul class="flex flex-col text-sm">
               <template x-for="e in enhederILokale(l.id)" :key="e.id">
                 <li class="typed stripe flex items-baseline justify-between gap-2 border-b border-line last:border-b-0 py-1 pl-2" :class="typeOf(e)">
@@ -804,8 +806,10 @@
                   <span class="num text-xs text-muted whitespace-nowrap" x-text="x.kabel + ' · ' + portTxt(x, 'switch')"></span></li>
               </template>
             </ul>
+            </div>
             <div class="mt-auto flex flex-wrap gap-1">
               <button class="btn" @click="openForm('enhed', null, {lokaleId:l.id})">+ Brugsgenstand</button>
+              <button class="btn" @click="openForm('daase', null, {lokaleId:l.id})">+ Samledåse</button>
               <button class="btn" @click="filterLokale(l.id)">Vis i kabeltabel</button>
               <button class="btn" @click="lokF = lokF===l.id ? '' : l.id" x-text="lokF===l.id ? 'Vis alle lokaler' : 'Filtrér alle faner'"></button>
               <button class="btn" @click="klonAabn(l.id)">Klon lokale</button>
@@ -1808,16 +1812,16 @@
   </div>
 </div>
 
-<script src="js/data.js?v=10.29.2"></script>
-<script src="js/beregning.js?v=10.29.2"></script>
-<script src="js/diagram.js?v=10.29.2"></script>
-<script src="js/lagring.js?v=10.29.2"></script>
-<script src="js/historik.js?v=10.29.2"></script>
-<script src="js/billeder.js?v=10.29.2"></script>
-<script src="js/brand.js?v=10.29.2"></script>
-<script src="js/import.js?v=10.29.2"></script>
-<script src="js/aflevering.js?v=10.29.2"></script>
-<script src="js/app.js?v=10.29.2"></script>
+<script src="js/data.js?v=10.30.0"></script>
+<script src="js/beregning.js?v=10.30.0"></script>
+<script src="js/diagram.js?v=10.30.0"></script>
+<script src="js/lagring.js?v=10.30.0"></script>
+<script src="js/historik.js?v=10.30.0"></script>
+<script src="js/billeder.js?v=10.30.0"></script>
+<script src="js/brand.js?v=10.30.0"></script>
+<script src="js/import.js?v=10.30.0"></script>
+<script src="js/aflevering.js?v=10.30.0"></script>
+<script src="js/app.js?v=10.30.0"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.14.1/cdn.min.js"></script>
 </body>
 </html>
