@@ -117,6 +117,11 @@ button.din-item{cursor:pointer}
 .port.poe{box-shadow:inset 0 -3px 0 #e8b400} .port.konf{background:var(--crit);border-color:var(--crit);color:var(--raised)}
 .rackb{position:absolute;top:1rem;left:2px;font-size:.8rem;background:var(--raised);border-radius:2px;line-height:1;padding:1px}
 /* enstregsdiagram */
+/* Plantegning: tegning som SVG med nummererede prikker (grøn = færdig, orange = mangler) og kabelvej under måling */
+.plan-boks{max-height:75vh;overflow:auto;background:var(--raised);touch-action:pan-x pan-y pinch-zoom} .plan-svg{display:block;width:100%;height:auto;background:#fff}
+.plan-mode{cursor:crosshair} .plan-svg .pp{cursor:pointer} .plan-svg .pp circle{stroke:#fff;stroke-width:3} .plan-svg .pp.ok circle{fill:var(--cctv)} .plan-svg .pp.ikke circle{fill:var(--kraft)}
+.plan-svg .pp.valgt circle{stroke:var(--accent);stroke-width:6} .plan-svg .pp text{fill:#fff;font:600 20px "IBM Plex Sans",sans-serif;pointer-events:none}
+.plan-svg .pm{fill:none;stroke:var(--crit);stroke-width:3;stroke-dasharray:8 5} .plan-svg .pmp{fill:var(--crit)}
 /* enstreg i fuld skærm og med egen baggrund. Tokens sættes på .sldbox, så kun diagrammet skifter */
 .sld-stor{position:fixed;inset:0;z-index:45;display:flex;flex-direction:column;border-radius:0} .sld-stor .sldbox{flex:1;height:auto}
 .sldbox.sld-lys{--raised:#ffffff; --ink:#181d20; --muted:#566068; --line:#bfc6ca; --accent:#0d6b63; --crit:#b3204f;

@@ -2,6 +2,18 @@
 
 Nyeste øverst. Versionsnummeret står også i appen som `APP_VERSION`. Hver version siger, hvilken model der lavede den.
 
+## 10.33.0 · 2026-11-26 · Claude Opus 5.5
+
+Ny fane **Plantegning**. Plan: `docs/planer/2026-11-26-plantegning.md`.
+
+- Upload af plantegninger, eltegninger og lignende som billede (JPEG/PNG) eller PDF. En PDF bliver til én tegning pr. side. Tegningerne gemmes i høj opløsning (ca. 3000 px, højst ca. 1,5 MB) på enheden og synkroniseres som de andre billeder.
+- **Placér komponenter:** tavler, samlepunkter, brugsgenstande, dataudtag/kameraer og brandlukninger sættes som nummererede prikker. En prik er grøn, når kablet er trukket eller lukningen udført med mærkat, og orange, når noget mangler. Klik åbner posten. Klik på en prik i placeringstilstand flytter den.
+- **Målestok og mål kabel:** klik på to punkter med kendt afstand, og tegn derefter kabelvejen. Længden kan bruges direkte på en brugsgenstand, et samlepunkt eller et dataudtag og rundes op til nærmeste 0,5 m.
+- **Lokale:** en tegning kan knyttes til et lokale. Lokalefilteret gælder fanen, og fanen Lokaler viser lokalets tegninger.
+- **Dokumentation:** afsnittet "Plantegninger" viser hver tegning med prikker og en liste med status.
+- Skema 21: ny liste `tegninger`. Billederne er med i backupfil, billedsynk og oprydningens tjek (`billedIds()`). Der tages backup ved første start.
+- PDF-læseren (pdf.js) hentes fra nettet første gang, en PDF indlæses.
+
 ## 10.32.1 · 2026-11-26 · Claude Opus 5.5
 
 - Rettelse: Højtalerkabel kan nu også vælges som sløjfekabel under **Sløjf efter hinanden**, med tværsnit 2 × 0,75–4 mm², og ledere er altid 2X. Krydses sløjfning af for højtalere med højtalerkabel, foreslås højtalerkabel. Et ugyldigt tværsnit for sløjfekablet rettes til 1,5 mm².

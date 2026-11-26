@@ -16,6 +16,7 @@
 | `js/lagring.js` | `APP_LAGRING()`: projekter, eksport, import, backup, synkronisering |
 | `js/billeder.js` | `APP_BILLEDER()`: billeder til brandlukninger, tavler, lokaler og samledåser. Fælles billedfelt i formularerne, komprimering med canvas, IndexedDB (`tavleoversigt-billeder`), miniaturer, billedsynk til separate Gists (højst 250 billeder i hver), billeder i backupfilen, lageradvarsel, oprydning af ubrugte billeder, afsnittet Billeder i dokumentationen |
 | `js/brand.js` | `APP_BRAND()`: fanen Brandlukning (liste, filtre, optælling, formular) og afsnittet i dokumentationen |
+| `js/plan.js` | `APP_PLAN()`: fanen Plantegning (skema 21): upload af billeder og PDF (pdf.js 3.11.174 fra cdnjs, én tegning pr. side, ca. 3000 px), visning som SVG, prikker, målestok, måling af kabellængde og afsnittet i dokumentationen. `TEGN` holder de fulde tegninger i hukommelsen |
 | `js/aflevering.js` | `APP_AFLEVERING()`: afleveringstjek i Fejlfinder (`aflTjek`, `aflAntal`, `aflGaa`, statuslinje i dokumentationen) og tavlefortegnelsen (`tavleFortegnelseHtml`, `udskrivFortegnelse`). Ingen egne data |
 | `js/import.js` | `APP_IMPORT()`: import af brugsgenstande og lokaler fra indsatte regnearksceller (overskrifter, forhåndsvisning, ét fortrydeligt trin) |
 | `js/historik.js` | `APP_HISTORIK()`: tidligere versioner af det aktive projekt fra Gist'ens versionshistorik (`/gists/{id}/commits`), gendannes som kopi |
@@ -33,7 +34,7 @@ Scriptsene er almindelige scripts (ikke ES-moduler) og deler globalt scope. Ræk
 
 Under 1024 px står hovedets titel og værktøjer under hinanden, og fanerne er én række, der kan rulles sidelæns (`.faner`, `lg:contents` fra 1024 px). Under 640 px vises måleskemaet som kort (`.mk`) i stedet for tabellen. Desktop-layoutet er uændret.
 
-Faner i `views`: Tavle, Enstregsdiagram, Tændingsdiagram, Samlepunkter & dåser, Svagstrøm, Beregning, Lokaler, Kabler, Dokumentation, Fejlfinder. Tasterne 1 til 9 og 0 skifter fane. Under Lokaler har hver brugsgenstand et afkrydsningsfelt for `trukket` (samme felt som i Føringsvej, sættes med `fvSaet`), og lokalets overskrift viser "x af y trukket". Listerne i hvert lokale har en fast højde med rulning; ⊞/⊟ udvider ét lokale (`lokUd[id]`), og "Udvid alle" sætter `lokAlleUd`. Tilstanden gemmes ikke. "+ Samledåse" åbner samlepunktets formular med lokalet valgt.
+Faner i `views`: Tavle, Enstregsdiagram, Tændingsdiagram, Samlepunkter & dåser, Svagstrøm, Beregning, Lokaler, Kabler, Dokumentation, Fejlfinder, Brandlukning, Plantegning (de to sidste uden tast). Tasterne 1 til 9 og 0 skifter fane. Under Lokaler har hver brugsgenstand et afkrydsningsfelt for `trukket` (samme felt som i Føringsvej, sættes med `fvSaet`), og lokalets overskrift viser "x af y trukket". Listerne i hvert lokale har en fast højde med rulning; ⊞/⊟ udvider ét lokale (`lokUd[id]`), og "Udvid alle" sætter `lokAlleUd`. Tilstanden gemmes ikke. "+ Samledåse" åbner samlepunktets formular med lokalet valgt.
 
 ## Ydelse
 
@@ -79,6 +80,7 @@ Skema 16 (`docs/planer/2026-11-18-billeder.md`): højst `BMAKS` = 250 billeder p
 | `udstyr` | `id, rackId, navn, art, he, pos, porte, poe, poeBudget, effekt` |
 | `links` | `id, art (data, cctv), navn, lokaleId, kabel, laengde, panelId, panelPort, switchId, switchPort, patch, poeW, kamType, oploesning, nvrId`, `trukket` (skema 19, kablet er trukket) |
 | `brandlukninger` | Skema 15: `id, nr, lokaleId, placering, beskrivelse, brandklasse, produkt` (fritekst), `brandklasser[]` (skema 18, afkrydsede fra `BRANDKLASSER`), `produkter[]` (skema 17, afkrydsede fra `BRANDPRODUKTER`), `udfoert, maerkat` (brandmærkat sat), `note`, `billeder[]` (billed-id'er; selve billederne ligger i IndexedDB) |
+| `tegninger` | Skema 21: `id, navn, lokaleId, billede` (billed-id i IndexedDB og billed-Gist), `forhold` (højde/bredde), `skala` (meter pr. billedbredde, 0 = ingen målestok), `punkter[]`: `{ k, x, y }` med `k` som i enstreg (`t:`, `d:`, `e:`, `x:`) plus `b:` for brandlukning, og `x`, `y` som brøkdel af billedets bredde. Indgår i `billedIds()` |
 
 Relationer: gruppe → tavle, gruppe → HPFI, brugsgenstand → gruppe, lokale og evt. samledåse eller en anden brugsgenstand (sløjfe), afbryder → evt. dåse eller brugsgenstand (træk), samledåse → gruppe og evt. overordnet dåse, undertavle → tavle og evt. gruppe (`fraGruppe`), link → patchpanel, switch og NVR.
 

@@ -368,7 +368,7 @@ const APP_LAGRING = () => ({
           '<p>' + esc((a.art === 'krone' ? 'Tænding 1: ' : 'Lamper: ') + (this.afbLamper(a, 'a') || 'ingen valgt') + (a.art === 'krone' ? ' · Tænding 2: ' + (this.afbLamper(a, 'b') || 'ingen valgt') : '')) + '</p></div>';
         h += '</section>';
       }
-      h += this.billedDocHtml() + this.brandDocHtml();
+      h += this.billedDocHtml() + this.planDocHtml() + this.brandDocHtml();
       const blok = t => '<div><b>' + t + '</b><div class="l"></div><div class="t">Navn</div><div class="l"></div><div class="t">Dato</div><div class="l"></div><div class="t">Underskrift</div></div>';
       h += '<section class="sig"><h2>Underskrift</h2><div class="sb">' + blok('Montør') + blok('Ansvarlig for kvalitetsledelsessystem (KLS)') + '</div></section>';
       return h + '</body></html>';

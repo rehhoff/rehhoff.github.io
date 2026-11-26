@@ -31,7 +31,7 @@ const APP_BILLEDER = () => ({
         (minier || []).forEach(m => { if (m && bOk(m.data)) BMINI[m.id] = m.data; }); (noegler || []).forEach(k => BFULD.add(k));
         this.billedOk = true;
       } catch (e) { this.billedOk = false; }
-      this.billedTick++; this.billedLager();
+      this.billedTick++; this.billedLager(); this.planHentAlle();
     },
     billedSrc(id) { this.billedTick; return BMINI[id] || ''; },
     billedHar(id) { this.billedTick; return BFULD.has(id); },
