@@ -1115,10 +1115,11 @@ async def main():
             li[0].querySelector('.lok-traek').dispatchEvent(new DragEvent('dragstart',{{bubbles:true,dataTransfer:dt}})); await T(20);
             const sidste=li[li.length-1]; sidste.dispatchEvent(new DragEvent('dragover',{{bubbles:true,cancelable:true,dataTransfer:dt}})); sidste.dispatchEvent(new DragEvent('drop',{{bubbles:true,cancelable:true,dataTransfer:dt}})); await T(80);
             const g1=ids(); o.traek=g1[g1.length-1]===g0[0]&&g1[0]===g0[1]&&g1.length===g0.length&&a.db.lokaler.map(x=>x.id).join()===lokOrd; a.undo(); await T(40); o.traekFortryd=JSON.stringify(ids())===JSON.stringify(g0); }}
+          {{ const li=[...art.querySelectorAll('.lok-lister ul')[0].children].filter(x=>x.tagName==='LI'), bg=x=>getComputedStyle(x).backgroundColor; o.zebra=bg(li[0])!==bg(li[1])&&bg(li[0])===bg(li[2]||li[0]); }}
           a.lokAlleUd=false; a.go('tavle'); await T(50);
           return o}}""")
         tjek('lokaler: + Dataudtag og + Kamera med lokalet valgt; brugsgenstande flyttes op og ned inden for lokalet og kan fortrydes',
-             r['data'] == ['link', 'data', True] and r['kam'] == ['cctv', True] and r['ned'] and r['op'] and r['fortryd'] and r['traek'] and r['traekFortryd'], r)
+             r['data'] == ['link', 'data', True] and r['kam'] == ['cctv', True] and r['ned'] and r['op'] and r['fortryd'] and r['traek'] and r['traekFortryd'] and r['zebra'], r)
 
         await pg.evaluate(f"{A}.go('tavle')")
 

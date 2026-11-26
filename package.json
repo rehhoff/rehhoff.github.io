@@ -1,6 +1,6 @@
 {
   "name": "el-oversigtsapp",
-  "version": "10.35.0",
+  "version": "10.35.1",
   "private": true,
   "description": "El-oversigtsappen: tavler, grupper, kabler og diagrammer. Hele appen er index.html.",
   "scripts": {
