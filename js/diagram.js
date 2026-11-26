@@ -64,7 +64,7 @@ const APP_DIAGRAM = () => ({
         return op.concat([{ key:'t:' + t.id, txt:t.navn }]);
       };
       const opGruppe = (gid, n) => { const g = this.gruppe(gid); if (!g) return []; const r = this.rcd(g); return opTavle(g.tavleId, n).concat(r ? [{ key:'r:' + r.id, txt:r.navn }] : [], [{ key:'g:' + g.id, txt:'G' + g.nr + ' ' + g.navn }]); };
-      const opDaase = did => { const ks = []; let x = this.daase(did), n = 0; while (x && n++ < 20) { ks.unshift({ key:'d:' + x.id, txt:x.type + ' ' + x.navn }); x = this.daase(x.parentId); } return ks; };
+      const opDaase = did => this.vejDaase(did).reverse().map(x => this.daase(x.id) === x ? { key:'d:' + x.id, txt:x.type + ' ' + x.navn } : { key:'e:' + x.id, txt:x.navn });
       const opRack = rid => { const r = this.rack(rid); return r ? opGruppe(r.gruppeId).concat([{ key:'k:' + r.id, txt:'Rack ' + r.navn }]) : []; };
       if (a === 'e' && (o = d.enheder.find(e => e.id === id))) { const af = this.afbFor(id); return opGruppe(o.gruppeId).concat(opDaase(this.enhedDaase(o)), this.sloejfeVej(o).reverse().map(p => ({ key:'e:' + p.id, txt:p.navn })), af ? [{ key:'a:' + af.id, txt:af.navn }] : [], [{ key:sel, txt:o.navn }]); }
       if (a === 'a' && (o = d.afbrydere.find(x => x.id === id))) return opGruppe(o.gruppeId).concat([{ key:sel, txt:o.navn }]);
@@ -208,7 +208,7 @@ const APP_DIAGRAM = () => ({
     },
     sld(print) {
       /* dybde = antal mellemled (dåser og Tilgange i serie) før brugsgenstandene. Bestemmer, hvor langt til højre symbolerne står. */
-      const nivD = did => { let n = 0, x = this.daase(did); while (x && n < 6) { n++; x = this.daase(x.parentId); } return n; };
+      const nivD = did => Math.min(6, this.vejDaase(did).length);
       const erTilg = e => !this.enhed(e.fraEnhed) && this.symbolFor(e) === 'tilgang';
       const dyb = Math.min(5, Math.max(0, ...this.db.daaser.map(d => nivD(d.id)), ...this.db.enheder.filter(erTilg).map(e => nivD(e.daaseId) + 1)));
       const ROW = 36, DX = 170, XB = 150, XR = 212, XS = 280, XG = 342, XL = 500, XE = 810 + DX * dyb, XA = XE - 40, W = 1280 + DX * dyb, sel = print ? null : this.sldSel, o = [];
@@ -248,15 +248,16 @@ const APP_DIAGRAM = () => ({
            Børn uden egne sløjfer først, så fire udtag med hver sin stikkontakt giver U1, S1, U2, S2 … */
         const es = this.db.enheder.filter(e => e.gruppeId === gr.id && (did ? e.daaseId === did : !this.daase(e.daaseId)) && !this.enhed(e.fraEnhed));
         es.sort((a, b) => (erTilg(b) ? 1 : 0) - (erTilg(a) ? 1 : 0));
-        const ds = this.db.daaser.filter(d => d.gruppeId === gr.id && (did ? d.parentId === did : !this.daase(d.parentId)) && !seen.has(d.id));
+        const ds = this.db.daaser.filter(d => d.gruppeId === gr.id && !this.enhed(d.fraEnhed) && (did ? d.parentId === did : !this.daase(d.parentId)) && !seen.has(d.id));
+        const dFra = e => (this.kid().daaseFra.get(e.id) || []).filter(d => !seen.has(d.id));
         let r = yy, last = yy;
         const cl = key => (sporSet.has(key) ? ' tr' : '') + (lokSet && !lokSet.has(key) ? ' dim' : '');
         const tegnE = (e, sx, fra, eSet) => {
           eSet.add(e.id); const ry = r, eb = (this.duOver(e) || this.izFejl(e)) ? 'bad' : '', af = afbAf.get(e.id), gab = af ? afGab(af.art) : null, hj = this.erHoejt(e) ? 'hj' : '';
-          const kids = this.sloejfer(e.id).filter(x => !eSet.has(x.id)), px = Math.min(sx + 24, XA - 60);
+          const kids = this.sloejfer(e.id).filter(x => !eSet.has(x.id)), px = Math.min(sx + 24, XA - 60), dk2 = dFra(e);
           kids.sort((a, b) => (this.sloejfer(a.id).length ? 1 : 0) - (this.sloejfer(b.id).length ? 1 : 0));
           o.push(k('e:' + e.id, eb, (af ? ln(sx, r, XA - gab[0], r, hj) + ln(XA + gab[1], r, XE - 9, r, hj) : ln(sx, r, XE - 9, r, hj)) + load(this.symbolFor(e), XE, r) +
-            (kids.length ? `<circle class="dot sp" data-sp="${e.id}" cx="${px}" cy="${r}" r="3"/>` : '') +
+            (kids.length || dk2.length ? `<circle class="dot sp" data-sp="${e.id}" cx="${px}" cy="${r}" r="3"/>` : '') +
             tx(sx + 10, r - 6, (fra ? '' : 'G' + gr.nr + ' | ' + gr.In + 'A | ') + e.ledere + this.fmt(e.tv, 2) + ' ' + (hj ? 'højtalerkabel' : kort(e.kabel, 9)) + ' | ' + this.fmt(e.laengde) + 'm', hj ? 't hjt' : '') +
             tx(XE + 26, r - 1, kort(e.navn, 38)) + tx(XE + 26, r + 12, this.lokaleNavn(e.lokaleId) + ' · ' + (hj ? 'højtaler, ikke 230 V' + (fra ? ' · fra forstærker ' + kort(fra.navn, 18) : ' · ingen forstærker valgt') : (e.effekt ? e.effekt + ' W · ΔU ' + this.fmt(this.du(e), 2) + ' %' : 'ingen fast last') + (fra ? ' · sløjfe fra ' + kort(fra.navn, 18) : '')), 'm'), sx + 3, r, W - sx - 10, ' data-fra="' + (fra ? fra.id : '') + '"'));
           if (af) o.push(`<g class="k af${sel === 'a:' + af.id ? ' on' : ''}${cl('a:' + af.id)}" data-k="a:${af.id}"><title>${esc(af.navn + ' · ' + afTxt(af))}</title>` +
@@ -264,8 +265,19 @@ const APP_DIAGRAM = () => ({
           r += ROW;
           const stik = [];
           for (const c of kids) { if (eSet.has(c.id)) continue; stik.push([c.id, r]); tegnE(c, px, e, eSet); }
+          /* dåser sløjfet fra e (skema 22) udgår fra samme prik */
+          for (const d of dk2) { if (seen.has(d.id)) continue; stik.push(['d:' + d.id, r]); tegnD(d, px); }
           /* lodrette sløjfestreger: længste først, så en fremhævet kort streg ikke dækkes af en længere */
-          stik.reverse().forEach(([cid, cy]) => o.push(`<g class="k sl${cl('e:' + cid)}">${ln(px, ry, px, cy, this.erHoejt(this.enhed(cid)) ? 'hj' : '')}</g>`));
+          stik.reverse().forEach(([cid, cy]) => o.push(`<g class="k sl${cl(cid.startsWith('d:') ? cid : 'e:' + cid)}">${ln(px, ry, px, cy, this.erHoejt(this.enhed(cid)) ? 'hj' : '')}</g>`));
+        };
+        /* dåse: boks på linjen fra x0, afgangene fra x0 + DX */
+        const tegnD = (d, x0) => {
+          seen.add(d.id); const xj = x0 + DX - 22;
+          o.push(k('d:' + d.id, this.daaseIzFejl(d) ? 'bad' : '', ln(x0, r, xj - 7, r) + `<rect class="l f" x="${xj - 7}" y="${r - 7}" width="14" height="14"/><circle class="dot" cx="${xj}" cy="${r}" r="3"/>` + ln(xj + 7, r, x0 + DX, r) +
+            tx(x0 + 10, r - 6, d.ledere + this.fmt(d.tv) + ' | ' + this.fmt(d.laengde) + 'm') + tx(x0 + 10, r + 14, kort(d.type + ' ' + d.navn, 20), 'm'), x0 + 3, r, DX - 6));
+          const n = drawKids(gr, d.id, x0 + DX, r, seen);
+          if (!n) o.push(tx(x0 + DX + 10, r + 4, 'ingen afgange', 'm'));
+          r += Math.max(1, n) * ROW;
         };
         /* Tilgang i serie: tegnes som et mellemled på linjen (som en dåse), og det, der er sløjfet fra den, udgår fra en skinne efter symbolet */
         const tegnT = e => {
@@ -276,6 +288,7 @@ const APP_DIAGRAM = () => ({
             tx(bx + 10, r - 6, e.ledere + this.fmt(e.tv) + ' ' + kort(e.kabel, 9) + ' | ' + this.fmt(e.laengde) + 'm') + tx(bx + 10, r + 14, kort(e.navn, 20), 'm'), bx + 3, r, DX - 6, ' data-fra="" data-tx="' + xj + '"'));
           let lk = r;
           for (const c of kids) { if (eSet.has(c.id)) continue; lk = r; tegnE(c, xk, e, eSet); }
+          for (const d of dFra(e)) { if (seen.has(d.id)) continue; lk = r; tegnD(d, xk); }
           if (r === ry) { o.push(tx(xk + 10, r + 4, 'ingen sløjfer', 'm')); r += ROW; }
           else if (lk > ry) o.push(`<g class="k sl${cl('e:' + e.id)}">${ln(xk, ry, xk, lk, 'b2')}</g>`);
         };
@@ -298,14 +311,7 @@ const APP_DIAGRAM = () => ({
             tx(XE + 26, r - 1, 'Undertavle ' + ut.navn) + tx(XE + 26, r + 12, (ut.placering ? kort(ut.placering, 26) + ' · ' : '') + 'fortsætter i eget diagram', 'm'), bx + 3, r, W - bx - 10));
           r += ROW;
         }
-        for (const d of ds) {
-          last = r; seen.add(d.id); const xj = bx + DX - 22;
-          o.push(k('d:' + d.id, this.daaseIzFejl(d) ? 'bad' : '', ln(bx, r, xj - 7, r) + `<rect class="l f" x="${xj - 7}" y="${r - 7}" width="14" height="14"/><circle class="dot" cx="${xj}" cy="${r}" r="3"/>` + ln(xj + 7, r, bx + DX, r) +
-            tx(bx + 10, r - 6, d.ledere + this.fmt(d.tv) + ' | ' + this.fmt(d.laengde) + 'm') + tx(bx + 10, r + 14, kort(d.type + ' ' + d.navn, 20), 'm'), bx + 3, r, DX - 6));
-          const n = drawKids(gr, d.id, bx + DX, r, seen);
-          if (!n) o.push(tx(bx + DX + 10, r + 4, 'ingen afgange', 'm'));
-          r += Math.max(1, n) * ROW;
-        }
+        for (const d of ds) { if (seen.has(d.id)) continue; last = r; tegnD(d, bx); }
         if (r === yy) return 0;
         o.push(ln(bx, yy, bx, last, 'b2'));
         return (r - yy) / ROW;
@@ -411,7 +417,7 @@ const APP_DIAGRAM = () => ({
             .concat(f.vals.map(p => [p.p, this.fmt(p.I) + ' A'])).concat([['Grupper', this.grupperFor(id).length]]) };
       }
       if (a === 'd' && (o = this.daase(id))) return { art:'Samlepunkt', titel:o.type + ' ' + o.navn, type:'daase', obj:o, gid:o.gruppeId, fejl: this.daaseIzFejl(o) ? ['Iz under sikringens mærkestrøm.'] : [],
-        rows: [['Gruppe', this.gruppeTxt(o.gruppeId)], ['Forsynes fra', o.parentId ? this.daaseTxt(o.parentId) : 'Tavle'], ['Lokale', this.lokaleNavn(o.lokaleId)], ['Tilgangskabel', o.kabel + ' ' + this.kabelDim(o)], ['Længde', this.fmt(o.laengde) + ' m'],
+        rows: [['Gruppe', this.gruppeTxt(o.gruppeId)], ['Forsynes fra', this.daaseFraTxt(o) || 'Tavle'], ['Lokale', this.lokaleNavn(o.lokaleId)], ['Tilgangskabel', o.kabel + ' ' + this.kabelDim(o)], ['Længde', this.fmt(o.laengde) + ' m'],
           ['Afgange', this.db.enheder.filter(e => e.daaseId === id).length + this.db.daaser.filter(d => d.parentId === id).length], ['Strøm', this.fmt(this.daaseI(id)) + ' A'], ['ΔU frem til dåsen', this.fmt(this.duOp(id), 2) + ' %']] };
       if (a === 'k' && (o = this.rack(id))) return { art:'Rackskab', titel:o.navn, type:'rack', obj:o, gid:o.gruppeId, fejl: this.rackHe(id) > o.he ? ['Udstyret fylder mere end skabets højde.'] : [],
         rows: [['Type', o.type], ['Lokale', this.lokaleNavn(o.lokaleId)], ['Højde', this.rackHe(id) + ' af ' + o.he + ' HE'], ['Effekt inkl. PoE', this.fmt(this.rackW(id), 0) + ' W'], ['Forsynes fra', o.gruppeId ? this.gruppeTxt(o.gruppeId) : 'Ikke angivet'], ['Udstyr', this.udstyrFor(id).length]] };
@@ -459,7 +465,7 @@ const APP_DIAGRAM = () => ({
       if (a === 'e') {
         const m = this.enhed(id); if (!m || m.id === e.id) return nej('');
         if (m.gruppeId !== e.gruppeId) return anden(m.navn, m.gruppeId);
-        if (this.erSloejfetUnder(m.id, e.id)) return nej(e.navn + ' kan ikke sløjfes fra ' + m.navn + ', for ' + m.navn + ' er selv sløjfet fra ' + e.navn + '.');
+        if (!this.kanForsyne(m, e.id)) return nej(e.navn + ' kan ikke sløjfes fra ' + m.navn + ', for ' + m.navn + ' er selv sløjfet fra ' + e.navn + '.');
         if (e.fraEnhed === m.id) return nej(e.navn + ' er allerede sløjfet fra ' + m.navn + '.');
         return { ok:true, fra:m.id, daase:e.daaseId, til:m.navn, txt:e.navn + ' er nu sløjfet fra ' + m.navn + '.' };
       }
@@ -467,6 +473,7 @@ const APP_DIAGRAM = () => ({
         const d = this.daase(id); if (!d) return nej('');
         if (d.gruppeId !== e.gruppeId) return anden(d.type + ' ' + d.navn, d.gruppeId);
         if (!this.enhed(e.fraEnhed) && e.daaseId === d.id) return nej(e.navn + ' er allerede tilsluttet ' + d.type + ' ' + d.navn + '.');
+        if (!this.kanForsyne(d, e.id)) return nej(e.navn + ' kan ikke tilsluttes ' + d.type + ' ' + d.navn + ', for dåsen forsynes selv fra ' + e.navn + '.');
         return { ok:true, fra:'', daase:d.id, til:d.type + ' ' + d.navn, txt:e.navn + ' er nu tilsluttet ' + d.type + ' ' + d.navn + '.' };
       }
       if (a === 'g') {

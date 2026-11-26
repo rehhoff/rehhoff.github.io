@@ -2,7 +2,7 @@
 const KEY = 'tavleoversigt.v2', OLD = 'tavleoversigt.v1', TKEY = 'tavleoversigt.tema', IDX = 'tavleoversigt.projekter';
 const DTKEY = 'tavleoversigt.diagramtema';  /* enstregsdiagrammets baggrund: '' (som appen), 'lys' eller 'moerk'. Kun denne browser */
 /* Versioner: APP_VERSION følger CHANGELOG.md. SCHEMA hæves kun, når datamodellen ændres, og udløser en automatisk backup før migrering. */
-const APP_VERSION = '10.37.0', SCHEMA = 21, BKEY = 'tavleoversigt.backups', BMAX = 3;
+const APP_VERSION = '10.38.0', SCHEMA = 22, BKEY = 'tavleoversigt.backups', BMAX = 3;
 const PK = id => 'tavleoversigt.p.' + id, MEM = {};
 /* Synkronisering: en hemmelig GitHub Gist med en markørfil og én fil pr. projekt. Se docs/planer/2026-11-15-gist-synk.md. */
 const SKEY = 'tavleoversigt.sync', GFIL = 'tavleoversigt.json', GP = id => 'tavleoversigt-' + id + '.json', GPRE = /^tavleoversigt-([A-Za-z0-9_-]+)\.json$/, GH = 'https://api.github.com';
@@ -150,6 +150,19 @@ function forholdNorm(o, p) {
   o[n('samlet')] = s >= 1 && s <= 20 ? s : '';
   o[n('lag')] = LAG[o[n('lag')]] ? o[n('lag')] : '';
 }
+/* Forsyningstræet (skema 22): en dåse forsynes fra en brugsgenstand (fraEnhed) eller en dåse (parentId), en brugsgenstand fra en brugsgenstand (fraEnhed) eller en dåse (daaseId).
+   Ukendte henvisninger fjernes, og en kreds brydes ved den post, der lukker den. Bruges af norm() og syncDaaser() */
+function forsyning(o) {
+  const D = new Map(o.daaser.map(d => [d.id, d])), E = new Map(o.enheder.map(e => [e.id, e])), erD = x => D.get(x.id) === x;
+  o.daaser.forEach(d => { if (!E.has(d.fraEnhed)) d.fraEnhed = ''; if (d.fraEnhed || d.parentId === d.id || !D.has(d.parentId)) d.parentId = ''; });
+  o.enheder.forEach(e => { if (e.fraEnhed === e.id || !E.has(e.fraEnhed)) e.fraEnhed = ''; if (e.daaseId && !D.has(e.daaseId)) e.daaseId = ''; });
+  const op = x => E.get(x.fraEnhed) || D.get(erD(x) ? x.parentId : x.daaseId), brud = x => { if (x.fraEnhed) x.fraEnhed = ''; else if (erD(x)) x.parentId = ''; else x.daaseId = ''; }, ok = new Set();
+  for (const x0 of o.daaser.concat(o.enheder)) {
+    const sti = new Set(); let x = x0;
+    while (x && !ok.has(x)) { sti.add(x); let p = op(x); while (p && sti.has(p)) { brud(x); p = op(x); } x = p; }
+    sti.forEach(y => ok.add(y));
+  }
+}
 function norm(d) {
   const o = Object.assign(tom(), d || {});
   o.projekt = Object.assign(tom().projekt, o.projekt || {});
@@ -169,11 +182,11 @@ function norm(d) {
   /* skema 13: føringsvej. Hver post har ét indgående træk med status (trukket, note) og placering (fx "Væg A") og højde (cm) */
   const traek = x => { x.hoejde = Number(x.hoejde) > 0 ? Number(x.hoejde) : ''; x.placering = String(x.placering || ''); x.trukket = !!x.trukket; x.note = String(x.note || ''); };
   o.enheder.forEach(e => { e.gruppeId = e.gruppeId || ''; e.lokaleId = e.lokaleId || ''; e.daaseId = e.daaseId || ''; if (e.kabel === HOEJT) { e.ledere = '2X'; e.tv = HTV.includes(Number(e.tv)) ? Number(e.tv) : 1.5; } else e.kabel = kabMap(e.kabel); e.symbol = e.symbol || 'auto'; e.fraEnhed = e.fraEnhed || ''; /* skema 14: 1-faset tilslutning på 3-faset gruppe ('' = som gruppen) */ e.fase = PH.includes(e.fase) ? e.fase : ''; traek(e); });
-  o.daaser.forEach(d => { d.gruppeId = d.gruppeId || ''; d.parentId = d.parentId || ''; d.lokaleId = d.lokaleId || ''; d.kabel = kabMap(d.kabel); d.type = daaMap(d.type); traek(d); });
+  /* skema 22: fraEnhed = dåsens tilgangskabel er sløjfet fra en brugsgenstand ('' = fra parentId eller tavlen) */
+  o.daaser.forEach(d => { d.gruppeId = d.gruppeId || ''; d.parentId = d.parentId || ''; d.fraEnhed = d.fraEnhed || ''; d.lokaleId = d.lokaleId || ''; d.kabel = kabMap(d.kabel); d.type = daaMap(d.type); traek(d); });
   const eid = new Set(o.enheder.map(e => e.id));
-  /* skema 13: sløjfe fra en anden brugsgenstand. Ukendt eller sig selv = ingen sløjfe; kredse brydes */
-  o.enheder.forEach(e => { if (!eid.has(e.fraEnhed) || e.fraEnhed === e.id) e.fraEnhed = ''; });
-  { const E = new Map(o.enheder.map(e => [e.id, e])); o.enheder.forEach(e => { let x = E.get(e.fraEnhed), n = 0; while (x && n++ < 50) { if (x.id === e.id) { e.fraEnhed = ''; break; } x = E.get(x.fraEnhed); } }); }
+  /* skema 13: sløjfe fra en anden brugsgenstand. Ukendt eller sig selv = ingen sløjfe; kredse brydes (forsyning) */
+  forsyning(o);
   o.afbrydere.forEach(a => { a.art = a.art || 'enpolet'; a.gruppeId = a.gruppeId || ''; a.lokaleId = a.lokaleId || ''; a.steder = Number(a.steder) || 1; if (a.art === 'kryds') a.steder = Math.min(6, Math.max(3, Math.round(a.steder))); /* skema 11: krydsafbryder med 3 til 6 betjeningssteder */ a.tid = Number(a.tid) || 3;
     /* skema 13: afbryderens eget træk fra en dåse eller en brugsgenstand (0 m = intet træk). Indgår ikke i ΔU */
     a.daaseId = a.daaseId || ''; a.fraEnhed = eid.has(a.fraEnhed) ? a.fraEnhed : ''; a.kabel = a.kabel ? kabMap(a.kabel) : 'PVC'; a.ledere = a.ledere || '3G'; a.tv = Number(a.tv) || 1.5; a.laengde = Number(a.laengde) || 0; traek(a);

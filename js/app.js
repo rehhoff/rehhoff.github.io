@@ -157,7 +157,7 @@ function app() {
       const g = (L, f) => { const r = new Map(); for (const x of L) { const k = f(x); (r.get(k) || r.set(k, []).get(k)).push(x); } return r; };
       const gr = g(db.grupper, x => x.tavleId); gr.forEach(l => l.sort((a, b) => a.nr - b.nr));
       return (c.kids = { grupper:gr, enhFra:g(db.enheder, x => x.fraEnhed), enhDaase:g(db.enheder, x => x.daaseId), enhGruppe:g(db.enheder, x => x.gruppeId),
-        daaseParent:g(db.daaser, x => x.parentId), daaseGruppe:g(db.daaser, x => x.gruppeId), afbFra:g(db.afbrydere, x => x.fraEnhed), afbDaase:g(db.afbrydere, x => x.daaseId) });
+        daaseParent:g(db.daaser, x => x.parentId), daaseFra:g(db.daaser, x => x.fraEnhed), daaseGruppe:g(db.daaser, x => x.gruppeId), afbFra:g(db.afbrydere, x => x.fraEnhed), afbDaase:g(db.afbrydere, x => x.daaseId) });
     },
     tavle(id) { return this.idx().tavle.get(id); },
     gruppe(id) { return this.idx().gruppe.get(id); },
@@ -198,11 +198,18 @@ function app() {
     daaserFor(gid) { return (this.kid().daaseGruppe.get(gid) || []).slice(); },
     daaserILokale(lid) { return this.db.daaser.filter(d => d.lokaleId === lid); },
     daaseTxt(id) { const d = this.daase(id); return d ? d.type + ' ' + d.navn : ''; },
-    erUnder(id, anc) { let d = this.daase(id), n = 0; while (d && n++ < 20) { if (d.parentId === anc) return true; d = this.daase(d.parentId); } return false; },
+    daaseFra(d) { return d ? this.enhed(d.fraEnhed) || this.daase(d.parentId) : null; },
+    daaseFraTxt(d) { const e = d && this.enhed(d.fraEnhed); return e ? e.navn : d && d.parentId ? this.daaseTxt(d.parentId) : ''; },
+    /* forsyningsvej (skema 22): op(x) er posten lige før x (brugsgenstand eller dåse), opVej(x) alle poster før x op til gruppen */
+    op(x) { if (!x) return null; return this.enhed(x.fraEnhed) || this.daase(this.daase(x.id) === x ? x.parentId : x.daaseId) || null; },
+    opVej(x) { const v = []; let p = this.op(x), n = 0; while (p && n++ < 200) { v.push(p); p = this.op(p); } return v; },
+    vejDaase(did) { const d = this.daase(did); return d ? [d].concat(this.opVej(d)) : []; },
+    /* p må forsyne posten id: p er ikke id og ligger ikke efter id (ingen kreds) */
+    kanForsyne(p, id) { return !!p && (!id || (p.id !== id && !this.opVej(p).some(x => x.id === id))); },
     nedstroem(did, seen) {
       seen = seen || new Set(); if (seen.has(did)) return []; seen.add(did);
       const k = this.kid(); let out = (k.enhDaase.get(did) || []).slice();
-      for (const d of k.daaseParent.get(did) || []) out = out.concat(this.nedstroem(d.id, seen));
+      for (const d of (k.daaseParent.get(did) || []).concat(...out.map(e => k.daaseFra.get(e.id) || []))) out = out.concat(this.nedstroem(d.id, seen));
       return out;
     },
     daaseFaser(did) { return this.mk('daaseFaser', did, () => this.faseSum(this.nedstroem(did))); },
@@ -210,49 +217,25 @@ function app() {
     daaseIz(d) { const g = this.gruppe(d.gruppeId); return this.izBeregn(d.kabel, d.tv, !!g && g.faser == 3, this.forhold(g)); },
     daaseIzFejl(d) { const g = this.gruppe(d.gruppeId); return !!g && !!this.daaseIz(d) && g.In > this.daaseIz(d); },
     duSeg(I, L, A, tre) { return tre ? Math.sqrt(3) * L * I * RHO / A / 400 * 100 : 2 * L * I * RHO / A / 230 * 100; },
-    duOp(did) {
-      let s = 0, d = this.daase(did), n = 0;
-      while (d && n++ < 20) { s += this.duV(this.daaseFaser(d.id), Number(d.laengde) || 0, Number(d.tv) || 1); d = this.daase(d.parentId); }
-      return s;
-    },
+    /* ΔU fra gruppen frem til dåsen: dåsens tilgangskabel og alle træk før den (dåser og brugsgenstande) */
+    duOp(did) { return this.mk('duOp', did, () => this.vejDaase(did).reduce((s, x) => s + this.duV(this.daase(x.id) === x ? this.daaseFaser(x.id) : this.enhedFaser(x), Number(x.laengde) || 0, Number(x.tv) || 1), 0)); },
     syncDaaser() {
-      /* hver dåse arver gruppe fra roden af sin kæde (parentId), hver sløjfet brugsgenstand gruppe og samlepunkt fra roden af sin sløjfe (fraEnhed). Kæder følges én gang pr. post; en løkke brydes */
-      const D = this.db.daaser, E = this.db.enheder, dm = this.idx().daase, em = this.idx().enhed, gr = new Map();
-      for (const d0 of D) {
-        const sti = [], set = new Set(); let x = d0, g;
-        for (;;) {
-          if (gr.has(x.id)) { g = gr.get(x.id); break; }
-          sti.push(x); set.add(x.id);
-          const p = x.parentId && x.parentId !== x.id ? dm.get(x.parentId) : null;
-          if (!p || set.has(p.id)) { x.parentId = ''; g = x.gruppeId; break; }
-          x = p;
-        }
-        for (const y of sti) { if (y.gruppeId !== g) y.gruppeId = g; gr.set(y.id, g); }
-      }
-      E.forEach(e => { if (!e.daaseId) return; const d = dm.get(e.daaseId); if (d) e.gruppeId = d.gruppeId; else e.daaseId = ''; });
-      /* sløjfer: en sløjfet brugsgenstand arver gruppe og samlepunkt fra den, den er sløjfet fra */
-      E.forEach(e => { if (e.fraEnhed && (e.fraEnhed === e.id || !em.get(e.fraEnhed) || this.erSloejfetUnder(e.fraEnhed, e.id))) e.fraEnhed = ''; });
-      const rs = new Map();
-      for (const e0 of E) {
-        const sti = [], set = new Set(); let x = e0, g, d;
-        for (;;) {
-          if (rs.has(x.id)) { [g, d] = rs.get(x.id); break; }
-          sti.push(x); set.add(x.id);
-          const p = em.get(x.fraEnhed);
-          if (!p || set.has(p.id)) { g = x.gruppeId; d = x.daaseId; break; }
-          x = p;
-        }
-        for (const y of sti) { if (y.gruppeId !== g) y.gruppeId = g; if (y.daaseId !== d) y.daaseId = d; rs.set(y.id, [g, d]); }
-      }
+      /* hver post arver gruppe fra toppen af sin forsyningsvej, hver sløjfet brugsgenstand samlepunkt fra roden af sin sløjfe (fraEnhed). Kredse brydes i forsyning() */
+      forsyning(this.db);
+      const dm = this.idx().daase, em = this.idx().enhed, gr = new Map();
+      const g = x => { if (gr.has(x)) return gr.get(x); gr.set(x, x.gruppeId); const p = this.op(x), v = p ? g(p) : x.gruppeId; gr.set(x, v); return v; };
+      for (const x of this.db.daaser.concat(this.db.enheder)) { const v = g(x); if (x.gruppeId !== v) x.gruppeId = v; }
+      this.db.enheder.forEach(e => { if (!e.fraEnhed) return; const r = this.enhedRod(e); if (e.daaseId !== r.daaseId) e.daaseId = r.daaseId; });
       this.db.afbrydere.forEach(a => { if (a.fraEnhed && !em.get(a.fraEnhed)) a.fraEnhed = ''; if (a.fraEnhed) a.daaseId = ''; if (a.daaseId && !dm.get(a.daaseId)) a.daaseId = ''; });
     },
     /* føringsvej: sløjfer mellem brugsgenstande (skema 13) */
     enhed(id) { return id ? this.idx().enhed.get(id) : undefined; },
     sloejfer(id) { return id ? (this.kid().enhFra.get(id) || []).slice() : []; },
-    erSloejfetUnder(id, anc) { let e = this.enhed(id), n = 0; while (e && n++ < 50) { if (e.id === anc) return true; e = this.enhed(e.fraEnhed); } return false; },
     enhedNed(e, seen) { seen = seen || new Set(); if (!e || seen.has(e.id)) return []; seen.add(e.id); return [e].concat(...this.sloejfer(e.id).map(x => this.enhedNed(x, seen))); },
     /* strøm i e's eget træk pr. fase: e og alt sløjfet efter den, hver på sine faser (skema 14) */
-    enhedFaser(e) { return this.mk('enhedFaser', e.id, () => this.faseSum(this.enhedNed(e))); },
+    enhedFaser(e) { return this.mk('enhedFaser', e.id, () => this.faseSum(this.enhedLast(e))); },
+    /* e, alt sløjfet efter den og alt i dåser, der er sløjfet fra dem (skema 22) */
+    enhedLast(e) { const es = this.enhedNed(e), seen = new Set(), k = this.kid(); return es.concat(...es.map(x => (k.daaseFra.get(x.id) || []).flatMap(d => this.nedstroem(d.id, seen)))); },
     enhedI(e) { const v = this.enhedFaser(e); return Math.max(v.L1, v.L2, v.L3); },
     /* ΔU i e's eget træk; L kan gives for at regne pr. meter (lmax) */
     duEget(e, tv, L) { return this.duV(this.enhedFaser(e), L == null ? Number(e.laengde) || 0 : L, Number(tv || e.tv) || 1); },
@@ -264,7 +247,8 @@ function app() {
     fvNode(kind, o, kids) { return { kind, o, kids:kids || [] }; },
     fvEnhed(e, seen) {
       if (seen.has(e.id)) return null; seen.add(e.id);
-      return this.fvNode('enhed', e, this.sloejfer(e.id).map(x => this.fvEnhed(x, seen)).filter(Boolean).concat((this.kid().afbFra.get(e.id) || []).map(a => this.fvNode('afb', a))));
+      return this.fvNode('enhed', e, this.sloejfer(e.id).map(x => this.fvEnhed(x, seen)).filter(Boolean).concat((this.kid().afbFra.get(e.id) || []).map(a => this.fvNode('afb', a)),
+        (this.kid().daaseFra.get(e.id) || []).map(d => this.fvDaase(d, seen)).filter(Boolean)));
     },
     fvDaase(d, seen) {
       if (seen.has(d.id)) return null; seen.add(d.id);
@@ -289,7 +273,7 @@ function app() {
       };
       for (const t of this.db.tavler) {
         const tn = this.fvNode('tavle', t, this.grupperFor(t.id).map(g => this.fvNode('gruppe', g,
-          this.daaserFor(g.id).filter(d => !this.daase(d.parentId)).map(d => this.fvDaase(d, seen)).filter(Boolean)
+          this.daaserFor(g.id).filter(d => !this.daaseFra(d)).map(d => this.fvDaase(d, seen)).filter(Boolean)
             .concat(this.enhederFor(g.id).filter(e => !this.daase(e.daaseId) && !this.enhed(e.fraEnhed)).map(e => this.fvEnhed(e, seen)).filter(Boolean)))));
         flad(tn, 0, '', []);
       }
@@ -318,7 +302,7 @@ function app() {
     fvSaet(r, felt, v) { const o = r.o, k = r.kind === 'tavle' ? (felt === 'trukket' ? 'tTrukket' : 'tNote') : felt; if (o[k] === v) return; this.mutate(() => { o[k] = v; }); },
     fvKabelTxt(r) { const o = r.o; return r.kind === 'tavle' ? o.tKabel + ' ' + o.tLedere + this.fmt(o.tTv) + ' mm² · ' + this.fmt(o.tLaengde) + ' m' : o.kabel + ' ' + this.kabelDim(o) + ' · ' + this.fmt(o.laengde) + ' m'; },
     /* samlet kabellængde fra tavlens afgang (uden tilgangskablet) gennem dåser og sløjfer til posten; null for tavle og gruppe */
-    fvDaaseLaengde(id) { let s = 0, d = this.daase(id), n = 0; while (d && n++ < 20) { s += Number(d.laengde) || 0; d = this.daase(d.parentId); } return s; },
+    fvDaaseLaengde(id) { return this.vejDaase(id).reduce((s, x) => s + (Number(x.laengde) || 0), 0); },
     fvTotal(r) {
       const o = r.o, egen = Number(o.laengde) || 0;
       if (r.kind === 'daase') return this.fvDaaseLaengde(o.id);
@@ -347,10 +331,11 @@ function app() {
         else pre.daaseId = o.id;
         return this.openForm('enhed', null, pre);
       }
-      if (type === 'daase') return this.openForm('daase', null, Object.assign({ gruppeId:o.gruppeId, parentId:o.id }, sted, kab));
+      if (type === 'daase') return this.openForm('daase', null, Object.assign({ gruppeId:o.gruppeId }, r.kind === 'enhed' ? { fraEnhed:o.id } : { parentId:o.id }, sted, kab));
       if (type === 'afbryder') return this.openForm('afbryder', null, Object.assign({ gruppeId:o.gruppeId, laengde:3, kabel:kab.kabel, ledere:'3G', tv:1.5 }, sted, r.kind === 'enhed' ? { fraEnhed:o.id } : { daaseId:o.id }));
     },
     sloejfeValg() { const p = this.enhed(this.form.fraEnhed); if (p) { this.form.gruppeId = p.gruppeId; this.form.daaseId = p.daaseId; if (!this.form.lokaleId) this.form.lokaleId = p.lokaleId; if (!this.form.placering) this.form.placering = p.placering; } this.belSync(); },
+    daaseFraSaet(v) { const f = this.form, e = v.startsWith('e:') ? this.enhed(v.slice(2)) : null, d = v.startsWith('d:') ? this.daase(v.slice(2)) : null; f.fraEnhed = e ? e.id : ''; f.parentId = d ? d.id : ''; const p = e || d; if (p) { f.gruppeId = p.gruppeId; if (!f.lokaleId) f.lokaleId = p.lokaleId; } },
     afbFraSaet(v) { const f = this.form; f.daaseId = v.startsWith('d:') ? v.slice(2) : ''; f.fraEnhed = v.startsWith('e:') ? v.slice(2) : ''; if (v && !(Number(f.laengde) > 0)) f.laengde = 3; },
     /* slet direkte fra føringsvejen (kan fortrydes). Sløjfer efter en slettet brugsgenstand forsynes fra den, den selv var sløjfet fra */
     fvSlet(r) {
@@ -379,9 +364,11 @@ function app() {
     grenAabn(r) { this.gren = { kind:r.kind, id:r.o.id, navn:this.fvNavn(r), antal:1, placering:'' }; this.modal = { type:'gren' }; this.$nextTick(() => { const el = document.getElementById('gren-plac'); if (el) el.focus(); }); },
     grenDele(kind, id) {
       const d = this.db, ds = []; let es = [];
-      if (kind === 'daase') { const walk = x => { if (ds.includes(x)) return; ds.push(x); d.daaser.filter(y => y.parentId === x.id).forEach(walk); }; const r = this.daase(id); if (r) walk(r); const ids = new Set(ds.map(x => x.id)); es = d.enheder.filter(e => ids.has(e.daaseId)); }
-      if (kind === 'enhed') es = this.enhedNed(this.enhed(id));
-      const dI = new Set(ds.map(x => x.id)), eI = new Set(es.map(x => x.id));
+      /* dåser efter x: underdåser og dåser sløjfet fra x's brugsgenstande (skema 22) */
+      const walk = x => { if (ds.includes(x)) return; ds.push(x); d.daaser.filter(y => y.parentId === x.id || (this.enhed(y.fraEnhed) || {}).daaseId === x.id).forEach(walk); };
+      if (kind === 'daase') { const r = this.daase(id); if (r) walk(r); }
+      if (kind === 'enhed') { es = this.enhedNed(this.enhed(id)); const ids = new Set(es.map(e => e.id)); d.daaser.filter(y => ids.has(y.fraEnhed)).forEach(walk); }
+      const dI = new Set(ds.map(x => x.id)); es = es.concat(d.enheder.filter(e => dI.has(e.daaseId))); const eI = new Set(es.map(x => x.id));
       return { ds, es, as:d.afbrydere.filter(a => (a.fraEnhed && eI.has(a.fraEnhed)) || (!a.fraEnhed && dI.has(a.daaseId))) };
     },
     grenKopier(kind, id, antal, placering) {
@@ -392,7 +379,7 @@ function app() {
         for (; n < antal; n++) {
           const m = {}; dele.ds.concat(dele.es, dele.as).forEach(x => { m[x.id] = uid(); });
           const fx = (x, liste, extra) => { const c = Object.assign(kopi(x), { id:m[x.id], navn:this.naeste(x.navn, d[liste]), trukket:false, note:'' }, extra); if (Array.isArray(c.billeder)) c.billeder = []; if (placering) c.placering = placering; d[liste].push(c); };
-          dele.ds.forEach(x => fx(x, 'daaser', { parentId:m[x.parentId] || x.parentId }));
+          dele.ds.forEach(x => fx(x, 'daaser', { parentId:m[x.parentId] || x.parentId, fraEnhed:m[x.fraEnhed] || x.fraEnhed }));
           dele.es.forEach(x => fx(x, 'enheder', { daaseId:m[x.daaseId] || x.daaseId, fraEnhed:m[x.fraEnhed] || x.fraEnhed }));
           dele.as.forEach(x => fx(x, 'afbrydere', { daaseId:m[x.daaseId] || x.daaseId, fraEnhed:m[x.fraEnhed] || x.fraEnhed, a:x.a.map(i => m[i] || i), b:x.b.map(i => m[i] || i) }));
         }
@@ -509,7 +496,7 @@ function app() {
         afbryder: { navn:'', art:'enpolet', daaseId:'', fraEnhed:'', kabel:'PVC', ledere:'3G', tv:1.5, laengde:0, hoejde:'', placering:'', trukket:false, note:'', gruppeId:(cur && LYS_TYPER.includes(cur.type) ? cur.id : (this.sorteredeGrupper().find(g => LYS_TYPER.includes(g.type)) || {}).id) || '', lokaleId:'', steder:2, tid:3, a:[], b:[] },
         gruppe: { tavleId:t0, nr:1, navn:'', type:'stik', kar:'B', In:13, faser:1, fase:'L1', rcdId:'', brydeevne:6, sf:this.sfForslag({ type:'stik' }).v },
         enhed: { antal:1, navn:'', gruppeId:this.sel || '', lokaleId:'', daaseId:'', fraEnhed:'', fase:'', hoejde:'', placering:'', trukket:false, note:'', symbol:'auto', effekt:0, kabel:'PVC', ledere:'3G', tv:1.5, laengde:10 },
-        daase: { antal:1, navn:'', type:'Membrandåse', gruppeId:this.sel || '', parentId:'', lokaleId:'', hoejde:'', placering:'', trukket:false, note:'', kabel:'PVC', ledere:'3G', tv:1.5, laengde:5, billeder:[] },
+        daase: { antal:1, navn:'', type:'Membrandåse', gruppeId:this.sel || '', parentId:'', fraEnhed:'', lokaleId:'', hoejde:'', placering:'', trukket:false, note:'', kabel:'PVC', ledere:'3G', tv:1.5, laengde:5, billeder:[] },
         rack: { navn:'R' + (this.db.racks.length + 1), type:'19" vægskab', he:9, lokaleId:'', gruppeId:'' },
         udstyr: { rackId:(this.db.racks[0] || {}).id || '', navn:'', art:'switch', he:1, pos:1, porte:24, poe:false, poeBudget:0, effekt:20 },
         brand: { nr:1, lokaleId:'', placering:'', beskrivelse:'', brandklasse:'', brandklasser:[], produkt:'', produkter:[], udfoert:false, maerkat:false, note:'', billeder:[] },
@@ -556,11 +543,12 @@ function app() {
       if (type === 'tavle') { const v = String(rec.forsyn || ''); delete rec.forsyn; const g = v.startsWith('g:') ? this.gruppe(v.slice(2)) : null; rec.fraGruppe = g ? g.id : ''; rec.fra = g ? g.tavleId : v.startsWith('t:') ? v.slice(2) : ''; }
       if (type === 'tavle' && rec.fra === id) { rec.fra = ''; rec.fraGruppe = ''; }
       if (type === 'tavle' && !rec.forsikring) rec.forsikring = 35;
-      if (type === 'enhed' && rec.fraEnhed && (rec.fraEnhed === id || (id && this.erSloejfetUnder(rec.fraEnhed, id)))) rec.fraEnhed = '';
+      if (type === 'enhed' && rec.fraEnhed && !this.kanForsyne(this.enhed(rec.fraEnhed), id)) rec.fraEnhed = '';
+      if (type === 'enhed' && rec.daaseId && !this.kanForsyne(this.daase(rec.daaseId), id)) rec.daaseId = '';
       if (type === 'enhed' || type === 'daase' || type === 'afbryder') { rec.hoejde = Number(rec.hoejde) > 0 ? Number(rec.hoejde) : ''; rec.trukket = !!rec.trukket; rec.note = String(rec.note || ''); rec.placering = String(rec.placering || '').trim(); }
       if (type === 'tavle') rec.tTrukket = !!rec.tTrukket;
       if (this.billedFelt(type)) rec.billeder = bIdListe(rec.billeder);  /* skema 16 */
-      if (type === 'daase' && (rec.parentId === id || (id && this.erUnder(rec.parentId, id)))) rec.parentId = '';
+      if (type === 'daase') { if (rec.fraEnhed && !this.kanForsyne(this.enhed(rec.fraEnhed), id)) rec.fraEnhed = ''; if (rec.fraEnhed || (rec.parentId && !this.kanForsyne(this.daase(rec.parentId), id))) rec.parentId = ''; }
       if (type === 'link' && rec.art !== 'cctv') rec.nvrId = '';
       if (type === 'enhed' && rec.kabel === HOEJT) { rec.ledere = '2X'; if (!HTV.includes(rec.tv)) rec.tv = 1.5; }
       if (type === 'link') rec.trukket = !!rec.trukket;
@@ -593,6 +581,7 @@ function app() {
       this.mutate(() => {
         if (type === 'brand') d.brandlukninger = d.brandlukninger.filter(x => x.id !== id);
         if (type === 'enhed') { const x0 = this.enhed(id) || {}; d.enheder.forEach(e => { if (e.fraEnhed === id) e.fraEnhed = x0.fraEnhed || ''; }); d.afbrydere.forEach(a => { if (a.fraEnhed === id) { a.fraEnhed = x0.fraEnhed || ''; if (!a.fraEnhed) a.daaseId = x0.daaseId || ''; } });
+          d.daaser.forEach(x => { if (x.fraEnhed === id) { x.fraEnhed = x0.fraEnhed || ''; if (!x.fraEnhed) x.parentId = x0.daaseId || ''; } });
           d.enheder = d.enheder.filter(e => e.id !== id); d.afbrydere.forEach(x => { x.a = x.a.filter(i => i !== id); x.b = x.b.filter(i => i !== id); }); }
         if (type === 'afbryder') d.afbrydere = d.afbrydere.filter(x => x.id !== id);
         if (type === 'daase') { d.afbrydere.forEach(a => { if (a.daaseId === id) a.daaseId = ''; }); d.enheder.forEach(e => { if (e.daaseId === id) e.daaseId = ''; }); d.daaser.forEach(x => { if (x.parentId === id) x.parentId = ''; }); d.daaser = d.daaser.filter(x => x.id !== id); }
@@ -831,9 +820,10 @@ function app() {
       ds.forEach(x => { dm[x.id] = uid(); }); const em = {}; es.forEach(e => { em[e.id] = uid(); });
       this.mutate(() => {
         d.lokaler.push(ny);
-        ds.forEach(x => d.daaser.push(Object.assign(kopi(x), { id:dm[x.id], lokaleId:ny.id, gruppeId:ng(x.gruppeId), parentId:dm[x.parentId] || (this.daase(x.parentId) && this.daase(x.parentId).gruppeId === ng(x.gruppeId) ? x.parentId : ''), navn:this.naeste(x.navn, d.daaser), trukket:false, note:'', billeder:[] })));
         /* en reference ud af lokalet beholdes kun, hvis den peger ind i den gruppe, genstanden ender i */
         const iGr = (x, g) => !!x && x.gruppeId === g;
+        ds.forEach(x => d.daaser.push(Object.assign(kopi(x), { id:dm[x.id], lokaleId:ny.id, gruppeId:ng(x.gruppeId), parentId:dm[x.parentId] || (iGr(this.daase(x.parentId), ng(x.gruppeId)) ? x.parentId : ''),
+          fraEnhed:em[x.fraEnhed] || (iGr(this.enhed(x.fraEnhed), ng(x.gruppeId)) ? x.fraEnhed : ''), navn:this.naeste(x.navn, d.daaser), trukket:false, note:'', billeder:[] })));
         es.forEach(e => { const g = ng(e.gruppeId); d.enheder.push(Object.assign(kopi(e), { id:em[e.id], lokaleId:ny.id, gruppeId:g, daaseId:dm[e.daaseId] || (iGr(this.daase(e.daaseId), g) ? e.daaseId : ''),
           fraEnhed:em[e.fraEnhed] || (iGr(this.enhed(e.fraEnhed), g) ? e.fraEnhed : ''), trukket:false, note:'' })); });
         ls.forEach(l => { const c = Object.assign(kopi(l), { id:uid(), lokaleId:ny.id, navn:this.naeste(l.navn, d.links), trukket:false }); this.givPorte(c); d.links.push(c); });

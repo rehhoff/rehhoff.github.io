@@ -146,7 +146,7 @@ const APP_BEREGNING = () => ({
     },
     zeBeregnet(t) { return !(Number(t.ze) > 0) && this.tavleZe(t.id) != null; },
     tavleIkMaks(tid, n) { const t = this.tavle(tid); if (!t || n > 8) return 0; if (Number(t.ikMaks) > 0) return Number(t.ikMaks); const op = this.tavleOp(t); return op ? this.tavleIkMaks(op, (n || 0) + 1) : 0; },
-    enhedR(e) { let r = this.rSloejfe(e.kabel, e.laengde, e.tv) + this.sloejfeVej(e).reduce((s, p) => s + this.rSloejfe(p.kabel, p.laengde, p.tv), 0), d = this.daase(this.enhedDaase(e)), n = 0; while (d && n++ < 20) { r += this.rSloejfe(d.kabel, d.laengde, d.tv); d = this.daase(d.parentId); } return r; },
+    enhedR(e) { return this.opVej(e).reduce((s, p) => s + this.rSloejfe(p.kabel, p.laengde, p.tv), this.rSloejfe(e.kabel, e.laengde, e.tv)); },
     ikMin(g) {
       const ze = this.tavleZe(g.tavleId); if (ze == null) return null;
       const rs = this.enhederFor(g.id).filter(e => !this.erHoejt(e)).map(e => this.enhedR(e)).concat(this.underTavler(g.id).filter(u => Number(u.tLaengde) > 0).map(u => this.rSloejfe(u.tKabel, u.tLaengde, u.tTv)));
@@ -295,7 +295,7 @@ const APP_BEREGNING = () => ({
       }).concat(this.db.daaser.map(d => {
         const g = this.gruppe(d.gruppeId), P = this.nedstroem(d.id).reduce((s, e) => s + (Number(e.effekt) || 0), 0);
         return { d, e: Object.assign({}, d, { id:'d' + d.id, navn:d.type + ' ' + d.navn, effekt:P }), g, tn: g ? this.tavleNavn(g.tavleId) : '', lok:this.lokaleNavn(d.lokaleId), I:this.daaseI(d.id), du:this.duOp(d.id), over:false, lmax:null,
-          iz:this.daaseIz(d), izFejl:this.daaseIzFejl(d), via: 'tilgang fra ' + (d.parentId ? this.daaseTxt(d.parentId) : 'tavle') };
+          iz:this.daaseIz(d), izFejl:this.daaseIzFejl(d), via: 'tilgang fra ' + (this.daaseFraTxt(d) || 'tavle') };
       })).concat(this.db.afbrydere.filter(a => Number(a.laengde) > 0).map(a => {
         const g = this.gruppe(a.gruppeId), fra = this.enhed(a.fraEnhed);
         return { a, e:{ id:'a' + a.id, navn:'Afbryder ' + a.navn, kabel:a.kabel, ledere:a.ledere, tv:a.tv, laengde:a.laengde, lokaleId:a.lokaleId, effekt:0 }, g, tn: g ? this.tavleNavn(g.tavleId) : '', lok:this.lokaleNavn(a.lokaleId), I:0, du:0, over:false, lmax:null, iz:null, izFejl:false,
