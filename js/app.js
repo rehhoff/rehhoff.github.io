@@ -20,7 +20,8 @@ function app() {
     daaseTyper: DAASER,
     rackTyper: ['19" vægskab', '19" gulvskab', '10" vægskab'],
     datakabler: ['Cat6', 'Cat6A', 'Cat7', 'Fiber OM4', 'Fiber OS2'],
-    ampTrin: [25, 35, 50, 63, 80, 100, 125, 160, 200, 250, 315, 400, 630], svFilter: '',
+    ampTrin: [25, 35, 50, 63, 80, 100, 125, 160, 200, 250, 315, 400, 630], svFilter: '', svSort: { key:'', dir:1 }, dragS: null, overS: null,  /* svSort gemmes ikke; dragS/overS: forbindelse, der trækkes */
+    svKol: [['art', 'Art'], ['navn', 'Betegnelse'], ['lokale', 'Lokale'], ['kabel', 'Kabel'], ['trukket', 'Trukket'], ['laengde', 'Længde', 'r'], ['panel', 'Patchpanel'], ['switch', 'Switch'], ['poe', 'PoE', 'r'], ['kamera', 'Kamera / NVR'], ['status', 'Status']].map(x => ({ k:x[0], l:x[1], c:x[2] || '' })),
     kabeltyper: KABLER,
     online: navigator.onLine !== false, installPrompt: null, installeret: false, swOk: false,
     firma: { navn:'', cvr:'', adresse:'', telefon:'', logo:'' },
@@ -404,8 +405,28 @@ function app() {
     kameraerPaa(nid) { return this.db.links.filter(l => l.art === 'cctv' && l.nvrId === nid).length; },
     linksILokale(lid, art) { return this.db.links.filter(l => l.lokaleId === lid && (!art || l.art === art)); },
     svLinks() { return this.db.links.filter(l => (!this.svFilter || l.art === this.svFilter) && (!this.lokF || l.lokaleId === this.lokF)); },
+    /* forbindelseslisten: tekst i kolonnerne, sortering inden for hver etage og manuel rækkefølge */
+    svKameraTxt(l) { return l.art === 'cctv' ? l.kamType + ' ' + l.oploesning + ' · ' + (this.udstTxt(l.nvrId) || 'ingen NVR') : '–'; },
+    svStatusTxt(l) { const f = this.linkFejl(l); return f.length ? '⚠ ' + f[0] : (this.udst(l.switchId) ? 'OK' : 'Ikke patchet'); },
+    svVaerdi(l, k) {
+      return k === 'art' ? (l.art === 'cctv' ? 'CCTV' : 'PDS') : k === 'lokale' ? this.lokaleNavn(l.lokaleId) : k === 'trukket' ? Number(!!l.trukket) : k === 'laengde' ? Number(l.laengde) || 0
+        : k === 'poe' ? Number(l.poeW) || 0 : k === 'panel' || k === 'switch' ? this.portTxt(l, k) : k === 'kamera' ? this.svKameraTxt(l) : k === 'status' ? this.svStatusTxt(l) : String(l[k] || '');
+    },
+    /* første tryk: stigende, andet: faldende, tredje: nulstil */
+    svSorter(k) { const s = this.svSort; this.svSort = s.key !== k ? { key:k, dir:1 } : s.dir > 0 ? { key:k, dir:-1 } : { key:'', dir:1 }; },
+    svSorteret(ls) {
+      const { key, dir } = this.svSort; if (!key) return ls;
+      return [...ls].sort((a, b) => { const x = this.svVaerdi(a, key), y = this.svVaerdi(b, key); return dir * (typeof x === 'number' ? x - y : x.localeCompare(y, 'da', { numeric:true })); });
+    },
+    svEtage(l) { return String((this.db.lokaler.find(r => r.id === l.lokaleId) || {}).etage || '').trim(); },
+    svRyk(id, dir) { const vist = new Set(this.svLinks().map(l => l.id)); this.ryk('links', id, dir, (a, b) => vist.has(a.id) && this.svEtage(a) === this.svEtage(b)); },
+    slipLink(til, ev) {
+      const fra = this.dragS; this.dragS = null; this.overS = null; if (!fra) return; ev.preventDefault(); if (fra === til) return;
+      const L = this.db.links, i = L.findIndex(l => l.id === fra), j = L.findIndex(l => l.id === til); if (i < 0 || j < 0 || this.svEtage(L[i]) !== this.svEtage(L[j])) return;
+      this.mutate(() => { const x = L[i]; L.splice(i, 1); L.splice(j, 0, x); });
+    },
     svEtager() {
-      const et = new Map(this.db.lokaler.map(r => [r.id, String(r.etage || '').trim()])), ls = this.svLinks();
+      const et = new Map(this.db.lokaler.map(r => [r.id, String(r.etage || '').trim()])), ls = this.svSorteret(this.svLinks());
       return [...new Set([...et.values(), ''])].sort((a, b) => !a - !b).map(e => ({ etage:e, links:ls.filter(l => (et.get(l.lokaleId) || '') === e) })).filter(g => g.links.length);
     },
     felt(u) { return u.art === 'patchpanel' ? 'panel' : u.art === 'switch' ? 'switch' : ''; },
@@ -726,9 +747,9 @@ function app() {
       const L = this.db.enheder, i = L.findIndex(e => e.id === fra), j = L.findIndex(e => e.id === til); if (i < 0 || j < 0 || L[i].lokaleId !== L[j].lokaleId) return;
       this.mutate(() => { const x = L[i]; L.splice(i, 1); L.splice(j, 0, x); });
     },
-    /* rul siden, mens et lokale trækkes nær top eller bund. dragover gentages, også når musen holdes stille */
+    /* rul siden, mens et lokale eller en forbindelse trækkes nær top eller bund. dragover gentages, også når musen holdes stille */
     dragRul(ev) {
-      if (!this.dragL) return;
+      if (!this.dragL && !this.dragS) return;
       const z = 100, y = ev.clientY, d = y < z ? y - z : Math.max(0, y - (innerHeight - z));
       if (d) (this.modal ? document.getElementById('dialog') : window).scrollBy(0, Math.round(d / 4));
     },

@@ -987,6 +987,26 @@ async def main():
         tjek('svagstrøm: PDS, CCTV og Alle grupperet efter etage, Uden etage sidst, data uændrede',
              all(all(x[:3]) for x in r['f']) and r['f'][0][3][0] == 'Etage: 1. sal' and r['f'][1][3][-1] == 'Uden etage' and r['ens'], r)
 
+        r = await pg.evaluate(f"""async()=>{{const a={A};const T=n=>new Promise(f=>setTimeout(f,n));const o={{}};
+          const foer=JSON.stringify(a.db.links), gl=a.db.lokaler.map(l=>l.etage); a.db.lokaler.forEach(l=>l.etage=''); a.svFilter=''; a.go('svag'); await T(120);
+          const ids=()=>[...document.querySelectorAll('tr.sv-raekke')].filter(x=>x.offsetParent).map(x=>x.dataset.id), start=ids().join();
+          const kn=k=>document.querySelector('button.sv-sort[data-k="'+k+'"]'), l=()=>ids().map(i=>Number(a.db.links.find(x=>x.id===i).laengde));
+          kn('laengde').click(); await T(80); const op=l(); o.op=op.join()===[...op].sort((x,y)=>x-y).join(); o.laast=document.querySelector('button.sv-op').disabled;
+          kn('laengde').click(); await T(80); const nd=l(); o.ned=nd.join()===[...nd].sort((x,y)=>y-x).join();
+          kn('laengde').click(); await T(80); o.nul=ids().join()===start&&!a.svSort.key;
+          o.alle=a.svKol.every(k=>{{a.svSorter(k.k); const n=a.svEtager().reduce((s,g)=>s+g.links.length,0); a.svSorter(k.k); a.svSorter(k.k); return n===a.db.links.length}});
+          o.data=JSON.stringify(a.db.links)===foer;
+          const s=ids(); document.querySelectorAll('button.sv-ned')[0].click(); await T(80); o.pil=ids().slice(0,2).join()===[s[1],s[0]].join(); a.undo(); await T(80); o.fortryd=ids().join()===s.join();
+          const rk=i=>document.querySelector('tr.sv-raekke[data-id="'+i+'"]'), dt=new DataTransfer(), ev=(el,n)=>el.dispatchEvent(new DragEvent(n,{{bubbles:true,cancelable:true,dataTransfer:dt}}));
+          ev(rk(s[2]).querySelector('.sv-traek'),'dragstart'); ev(rk(s[0]),'dragover'); ev(rk(s[0]),'drop'); await T(80); o.traek=ids().slice(0,3).join()===[s[2],s[0],s[1]].join(); a.undo(); await T(80);
+          a.svFilter='cctv'; await T(80); const c=ids(); a.svRyk(c[0],1); await T(80); o.filter=ids().slice(0,2).join()===[c[1],c[0]].join(); a.undo(); a.svFilter=''; await T(80);
+          const x=a.db.links[0].lokaleId; a.db.lokaler.find(r=>r.id===x).etage='Kælder'; await T(80); const n0=JSON.stringify(a.db.links), anden=a.db.links.find(y=>y.lokaleId!==x);
+          a.dragS=a.db.links[0].id; a.slipLink(anden.id,{{preventDefault(){{}}}}); o.etage=JSON.stringify(a.db.links)===n0;
+          a.db.lokaler.forEach((r,i)=>r.etage=gl[i]); o.slut=JSON.stringify(a.db.links)===foer; a.go('tavle'); await T(50);
+          return o}}""")
+        tjek('svagstrøm: kolonnesortering stigende, faldende og nulstil; rækkefølge med pile og træk inden for etagen, kan fortrydes',
+             all(r.values()) and len(r) == 12, r)
+
         # 4q. Datasikring (gennemgang 2026-11-25): anden fanes ændring læses frisk, Gist med 300 filer afvises, backup-id kontrolleres, ulæseligt projekt overskrives ikke
         r = await pg.evaluate(f"""async()=>{{const a={A};const o={{}};
           const x=a.projekter.find(p=>p.id!==a.pid); o.har=!!x;
