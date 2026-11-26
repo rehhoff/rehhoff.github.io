@@ -1121,10 +1121,12 @@ async def main():
             mus(k[0],'pointerenter','touch'); await T(40); const t0=lys(); mus(k[0],'pointerenter','mouse'); await T(40); const h=lys(); mus(k[0],'pointerleave','mouse'); await T(40); const h0=lys();
             k[0].click(); await T(40); const p=lys(); let p2=true; if(k.length>1) {{ k[1].click(); await T(40); p2=lys()===n(1); k[0].click(); await T(40); }} k[0].click(); await T(40);
             o.kilde=[t0===0, h===n(0)&&h>0, h0===0, p===n(0), p2, lys()===0, a.view==='lokaler']; }}
+          {{ const over=y=>art.dispatchEvent(new DragEvent('dragover',{{bubbles:true,cancelable:true,clientY:y}})), st=document.createElement('div'); st.style.height='3000px'; document.body.append(st); scrollTo(0,500);
+            const y0=scrollY; over(innerHeight-5); const udenTraek=scrollY===y0; a.dragL=l.id; over(innerHeight-5); const ned=scrollY>y0, y1=scrollY; over(5); const op=scrollY<y1, y2=scrollY; over(innerHeight/2); o.rul=[udenTraek, ned, op, scrollY===y2]; a.dragL=null; st.remove(); scrollTo(0,0); }}
           a.lokAlleUd=false; a.go('tavle'); await T(50);
           return o}}""")
         tjek('lokaler: + Dataudtag og + Kamera med lokalet valgt; brugsgenstande flyttes op og ned inden for lokalet og kan fortrydes',
-             r['data'] == ['link', 'data', True] and r['kam'] == ['cctv', True] and r['ned'] and r['op'] and r['fortryd'] and r['traek'] and r['traekFortryd'] and r['zebra'] and all(r['kilde']), r)
+             r['data'] == ['link', 'data', True] and r['kam'] == ['cctv', True] and r['ned'] and r['op'] and r['fortryd'] and r['traek'] and r['traekFortryd'] and r['zebra'] and all(r['kilde']) and all(r['rul']), r)
 
         await pg.evaluate(f"{A}.go('tavle')")
 
