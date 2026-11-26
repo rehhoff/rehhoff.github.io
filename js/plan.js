@@ -20,7 +20,7 @@ const APP_PLAN = () => ({
     planEtager() { return [...new Set([...this.db.lokaler, ...this.db.tegninger].map(x => String(x.etage || '').trim()).filter(Boolean))]; },
     planTitel(t) { return (t.navn || 'Tegning') + (t.etage ? ' · ' + t.etage : ''); },
     planVaelgT(id) { this.planId = id; this.planNulstil(); },
-    planNulstil() { this.planMode = ''; this.planPts = []; this.planVaelg = ''; },
+    planNulstil() { this.planMode = ''; this.planPts = []; this.planVaelg = ''; this.planSoeg = ''; },
     planTilstand(m) { const ny = this.planMode === m ? '' : m; this.planNulstil(); this.planMode = ny; },
     /* den fulde tegning hentes fra IndexedDB første gang, den bruges; indtil da vises miniaturen */
     planSrc(t) {
@@ -86,6 +86,20 @@ const APP_PLAN = () => ({
       return [g('Tavler', d.tavler.map(o => ({ k:'t:' + o.id, txt:o.navn }))), g('Samlepunkter', d.daaser.filter(i).map(o => ({ k:'d:' + o.id, txt:this.daaseTxt(o.id) }))),
         g('Brugsgenstande', d.enheder.filter(i).map(o => ({ k:'e:' + o.id, txt:o.navn }))), g('Dataudtag og kameraer', d.links.filter(i).map(o => ({ k:'x:' + o.id, txt:o.navn }))),
         g('Brandlukninger', d.brandlukninger.filter(i).map(o => ({ k:'b:' + o.id, txt:'Nr. ' + o.nr + (o.placering ? ' ' + o.placering : '') })))].filter(x => x.L.length);
+    },
+    /* listen ved placering: samme komponenter som planValg, grupperet efter etage og lokale (tavler først, uden lokale sidst). Placerede er skjult, indtil planVisPlac slås til */
+    planPlacer(t) {
+      const brugt = new Set((t ? t.punkter : []).map(p => p.k)), ord = this.planSoeg.toLowerCase().split(/\s+/).filter(Boolean), G = new Map();
+      const et = r => String(r.etage || '').trim(), etager = [...new Set(this.db.lokaler.map(et))].sort((a, b) => !a - !b), rum = [...this.db.lokaler].sort((a, b) => etager.indexOf(et(a)) - etager.indexOf(et(b)));
+      for (const o of this.planValg(t).flatMap(g => g.L)) {
+        if (brugt.has(o.k) && !this.planVisPlac) continue;
+        const c = this.planKomp(o.k), i = c.type === 'tavle' ? -1 : rum.findIndex(r => r.id === c.obj.lokaleId), r = rum[i];
+        const navn = c.type === 'tavle' ? 'Tavler' : r ? (et(r) || 'Uden etage') + ' · ' + r.navn : 'Uden lokale', s = (o.txt + ' ' + c.art + ' ' + navn).toLowerCase();
+        if (!ord.every(w => s.includes(w))) continue;
+        const n = c.type === 'tavle' || r ? i : rum.length;
+        if (!G.has(n)) G.set(n, { n, navn, L:[] }); G.get(n).L.push({ k:o.k, txt:o.txt, art:c.art });
+      }
+      return [...G.values()].sort((a, b) => a.n - b.n);
     },
     planMaalValg(t) { return this.planValg(t).filter(g => /^[dex]:/.test(g.L[0].k)); },
     planFjern(t, k) { this.mutate(() => { t.punkter = t.punkter.filter(p => p.k !== k); }); },

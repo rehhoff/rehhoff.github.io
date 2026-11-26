@@ -14,8 +14,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=10.41.0">
-<link rel="stylesheet" href="css/tailwind.css?v=10.41.0">
+<link rel="stylesheet" href="css/app.css?v=10.42.0">
+<link rel="stylesheet" href="css/tailwind.css?v=10.42.0">
 </head>
 <body class="min-h-full">
 <p id="fail" hidden style="margin:16px;padding:12px;border:1px solid var(--crit);color:var(--crit)">Appen kunne ikke starte, fordi Alpine.js ikke blev indlæst. Genindlæs siden.</p>
@@ -563,11 +563,19 @@
           </div>
         </header>
         <div class="flex flex-wrap items-end gap-2 border-b border-line px-3 py-2 text-sm" x-show="planMode">
-          <template x-if="planMode==='placer'"><div class="contents">
-            <label class="f" for="pl-komp">Komponent
-              <select id="pl-komp" class="inp" x-model="planVaelg"><option value="">Vælg …</option>
-                <template x-for="g in planValg(planAkt())" :key="g.navn"><optgroup :label="g.navn"><template x-for="o in g.L" :key="o.k"><option :value="o.k" :selected="planVaelg===o.k" x-text="o.txt"></option></template></optgroup></template></select></label>
-            <span class="text-xs text-muted pb-2">Klik på tegningen for at placere. Klik på en prik for at flytte den. Esc afslutter.</span>
+          <template x-if="planMode==='placer'"><div class="flex flex-col gap-2 w-full">
+            <div class="flex flex-wrap items-end gap-3">
+              <label class="f" for="pl-soeg">Søg komponent<input id="pl-soeg" class="inp" type="search" x-model="planSoeg" placeholder="Navn, lokale eller etage" autocomplete="off"></label>
+              <label class="flex items-center gap-2 pb-2"><input id="pl-vis-plac" type="checkbox" x-model="planVisPlac"> Vis placerede</label>
+            </div>
+            <div id="pl-komp" class="flex flex-col gap-2 max-h-48 overflow-auto">
+              <template x-for="g in planPlacer(planAkt())" :key="g.navn + g.n"><div role="group" :aria-label="g.navn">
+                <div class="text-[.7rem] uppercase tracking-wider text-muted mb-1" x-text="g.navn"></div>
+                <div class="flex flex-wrap gap-1"><template x-for="o in g.L" :key="o.k"><button type="button" class="btn" :class="planVaelg===o.k && 'sel'" :aria-pressed="planVaelg===o.k" :data-valg="o.k" :title="o.art" @click="planVaelg = planVaelg===o.k ? '' : o.k" x-text="o.txt"></button></template></div>
+              </div></template>
+              <p class="text-muted" x-show="!planPlacer(planAkt()).length" x-text="planSoeg ? 'Ingen komponenter passer til søgningen.' : 'Ingen komponenter at placere. Slå Vis placerede til for at se dem, der allerede står på tegningen.'"></p>
+            </div>
+            <span class="text-xs text-muted" x-text="(planVaelg && planKomp(planVaelg) ? 'Valgt: ' + planKomp(planVaelg).navn + '. ' : 'Vælg en komponent. ') + 'Klik på tegningen for at placere. Klik på en prik for at flytte den. Esc afslutter.'"></span>
           </div></template>
           <template x-if="planMode==='skala'"><div class="contents">
             <span class="text-xs text-muted pb-2" x-text="planPts.length < 2 ? 'Klik på to punkter med en kendt afstand (' + planPts.length + ' af 2).' : 'Skriv afstanden mellem punkterne.'"></span>
@@ -1924,17 +1932,17 @@
   </div>
 </div>
 
-<script src="js/data.js?v=10.41.0"></script>
-<script src="js/beregning.js?v=10.41.0"></script>
-<script src="js/diagram.js?v=10.41.0"></script>
-<script src="js/lagring.js?v=10.41.0"></script>
-<script src="js/historik.js?v=10.41.0"></script>
-<script src="js/billeder.js?v=10.41.0"></script>
-<script src="js/brand.js?v=10.41.0"></script>
-<script src="js/import.js?v=10.41.0"></script>
-<script src="js/aflevering.js?v=10.41.0"></script>
-<script src="js/plan.js?v=10.41.0"></script>
-<script src="js/app.js?v=10.41.0"></script>
+<script src="js/data.js?v=10.42.0"></script>
+<script src="js/beregning.js?v=10.42.0"></script>
+<script src="js/diagram.js?v=10.42.0"></script>
+<script src="js/lagring.js?v=10.42.0"></script>
+<script src="js/historik.js?v=10.42.0"></script>
+<script src="js/billeder.js?v=10.42.0"></script>
+<script src="js/brand.js?v=10.42.0"></script>
+<script src="js/import.js?v=10.42.0"></script>
+<script src="js/aflevering.js?v=10.42.0"></script>
+<script src="js/plan.js?v=10.42.0"></script>
+<script src="js/app.js?v=10.42.0"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.14.1/cdn.min.js"></script>
 </body>
 </html>

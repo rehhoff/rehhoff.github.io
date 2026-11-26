@@ -2,6 +2,11 @@
 
 Nyeste øverst. Versionsnummeret står også i appen som `APP_VERSION`. Hver version siger, hvilken model der lavede den.
 
+## 10.42.0 · 2026-11-26 · Claude Sonnet 5.5
+
+- Plantegning, Placér komponenter: rullelisten er erstattet af et søgefelt og en klikbar liste, grupperet efter etage og lokale. Allerede placerede komponenter er skjult og kan vises med "Vis placerede".
+- Ingen ændring af datamodellen (skema 23).
+
 ## 10.41.0 · 2026-11-26 · Claude Sonnet 5.5
 
 - Plantegning: vælg etage, når en tegning indsættes (feltet "Etage for ny tegning"; gælder alle sider i en PDF). Etagen vises på tegningen og i dokumentationen og kan rettes i sidepanelet. Feltet foreslår de etager, lokalerne allerede bruger.
