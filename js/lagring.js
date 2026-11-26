@@ -159,6 +159,15 @@ const APP_LAGRING = () => ({
       if (this.synkKoerer) return ' · synkroniserer …';
       return this.synk.sidst ? ' · synkroniseret kl. ' + new Date(this.synk.sidst).toLocaleTimeString('da-DK', { hour:'2-digit', minute:'2-digit' }) : ' · synkroniseres via GitHub';
     },
+    /* base er hashen efter norm(). Får norm() nye felter i en opdatering, ville et urørt projekt se ændret ud og give en falsk konflikt. Er den gemte tekst præcis den sidst synkroniserede, regnes base om. Kaldes ved start, før noget skrives */
+    synkOmregn() {
+      const s = this.synkLaes(); if (!s) return; this.synk = s;
+      for (const [id, h] of Object.entries(s.base)) {
+        let raa = null; try { raa = localStorage.getItem(PK(id)); } catch (e) {}
+        const d = raa && hashTxt(raa) === h && this.laes(id); if (d) s.base[id] = hashD(d);
+      }
+      this.synkGem();
+    },
     synkSenere() { if (!this.synk || this.iSynk) return; clearTimeout(SYNK_T); SYNK_T = setTimeout(() => this.synkNu(), 4000); },
     async synkNu() {
       this.gemNu();
@@ -183,28 +192,32 @@ const APP_LAGRING = () => ({
         if (f.truncated || txt == null) { let r = null; try { r = await fetch(f.raw_url, { cache:'no-store' }); } catch (e) {} if (!r || !r.ok) throw new Error('Kunne ikke hente ' + navn + ' fra GitHub.'); txt = await r.text(); }
         let d = null; try { d = JSON.parse(txt); } catch (e) {}
         if (!d || !Array.isArray(d.tavler)) { ugyldig.add(m[1]); continue; }
-        d = norm(d); fjern[m[1]] = { d, h:hashD(d) };
+        d = norm(d); fjern[m[1]] = { d, h:hashD(d), raa:hashTxt(txt) };
       }
       /* Herfra og til PATCH er alt synkront, så brugeren kan ikke ændre noget midt i fletningen. */
       this.iSynk = true;
-      const base = this.synk.base || {}, nyBase = {}, filer = {}, n = { hentet:0, sendt:0, slettet:0, konflikt:0 };
+      const base = this.synk.base || {}, vej = this.synk.vej || {}, mellem = Object.assign({}, base), sendes = {}, nyBase = {}, filer = {}, n = { hentet:0, sendt:0, slettet:0, konflikt:0 };
       const fjernSlet = [];
       try {
-        if (this.storageOk) this.skriv(this.pid, this.db);
+        if (this.storageOk) this.skriv(this.pid, norm(JSON.parse(JSON.stringify(this.db))));
         const eks = new Set([seed(), seed2()].map(d => { d.projekt.dato = ''; return hashD(d); }));
         const erEks = d => { const c = JSON.parse(JSON.stringify(d)); c.projekt.dato = ''; return eks.has(hashD(c)); };
         const lokale = new Set(this.projekter.map(p => p.id));
         for (const id of new Set([...lokale, ...Object.keys(fjern), ...Object.keys(base)])) {
-          const L = lokale.has(id) ? this.laes(id) : null, R = fjern[id], B = base[id];
+          const L = lokale.has(id) ? this.laes(id) : null, R = fjern[id];
+          let B = base[id];
+          /* Gist'en er uændret, hvis filen er præcis den sidst synkroniserede (base fra før en opdatering) eller den, denne enhed sendte uden at nå at få svar */
+          if (R && (R.raa === B || R.h === vej[id])) mellem[id] = B = R.h;
           if (ugyldig.has(id) || (lokale.has(id) && !L)) { if (B) nyBase[id] = B; continue; }
-          const Lh = L && hashD(L), send = () => { filer[GP(id)] = { content:JSON.stringify(L) }; nyBase[id] = Lh; n.sendt++; };
+          const Lh = L && hashD(L), send = () => { const s = JSON.stringify(L); filer[GP(id)] = { content:s }; nyBase[id] = sendes[id] = Lh; n.sendt++; if (id !== this.pid) this.skriv(id, L, s); };
           if (L && R) {
             if (Lh === R.h) nyBase[id] = Lh;
             else if (R.h === B) send();
             else if (Lh === B) { this.synkHent(id, R.d); nyBase[id] = R.h; n.hentet++; }
             else {
               const kid = uid(), k = R.d; k.projekt.navn = (k.projekt.navn || 'Projekt') + ' (fra anden enhed ' + this.datoTxt(new Date().toISOString()) + ')';
-              this.synkHent(kid, k); filer[GP(kid)] = { content:JSON.stringify(k) }; nyBase[kid] = hashD(k);
+              this.synkHent(kid, k); filer[GP(kid)] = { content:JSON.stringify(k) }; nyBase[kid] = sendes[kid] = hashD(k);
+              mellem[id] = R.h;  /* den anden udgave er nu bevaret i kopien: mislykkes afsendelsen, laves der ikke en kopi til */
               send(); n.sendt--; n.konflikt++;
             }
           } else if (L) {
@@ -219,10 +232,13 @@ const APP_LAGRING = () => ({
         if (n.hentet || n.slettet || n.konflikt) this.skrivIdx();
       } finally { this.iSynk = false; }
       if (Object.keys(filer).length) {
+        /* gem før afsendelsen, hvad der allerede er hentet, og hvad der er på vej: afbrydes appen eller nettet, må næste synkronisering ikke se det som to ændringer */
+        for (const id of new Set([...Object.keys(mellem), ...Object.keys(nyBase)])) if (!(GP(id) in filer)) { if (nyBase[id]) mellem[id] = nyBase[id]; else delete mellem[id]; }
+        this.synk.base = mellem; this.synk.vej = sendes; this.synkGem();
         filer[GFIL] = { content:this.synkMarkoer() };
         await this.gh('/gists/' + this.synk.gistId, { method:'PATCH', body:JSON.stringify({ files:filer }) });
       }
-      this.synk.base = nyBase;
+      this.synk.base = nyBase; delete this.synk.vej;
       if (n.konflikt) this.say(n.konflikt + ' projekt' + (n.konflikt > 1 ? 'er' : '') + ' var ændret på to enheder. Begge udgaver er beholdt, og den anden hedder "fra anden enhed".');
     },
     synkHent(id, d) {
