@@ -2,6 +2,12 @@
 
 Nyeste øverst. Versionsnummeret står også i appen som `APP_VERSION`. Hver version siger, hvilken model der lavede den.
 
+## 10.43.0 · 2026-11-26 · Claude Sonnet 5.5
+
+- Plantegning: symbolerne er blevet mindre og følger målestokken (30 cm i diameter i virkeligheden). Uden målestok er de halvt så store som før. Størrelsen justeres med −/+ pr. tegning i sidepanelet. Det gælder også dokumentationen.
+- Små symboler kan stadig rammes: et tryk tæt på vælger den nærmeste prik.
+- Datamodel: skema 24, nyt felt `symbol` på tegninger (1 på gamle tegninger). Plan: `docs/planer/2026-11-26-symbolstoerrelse.md`.
+
 ## 10.42.0 · 2026-11-26 · Claude Sonnet 5.5
 
 - Plantegning, Placér komponenter: rullelisten er erstattet af et søgefelt og en klikbar liste, grupperet efter etage og lokale. Allerede placerede komponenter er skjult og kan vises med "Vis placerede".

@@ -14,8 +14,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=10.42.0">
-<link rel="stylesheet" href="css/tailwind.css?v=10.42.0">
+<link rel="stylesheet" href="css/app.css?v=10.43.0">
+<link rel="stylesheet" href="css/tailwind.css?v=10.43.0">
 </head>
 <body class="min-h-full">
 <p id="fail" hidden style="margin:16px;padding:12px;border:1px solid var(--crit);color:var(--crit)">Appen kunne ikke starte, fordi Alpine.js ikke blev indlæst. Genindlæs siden.</p>
@@ -604,6 +604,12 @@
           <select id="pl-lok" class="inp" @change="planSaet(planAkt(), 'lokaleId', $event.target.value)"><option value="" :selected="!planAkt().lokaleId">Hele projektet</option>
             <template x-for="l in db.lokaler" :key="l.id"><option :value="l.id" :selected="planAkt().lokaleId===l.id" x-text="l.navn"></option></template></select></label>
         <p class="text-xs text-muted" x-text="planAkt().skala ? 'Målestok: tegningen er ' + fmt(planAkt().skala, 1) + ' m bred.' : 'Ingen målestok. Tryk på Målestok for at kunne måle kabler.'"></p>
+        <div class="flex items-center gap-2 text-sm" role="group" aria-label="Symbolstørrelse">
+          <span class="text-[.7rem] uppercase tracking-wider text-muted">Symbolstørrelse</span>
+          <button class="btn" id="pl-sym-ned" @click="planSymbolTrin(planAkt(), 0.8)" aria-label="Mindre symboler">−</button>
+          <span class="num text-xs w-14 text-center" id="pl-sym" aria-live="polite" x-text="planSymbolTxt(planAkt())"></span>
+          <button class="btn" id="pl-sym-op" @click="planSymbolTrin(planAkt(), 1.25)" aria-label="Større symboler">+</button>
+        </div>
         <div>
           <div class="text-[.7rem] uppercase tracking-wider text-muted mb-1">Placerede komponenter</div>
           <p x-show="!planPunkter(planAkt()).length" class="text-sm text-muted">Ingen endnu. Tryk på Placér komponenter.</p>
@@ -1932,17 +1938,17 @@
   </div>
 </div>
 
-<script src="js/data.js?v=10.42.0"></script>
-<script src="js/beregning.js?v=10.42.0"></script>
-<script src="js/diagram.js?v=10.42.0"></script>
-<script src="js/lagring.js?v=10.42.0"></script>
-<script src="js/historik.js?v=10.42.0"></script>
-<script src="js/billeder.js?v=10.42.0"></script>
-<script src="js/brand.js?v=10.42.0"></script>
-<script src="js/import.js?v=10.42.0"></script>
-<script src="js/aflevering.js?v=10.42.0"></script>
-<script src="js/plan.js?v=10.42.0"></script>
-<script src="js/app.js?v=10.42.0"></script>
+<script src="js/data.js?v=10.43.0"></script>
+<script src="js/beregning.js?v=10.43.0"></script>
+<script src="js/diagram.js?v=10.43.0"></script>
+<script src="js/lagring.js?v=10.43.0"></script>
+<script src="js/historik.js?v=10.43.0"></script>
+<script src="js/billeder.js?v=10.43.0"></script>
+<script src="js/brand.js?v=10.43.0"></script>
+<script src="js/import.js?v=10.43.0"></script>
+<script src="js/aflevering.js?v=10.43.0"></script>
+<script src="js/plan.js?v=10.43.0"></script>
+<script src="js/app.js?v=10.43.0"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.14.1/cdn.min.js"></script>
 </body>
 </html>
