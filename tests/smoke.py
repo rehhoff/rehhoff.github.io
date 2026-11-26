@@ -1124,7 +1124,11 @@ async def main():
           ef().value=' Kælder '; ef().dispatchEvent(new Event('change')); await T(60); o.rettet=t.etage==='Kælder'&&a.docHtml().includes(t.navn+' · Kælder');
           const klik=(x,y)=>{{const s=svg().getBoundingClientRect(); svg().dispatchEvent(new MouseEvent('click',{{bubbles:true,clientX:s.left+x*s.width,clientY:s.top+y*s.width}}));}};
           const e=a.db.enheder[0], lok=a.db.lokaler[0];
-          document.getElementById('pl-placer').click(); await T(60); a.planVaelg='e:'+e.id; klik(0.5,0.25); await T(80);
+          document.getElementById('pl-placer').click(); await T(60); const kn=()=>document.querySelector('#pl-komp [data-valg="e:'+e.id+'"]');
+          const rum=a.db.lokaler.find(r=>r.id===e.lokaleId), gr=a.planPlacer(t); o.grupper=gr[0].navn==='Tavler'&&gr.find(g=>g.L.some(x=>x.k==='e:'+e.id)).navn===(rum.etage||'Uden etage')+' · '+rum.navn;
+          const sf=document.getElementById('pl-soeg'), skriv=v=>{{sf.value=v; sf.dispatchEvent(new Event('input'));}}; skriv('findesikke'); await T(60); o.soeg=!document.querySelector('#pl-komp [data-valg]');
+          skriv(rum.navn.toUpperCase()+' '+e.navn); await T(60); o.soeg=o.soeg&&!!kn(); kn().click(); await T(60); o.valgt=a.planVaelg==='e:'+e.id&&kn().getAttribute('aria-pressed')==='true'; klik(0.5,0.25); await T(80);
+          o.skjult=!kn(); document.getElementById('pl-vis-plac').click(); await T(60); o.skjult=o.skjult&&!!kn()&&kn().textContent.includes('(placeret)'); a.planVisPlac=false; skriv('');
           o.punkt=t.punkter.length===1&&t.punkter[0].k==='e:'+e.id&&Math.abs(t.punkter[0].x-0.5)<0.01&&Math.abs(t.punkter[0].y-0.25)<0.01;
           o.prik=svg().querySelectorAll('g.pp').length===1;
           a.planVaelg='e:'+e.id; klik(0.2,0.1); await T(60); o.flyttet=t.punkter.length===1&&Math.abs(t.punkter[0].x-0.2)<0.01;
@@ -1140,7 +1144,7 @@ async def main():
           e.laengde=L0; a.lokF=''; a.db.tegninger=[]; a.save(); a.planNulstil(); a.go('tavle'); await T(50);
           return o}}""")
         tjek('plantegning: billede og PDF (én tegning pr. side) gemt i IndexedDB og billedIds, prik placeres og flyttes, målestok og måling sætter kabellængden, lokale, dokumentation',
-             r['navne'] == ['Stueetage', 'El 1.sal · side 1', 'El 1.sal · side 2'] and r['forhold'] == 0.667 and r['etage'] and r['rettet'] and r['bil'] and r['ids'] and r['vist'] and r['punkt'] and r['prik']
+             r['navne'] == ['Stueetage', 'El 1.sal · side 1', 'El 1.sal · side 2'] and r['forhold'] == 0.667 and r['etage'] and r['rettet'] and r['grupper'] and r['soeg'] and r['valgt'] and r['skjult'] and r['bil'] and r['ids'] and r['vist'] and r['punkt'] and r['prik']
              and r['flyttet'] and r['maalLaast'] and r['skala'] == 20 and r['laengde'] == '6 m' and r['m'] and r['brugt'] is True and r['esc'] and r['lokKnap'] and r['filter'] and r['doc']
              and r['norm'] == '{"id":"t1","billede":"","forhold":0.5,"punkter":[{"k":"e:a","x":1,"y":0.5}],"navn":"","lokaleId":"","etage":"","skala":0}', r)
 
