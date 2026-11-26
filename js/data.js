@@ -2,7 +2,7 @@
 const KEY = 'tavleoversigt.v2', OLD = 'tavleoversigt.v1', TKEY = 'tavleoversigt.tema', IDX = 'tavleoversigt.projekter';
 const DTKEY = 'tavleoversigt.diagramtema';  /* enstregsdiagrammets baggrund: '' (som appen), 'lys' eller 'moerk'. Kun denne browser */
 /* Versioner: APP_VERSION følger CHANGELOG.md. SCHEMA hæves kun, når datamodellen ændres, og udløser en automatisk backup før migrering. */
-const APP_VERSION = '10.40.0', SCHEMA = 22, BKEY = 'tavleoversigt.backups', BMAX = 3;
+const APP_VERSION = '10.41.0', SCHEMA = 23, BKEY = 'tavleoversigt.backups', BMAX = 3;
 const PK = id => 'tavleoversigt.p.' + id, MEM = {};
 /* Synkronisering: en hemmelig GitHub Gist med en markørfil og én fil pr. projekt. Se docs/planer/2026-11-15-gist-synk.md. */
 const SKEY = 'tavleoversigt.sync', GFIL = 'tavleoversigt.json', GP = id => 'tavleoversigt-' + id + '.json', GPRE = /^tavleoversigt-([A-Za-z0-9_-]+)\.json$/, GH = 'https://api.github.com';
@@ -209,7 +209,7 @@ function norm(d) {
   o.links.forEach(l => { if (l && typeof l === 'object') l.trukket = !!l.trukket; });
   /* skema 21: plantegninger. Billedet ligger i IndexedDB; x og y er brøkdele af billedets bredde, y fra 0 til forhold. k som i enstreg (t, d, e, x) plus b = brandlukning */
   o.tegninger = o.tegninger.filter(t => t && typeof t === 'object');
-  o.tegninger.forEach((t, i) => { t.id = typeof t.id === 'string' && t.id ? t.id : 'tg' + (i + 1); t.navn = String(t.navn == null ? '' : t.navn); t.lokaleId = String(t.lokaleId || '');
+  o.tegninger.forEach((t, i) => { t.id = typeof t.id === 'string' && t.id ? t.id : 'tg' + (i + 1); t.navn = String(t.navn == null ? '' : t.navn); t.lokaleId = String(t.lokaleId || ''); t.etage = String(t.etage || '');  /* etage: skema 23 */
     t.billede = typeof t.billede === 'string' && BID.test(t.billede) ? t.billede : ''; t.forhold = Number(t.forhold) > 0 ? Number(t.forhold) : 0.75; t.skala = Number(t.skala) > 0 ? Number(t.skala) : 0;
     const set = new Set(); t.punkter = (Array.isArray(t.punkter) ? t.punkter : []).filter(p => p && /^[tdexb]:[A-Za-z0-9_-]+$/.test(p.k) && !set.has(p.k) && set.add(p.k))
       .map(p => ({ k:p.k, x:Math.min(1, Math.max(0, Number(p.x) || 0)), y:Math.min(t.forhold, Math.max(0, Number(p.y) || 0)) })); });

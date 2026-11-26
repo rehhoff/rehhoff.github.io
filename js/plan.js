@@ -16,6 +16,9 @@ const planPdfLib = () => PDF_P || (PDF_P = new Promise((ok, fejl) => {
 const APP_PLAN = () => ({
     planListe() { return this.db.tegninger.filter(t => !this.lokF || t.lokaleId === this.lokF); },
     planAkt() { const L = this.planListe(); return L.find(t => t.id === this.planId) || L[0] || null; },
+    /* etageforslag: dem, lokalerne og tegningerne allerede bruger */
+    planEtager() { return [...new Set([...this.db.lokaler, ...this.db.tegninger].map(x => String(x.etage || '').trim()).filter(Boolean))]; },
+    planTitel(t) { return (t.navn || 'Tegning') + (t.etage ? ' · ' + t.etage : ''); },
     planVaelgT(id) { this.planId = id; this.planNulstil(); },
     planNulstil() { this.planMode = ''; this.planPts = []; this.planVaelg = ''; },
     planTilstand(m) { const ny = this.planMode === m ? '' : m; this.planNulstil(); this.planMode = ny; },
@@ -33,7 +36,7 @@ const APP_PLAN = () => ({
     /* upload: billeder og PDF (én tegning pr. side) */
     async planFraFil(ev) {
       const filer = [...((ev.target && ev.target.files) || [])]; if (ev.target) ev.target.value = ''; if (!filer.length) return;
-      const nye = []; this.billedArbejder++;
+      const nye = [], etage = this.planEtage.trim(); this.billedArbejder++;
       try {
         for (const fil of filer) {
           const navn = String(fil.name || 'Tegning').replace(/\.[a-z0-9]+$/i, '') || 'Tegning';
@@ -45,11 +48,11 @@ const APP_PLAN = () => ({
                 const c = document.createElement('canvas'); c.width = Math.round(v.width); c.height = Math.round(v.height);
                 const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height);
                 await side.render({ canvasContext:x, viewport:v }).promise;
-                nye.push(await this.planGemBillede(c, pdf.numPages > 1 ? navn + ' · side ' + n : navn));
+                nye.push(await this.planGemBillede(c, pdf.numPages > 1 ? navn + ' · side ' + n : navn, etage));
               }
             } else if (/^image\//.test(fil.type || '')) {
               const url = URL.createObjectURL(fil);
-              try { nye.push(await this.planGemBillede(await this.billedBillede(url), navn)); } finally { URL.revokeObjectURL(url); }
+              try { nye.push(await this.planGemBillede(await this.billedBillede(url), navn, etage)); } finally { URL.revokeObjectURL(url); }
             } else this.say(fil.name + ' er hverken et billede eller en PDF.');
           } catch (e) { this.say((fil.name || 'Filen') + ' kunne ikke indlæses: ' + (e.message || 'ukendt fejl') + '.', false, true); }
         }
@@ -57,10 +60,10 @@ const APP_PLAN = () => ({
       if (nye.length) { this.mutate(() => { this.db.tegninger.push(...nye); }); this.planVaelgT(nye[0].id); this.say(nye.length + (nye.length > 1 ? ' tegninger er tilføjet.' : ' tegning er tilføjet.'), true); }
       this.billedLager();
     },
-    async planGemBillede(im, navn) {
+    async planGemBillede(im, navn, etage) {
       let r = null; for (const [maks, q] of [[PLAN_PX, 0.8], [PLAN_PX, 0.65], [2400, 0.65]]) { r = this.billedTegn(im, maks, q); if (bStr(r.data) <= PLAN_MAKS) break; }
       const bid = uid(); await this.billedGem(bid, r.data, this.billedTegn(im, 320, 0.6).data); TEGN[bid] = r.data;
-      return { id:uid(), navn, lokaleId:this.lokF || '', billede:bid, forhold:r.h / r.w, skala:0, punkter:[] };
+      return { id:uid(), navn, lokaleId:this.lokF || '', etage, billede:bid, forhold:r.h / r.w, skala:0, punkter:[] };
     },
     planSaet(t, felt, v) { if (!t || t[felt] === v) return; this.mutate(() => { t[felt] = v; }); },
     /* billedet bliver liggende på enheden og i billed-Gist'en, til der ryddes op under Datasikring */
@@ -127,7 +130,7 @@ const APP_PLAN = () => ({
       let h = '<section style="break-before:page"><h1>Plantegninger</h1>';
       for (const t of L) {
         const pp = this.planPunkter(t);
-        h += '<div class="bd"><h2>' + esc((t.navn || 'Tegning') + (t.lokaleId ? ' · ' + this.lokaleNavn(t.lokaleId) : '')) + '</h2>' + this.planSvg(t, true);
+        h += '<div class="bd"><h2>' + esc(this.planTitel(t) + (t.lokaleId ? ' · ' + this.lokaleNavn(t.lokaleId) : '')) + '</h2>' + this.planSvg(t, true);
         if (pp.length) h += '<table><tr><th>Nr.</th><th>Komponent</th><th>Art</th><th>Status</th></tr>' + pp.map(x => '<tr><td>' + x.nr + '</td><td>' + esc(x.c.navn) + '</td><td>' + esc(x.c.art) + '</td><td>' + (x.c.ok ? '✓ Færdig' : '<b>Mangler</b>') + '</td></tr>').join('') + '</table>';
         h += '</div>';
       }

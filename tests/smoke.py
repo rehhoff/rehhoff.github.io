@@ -1101,16 +1101,27 @@ async def main():
           a.save(); return {{ens, tom:Array.isArray(d.tegninger)&&!d.tegninger.length, meta:[d.projekt.navn, a.backups.length>=1, JSON.parse(localStorage.getItem('tavleoversigt.projekter')).schema]}}}})()""")
         tjek('opgradering fra skema 20: backup taget, data intakte, tom liste med plantegninger',
              r1['ens'] and r1['tom'] and r1['meta'] == ['Skema 20-projekt', True, SKEMA], r1)
+        # skema 23: tegninger fra skema 22 har ingen etage og skal ellers være intakte
+        gl = {'id': 'tg-gl', 'navn': 'Gammel', 'lokaleId': '', 'billede': 'gl1', 'forhold': 0.5, 'skala': 12, 'punkter': [{'k': 'e:a', 'x': 0.1, 'y': 0.2}]}
+        await pg.evaluate(f"""(()=>{{const i=JSON.parse(localStorage.getItem('tavleoversigt.projekter'));i.schema=22;const p=JSON.parse(localStorage.getItem('tavleoversigt.p.'+i.aktiv));
+          p.tegninger=[{json.dumps(gl)}];localStorage.setItem('tavleoversigt.p.'+i.aktiv,JSON.stringify(p));localStorage.setItem('tavleoversigt.projekter',JSON.stringify(i));localStorage.removeItem('tavleoversigt.backups');}})()""")
+        await pg.goto(URL); await pg.wait_for_timeout(500)
+        r2 = await pg.evaluate(f"""(()=>{{const a={A};const t=JSON.parse(JSON.stringify(a.db.tegninger[0]));const b=a.backups.length>=1;a.db.tegninger=[];a.save();
+          return {{t, b, s:JSON.parse(localStorage.getItem('tavleoversigt.projekter')).schema}}}})()""")
+        tjek('opgradering fra skema 22: backup taget, tegningen intakt med tom etage', r2['t'] == dict(gl, etage='') and r2['b'] and r2['s'] == SKEMA, r2)
         await pg.evaluate(f"""(()=>{{const a={A}; a.lokF=''; window.pdfjsLib={{GlobalWorkerOptions:{{}}, getDocument:()=>({{promise:Promise.resolve({{numPages:2, getPage:async n=>({{
           getViewport:({{scale}})=>({{width:600*scale,height:400*scale}}), render:({{canvasContext:x}})=>({{promise:(x.fillStyle='#246',x.fillRect(100,100,800,500),Promise.resolve())}})}})}})}})}}; a.go('plan');}})()""")
         await pg.wait_for_timeout(150)
+        await pg.fill('#pl-ny-etage', ' 1. sal ')
         await pg.set_input_files('#pl-fil', files=[{'name': 'Stueetage.png', 'mimeType': 'image/png', 'buffer': png}, {'name': 'El 1.sal.pdf', 'mimeType': 'application/pdf', 'buffer': b'%PDF-1.4 test'}])
         await pg.wait_for_function(f"{A}.db.tegninger.length===3 && !{A}.billedArbejder", timeout=15000)
         await pg.wait_for_timeout(150)
         r = await pg.evaluate(f"""async()=>{{const a={A};const T=n=>new Promise(f=>setTimeout(f,n));const o={{}}, L=a.db.tegninger;
+          o.etage=L.every(t=>t.etage==='1. sal')&&a.planEtager().includes('1. sal'); const ef=()=>document.getElementById('pl-etage');
           o.navne=L.map(t=>t.navn); o.forhold=Math.round(L[1].forhold*1000)/1000; o.bil=L.every(t=>BFULD.has(t.billede)&&!!BMINI[t.billede]); o.ids=L.every(t=>billedIds(a.db).has(t.billede));
           const t=L[1]; a.planVaelgT(t.id); await T(120); const svg=()=>document.querySelector('#pl-tegning svg');
           o.vist=!!svg()&&svg().innerHTML.includes('data:image/jpeg');
+          ef().value=' Kælder '; ef().dispatchEvent(new Event('change')); await T(60); o.rettet=t.etage==='Kælder'&&a.docHtml().includes(t.navn+' · Kælder');
           const klik=(x,y)=>{{const s=svg().getBoundingClientRect(); svg().dispatchEvent(new MouseEvent('click',{{bubbles:true,clientX:s.left+x*s.width,clientY:s.top+y*s.width}}));}};
           const e=a.db.enheder[0], lok=a.db.lokaler[0];
           document.getElementById('pl-placer').click(); await T(60); a.planVaelg='e:'+e.id; klik(0.5,0.25); await T(80);
@@ -1122,16 +1133,16 @@ async def main():
           document.getElementById('pl-maal').click(); await T(60); klik(0.1,0.1); klik(0.3,0.1); klik(0.3,0.2); await T(60);
           o.laengde=document.getElementById('pl-laengde').textContent.trim(); a.planMaalTil='e:'+e.id; const L0=e.laengde, m=a.planM(t); o.m=Math.abs(m-6)<0.05; o.forv=Math.ceil(Math.round(m*100)/50)/2; a.planBrugLaengde(t); o.brugt=e.laengde===o.forv&&o.forv%0.5===0&&o.forv>=m;
           document.dispatchEvent(new KeyboardEvent('keydown',{{key:'Escape',bubbles:true}})); await T(40); o.esc=a.planMode==='';
-          a.planSaet(t,'lokaleId',lok.id); a.go('lokaler'); await T(150); o.lokKnap=[...document.querySelectorAll('.pl-lok')].some(b=>b.textContent.trim()===t.navn);
+          a.planSaet(t,'lokaleId',lok.id); a.go('lokaler'); await T(150); o.lokKnap=[...document.querySelectorAll('.pl-lok')].some(b=>b.textContent.trim()===a.planTitel(t));
           a.lokF=lok.id; o.filter=a.planListe().map(x=>x.id).join()===t.id; a.lokF='';
           const doc=a.docHtml(); o.doc=doc.includes('<h1>Plantegninger</h1>')&&doc.includes('<image href="data:image/jpeg')&&doc.includes('✓ Færdig')!==doc.includes('<b>Mangler</b>');
           o.norm=JSON.stringify(norm({{tegninger:[{{id:'t1',billede:'../x',forhold:0.5,punkter:[{{k:'e:a',x:2,y:0.9}},{{k:'e:a',x:0.1,y:0.1}},{{k:'q:z',x:0,y:0}}]}}]}}).tegninger[0]);
           e.laengde=L0; a.lokF=''; a.db.tegninger=[]; a.save(); a.planNulstil(); a.go('tavle'); await T(50);
           return o}}""")
         tjek('plantegning: billede og PDF (én tegning pr. side) gemt i IndexedDB og billedIds, prik placeres og flyttes, målestok og måling sætter kabellængden, lokale, dokumentation',
-             r['navne'] == ['Stueetage', 'El 1.sal · side 1', 'El 1.sal · side 2'] and r['forhold'] == 0.667 and r['bil'] and r['ids'] and r['vist'] and r['punkt'] and r['prik']
+             r['navne'] == ['Stueetage', 'El 1.sal · side 1', 'El 1.sal · side 2'] and r['forhold'] == 0.667 and r['etage'] and r['rettet'] and r['bil'] and r['ids'] and r['vist'] and r['punkt'] and r['prik']
              and r['flyttet'] and r['maalLaast'] and r['skala'] == 20 and r['laengde'] == '6 m' and r['m'] and r['brugt'] is True and r['esc'] and r['lokKnap'] and r['filter'] and r['doc']
-             and r['norm'] == '{"id":"t1","billede":"","forhold":0.5,"punkter":[{"k":"e:a","x":1,"y":0.5}],"navn":"","lokaleId":"","skala":0}', r)
+             and r['norm'] == '{"id":"t1","billede":"","forhold":0.5,"punkter":[{"k":"e:a","x":1,"y":0.5}],"navn":"","lokaleId":"","etage":"","skala":0}', r)
 
         # 4w. Skema 22: samlepunkt sløjfet fra en brugsgenstand (Tilgang før dåsen). Opgradering fra skema 21, arvet gruppe, ΔU, strøm og Ik-R gennem Tilgangen,
         #     enstreg, sporing, føringsvej, formular, kredse afvist (kanForsyne, flytTjek, norm), klon lokale, kopiér gren, sletning og fortryd. Ryddes op bagefter

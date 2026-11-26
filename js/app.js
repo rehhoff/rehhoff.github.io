@@ -4,7 +4,7 @@ function bland(...dele) { const r = {}; for (const d of dele) Object.definePrope
 function app() {
   return bland({
     view: 'tavle',
-    planId: '', planMode: '', planVaelg: '', planPts: [], planSkalaM: '', planMaalTil: '', planZoom: 100, planTick: 0,  /* Plantegning (js/plan.js) */
+    planId: '', planMode: '', planVaelg: '', planPts: [], planSkalaM: '', planMaalTil: '', planZoom: 100, planTick: 0, planEtage: '',  /* Plantegning (js/plan.js) */
     sldStor: false, sldTema: '',  /* enstreg: fylder hele vinduet; egen lys/mørk baggrund */
     lokAlleUd: false, lokUd: {}, dragE: null, overE: null,  /* dragE/overE: brugsgenstand, der trækkes i Lokaler */  /* Lokaler: listerne er foldet sammen til en fast højde; lokUd[id] overstyrer lokAlleUd for ét lokale */
     lokP: '', lokH: '',  /* Lokaler: fastholdt og musens forsyningskilde ('lokaleId|gruppeId') */

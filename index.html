@@ -14,8 +14,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=10.40.0">
-<link rel="stylesheet" href="css/tailwind.css?v=10.40.0">
+<link rel="stylesheet" href="css/app.css?v=10.41.0">
+<link rel="stylesheet" href="css/tailwind.css?v=10.41.0">
 </head>
 <body class="min-h-full">
 <p id="fail" hidden style="margin:16px;padding:12px;border:1px solid var(--crit);color:var(--crit)">Appen kunne ikke starte, fordi Alpine.js ikke blev indlæst. Genindlæs siden.</p>
@@ -540,8 +540,10 @@
   <template x-if="view==='plan'"><section class="flex flex-col gap-3">
     <div class="flex flex-wrap gap-2 items-center">
       <label class="btn btn-primary" for="pl-fil">+ Tegning (billede eller PDF)<input type="file" id="pl-fil" class="sr-only" accept="image/*,application/pdf,.pdf" multiple @change="planFraFil($event)"></label>
+      <label class="f" for="pl-ny-etage">Etage for ny tegning<input id="pl-ny-etage" class="inp" list="pl-etager" x-model="planEtage" placeholder="Stue"></label>
+      <datalist id="pl-etager"><template x-for="e in planEtager()" :key="e"><option :value="e"></option></template></datalist>
       <span class="text-sm text-muted" x-show="billedArbejder">Gør tegningen klar …</span>
-      <template x-for="t in planListe()" :key="t.id"><button class="btn pl-vaelg" :class="planAkt() && planAkt().id === t.id && 'sel'" @click="planVaelgT(t.id)" x-text="t.navn || 'Tegning'"></button></template>
+      <template x-for="t in planListe()" :key="t.id"><button class="btn pl-vaelg" :class="planAkt() && planAkt().id === t.id && 'sel'" @click="planVaelgT(t.id)" x-text="planTitel(t)"></button></template>
     </div>
     <p class="text-xs text-muted">Upload plantegninger, eltegninger og lignende som billede eller PDF (én tegning pr. side). Placér komponenter som prikker: grøn er trukket eller udført, orange mangler. Sæt målestokken med en kendt afstand, og mål kabelvejen direkte på tegningen. Tegningerne gemmes på enheden og sendes til GitHub, hvis synkronisering er slået til.</p>
     <p x-show="!billedOk" class="panel p-3 text-sm warn">Browseren tillader ikke lagring af billeder (IndexedDB). Tegninger kan ikke tilføjes her.</p>
@@ -550,7 +552,7 @@
     <template x-if="planAkt()"><div class="grid gap-3 lg:grid-cols-[minmax(0,1fr)_20rem] items-start">
       <div class="panel overflow-hidden min-w-0">
         <header class="flex flex-wrap items-center justify-between gap-2 border-b border-line bg-raised px-3 py-2">
-          <h2 class="hd text-xl" x-text="planAkt().navn || 'Tegning'"></h2>
+          <h2 class="hd text-xl" x-text="planTitel(planAkt())"></h2>
           <div class="flex flex-wrap items-center gap-1">
             <button class="btn" @click="planZoom = Math.max(50, Math.round(planZoom / 1.25))" aria-label="Zoom ud">−</button>
             <span class="num text-xs w-12 text-center" x-text="planZoom + ' %'"></span>
@@ -589,6 +591,7 @@
       </div>
       <aside class="panel p-3 flex flex-col gap-3 lg:sticky lg:top-3">
         <label class="f" for="pl-navn">Navn<input id="pl-navn" class="inp" :value="planAkt().navn" @change="planSaet(planAkt(), 'navn', $event.target.value.trim())"></label>
+        <label class="f" for="pl-etage">Etage<input id="pl-etage" class="inp" list="pl-etager" :value="planAkt().etage" @change="planSaet(planAkt(), 'etage', $event.target.value.trim())"></label>
         <label class="f" for="pl-lok">Lokale
           <select id="pl-lok" class="inp" @change="planSaet(planAkt(), 'lokaleId', $event.target.value)"><option value="" :selected="!planAkt().lokaleId">Hele projektet</option>
             <template x-for="l in db.lokaler" :key="l.id"><option :value="l.id" :selected="planAkt().lokaleId===l.id" x-text="l.navn"></option></template></select></label>
@@ -869,7 +872,7 @@
             </div>
             <div x-show="db.tegninger.some(t => t.lokaleId === l.id)">
               <div class="text-[.7rem] uppercase tracking-wider text-muted mb-1">Plantegninger</div>
-              <div class="flex flex-wrap gap-1"><template x-for="t in db.tegninger.filter(t => t.lokaleId === l.id)" :key="t.id"><button class="chip pl-lok" @click="planVaelgT(t.id); go('plan')" x-text="t.navn || 'Tegning'"></button></template></div>
+              <div class="flex flex-wrap gap-1"><template x-for="t in db.tegninger.filter(t => t.lokaleId === l.id)" :key="t.id"><button class="chip pl-lok" @click="planVaelgT(t.id); go('plan')" x-text="planTitel(t)"></button></template></div>
             </div>
             <div class="lok-lister flex flex-col gap-3" :class="!(lokUd[l.id] ?? lokAlleUd) && 'max-h-80 overflow-y-auto'">
             <ul class="flex flex-col text-sm">
@@ -1921,17 +1924,17 @@
   </div>
 </div>
 
-<script src="js/data.js?v=10.40.0"></script>
-<script src="js/beregning.js?v=10.40.0"></script>
-<script src="js/diagram.js?v=10.40.0"></script>
-<script src="js/lagring.js?v=10.40.0"></script>
-<script src="js/historik.js?v=10.40.0"></script>
-<script src="js/billeder.js?v=10.40.0"></script>
-<script src="js/brand.js?v=10.40.0"></script>
-<script src="js/import.js?v=10.40.0"></script>
-<script src="js/aflevering.js?v=10.40.0"></script>
-<script src="js/plan.js?v=10.40.0"></script>
-<script src="js/app.js?v=10.40.0"></script>
+<script src="js/data.js?v=10.41.0"></script>
+<script src="js/beregning.js?v=10.41.0"></script>
+<script src="js/diagram.js?v=10.41.0"></script>
+<script src="js/lagring.js?v=10.41.0"></script>
+<script src="js/historik.js?v=10.41.0"></script>
+<script src="js/billeder.js?v=10.41.0"></script>
+<script src="js/brand.js?v=10.41.0"></script>
+<script src="js/import.js?v=10.41.0"></script>
+<script src="js/aflevering.js?v=10.41.0"></script>
+<script src="js/plan.js?v=10.41.0"></script>
+<script src="js/app.js?v=10.41.0"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.14.1/cdn.min.js"></script>
 </body>
 </html>
