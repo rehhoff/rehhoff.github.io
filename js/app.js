@@ -6,7 +6,7 @@ function app() {
     view: 'tavle',
     planId: '', planMode: '', planVaelg: '', planPts: [], planSkalaM: '', planMaalTil: '', planZoom: 100, planTick: 0,  /* Plantegning (js/plan.js) */
     sldStor: false, sldTema: '',  /* enstreg: fylder hele vinduet; egen lys/mørk baggrund */
-    lokAlleUd: false, lokUd: {},  /* Lokaler: listerne er foldet sammen til en fast højde; lokUd[id] overstyrer lokAlleUd for ét lokale */
+    lokAlleUd: false, lokUd: {}, dragE: null, overE: null,  /* dragE/overE: brugsgenstand, der trækkes i Lokaler */  /* Lokaler: listerne er foldet sammen til en fast højde; lokUd[id] overstyrer lokAlleUd for ét lokale */
     fvIkke: false, fvFold: new Set(), fvAaben: new Set(), fvHi: '', fvAnc: [], fvBlink: '', gren: null, sfPop: null, fvRed: null, fvTmp: null,
     views: [ { id:'tavle', l:'Tavle' }, { id:'enstreg', l:'Enstregsdiagram' }, { id:'taending', l:'Tændingsdiagram' }, { id:'samlepunkter', l:'Samlepunkter & dåser' }, { id:'foering', l:'Føringsvej' }, { id:'svag', l:'Svagstrøm' }, { id:'beregning', l:'Beregning' }, { id:'lokaler', l:'Lokaler' }, { id:'kabler', l:'Kabler' }, { id:'dokumentation', l:'Dokumentation' }, { id:'fejlfinder', l:'Fejlfinder' }, { id:'brand', l:'Brandlukning' }, { id:'plan', l:'Plantegning' } ],
     db: tom(), dbRev: 0, hist: [], fremtid: [], klon: null, sel: null, drag: null, over: null,
@@ -723,6 +723,12 @@ function app() {
     rykGruppe(gid, dir) {
       const g = this.gruppe(gid); if (!g) return; const gs = this.grupperFor(g.tavleId), n = gs[gs.findIndex(x => x.id === gid) + dir]; if (!n) return;
       this.mutate(() => { const nr = g.nr; g.nr = n.nr; n.nr = nr; });
+    },
+    /* træk en brugsgenstand til en anden plads i samme lokale. Den lægges på målets plads, og resten rykker */
+    slipEnhed(til, ev) {
+      const fra = this.dragE; this.dragE = null; this.overE = null; if (!fra) return; ev.preventDefault(); if (fra === til) return;
+      const L = this.db.enheder, i = L.findIndex(e => e.id === fra), j = L.findIndex(e => e.id === til); if (i < 0 || j < 0 || L[i].lokaleId !== L[j].lokaleId) return;
+      this.mutate(() => { const x = L[i]; L.splice(i, 1); L.splice(j, 0, x); });
     },
     slipLokale(til, ev) {
       const fra = this.dragL; this.dragL = null; this.overL = null; if (!fra) return; ev.preventDefault(); if (fra === til) return;

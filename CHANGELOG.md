@@ -2,6 +2,11 @@
 
 Nyeste øverst. Versionsnummeret står også i appen som `APP_VERSION`. Hver version siger, hvilken model der lavede den.
 
+## 10.35.0 · 2026-11-26 · Claude Opus 5.5
+
+- Fanen Lokaler: brugsgenstande kan trækkes til en ny plads i lokalet med håndtaget ⠿ foran fluebenet. Målet markeres med en ramme. Det kan fortrydes. Træk virker med mus og på tablet; ▲/▼ er der stadig.
+- Ingen ændring i datamodellen.
+
 ## 10.34.0 · 2026-11-26 · Claude Opus 5.5
 
 - Fanen Lokaler: knapperne **+ Dataudtag** og **+ Kamera** på hvert lokale åbner svagstrømsformularen med lokalet valgt.
