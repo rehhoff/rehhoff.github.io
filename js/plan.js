@@ -63,11 +63,21 @@ const APP_PLAN = () => ({
     async planGemBillede(im, navn, etage) {
       let r = null; for (const [maks, q] of [[PLAN_PX, 0.8], [PLAN_PX, 0.65], [2400, 0.65]]) { r = this.billedTegn(im, maks, q); if (bStr(r.data) <= PLAN_MAKS) break; }
       const bid = uid(); await this.billedGem(bid, r.data, this.billedTegn(im, 320, 0.6).data); TEGN[bid] = r.data;
-      return { id:uid(), navn, lokaleId:this.lokF || '', etage, billede:bid, forhold:r.h / r.w, skala:0, punkter:[] };
+      return { id:uid(), navn, lokaleId:this.lokF || '', etage, billede:bid, forhold:r.h / r.w, skala:0, symbol:1, punkter:[] };
     },
     planSaet(t, felt, v) { if (!t || t[felt] === v) return; this.mutate(() => { t[felt] = v; }); },
     /* billedet bliver liggende på enheden og i billed-Gist'en, til der ryddes op under Datasikring */
     planSlet(t) { this.mutate(() => { this.db.tegninger = this.db.tegninger.filter(x => x.id !== t.id); }); this.planId = ''; this.planNulstil(); this.say('Tegningen ' + (t.navn || '') + ' er slettet.', true); },
+    /* prikkens radius i SVG-enheder (billedbredden er 1000): med målestok 30 cm i diameter, ellers 9; begge ganges med tegningens faktor */
+    planR(t) { return (t.skala ? 150 / t.skala : 9) * t.symbol; },
+    planSymbolTxt(t) { return t.skala ? Math.round(30 * t.symbol) + ' cm' : Math.round(100 * t.symbol) + ' %'; },
+    planSymbolTrin(t, f) { this.planSaet(t, 'symbol', Math.min(10, Math.max(0.2, Math.round(t.symbol * f * 1000) / 1000))); },
+    /* små prikker skal kunne rammes med en finger: nærmeste prik inden for 22 skærmpixel. x og y er brøkdele af bredden, bredde er i pixel */
+    planNaer(t, x, y, bredde) {
+      let bedst = null, afst = 22;
+      for (const { p } of this.planPunkter(t)) { const d = Math.hypot(p.x - x, p.y - y) * bredde; if (d <= afst) { bedst = p.k; afst = d; } }
+      return bedst;
+    },
     /* komponent bag en prik: navn, formular og status. null, hvis komponenten er slettet */
     planKomp(k) {
       const [a, id] = String(k).split(':'), d = this.db;
@@ -107,10 +117,10 @@ const APP_PLAN = () => ({
     planKlik(ev, t) {
       const svg = ev.currentTarget && ev.currentTarget.querySelector('svg'); if (!t || !svg) return;
       const s = svg.getBoundingClientRect(), x = Math.min(1, Math.max(0, (ev.clientX - s.left) / s.width)), y = Math.min(t.forhold, Math.max(0, (ev.clientY - s.top) / s.width));
-      const hit = ev.target && ev.target.closest ? ev.target.closest('[data-k]') : null, m = this.planMode;
-      if (!m) { const c = hit && this.planKomp(hit.getAttribute('data-k')); if (c) this.openForm(c.type, c.obj); return; }
+      const el = ev.target && ev.target.closest ? ev.target.closest('[data-k]') : null, hit = el ? el.getAttribute('data-k') : this.planNaer(t, x, y, s.width), m = this.planMode;
+      if (!m) { const c = hit && this.planKomp(hit); if (c) this.openForm(c.type, c.obj); return; }
       if (m === 'placer') {
-        if (!this.planVaelg) { if (hit) this.planVaelg = hit.getAttribute('data-k'); else this.say('Vælg først en komponent i listen, eller klik på en prik for at flytte den.'); return; }
+        if (!this.planVaelg) { if (hit) this.planVaelg = hit; else this.say('Vælg først en komponent i listen, eller klik på en prik for at flytte den.'); return; }
         const k = this.planVaelg; this.mutate(() => { t.punkter = t.punkter.filter(p => p.k !== k).concat([{ k, x, y }]); }); this.planVaelg = ''; return;
       }
       this.planPts = (m === 'skala' ? this.planPts.slice(-1) : this.planPts).concat([{ x, y }]);
@@ -132,8 +142,9 @@ const APP_PLAN = () => ({
       if (!t) return ''; const H = 1000 * t.forhold, src = print ? (TEGN[t.billede] || BMINI[t.billede] || '') : this.planSrc(t), o = [];
       if (/^data:image\//.test(src)) o.push(`<image href="${esc(src)}" x="0" y="0" width="1000" height="${H}" preserveAspectRatio="none"/>`);
       else o.push(`<rect width="1000" height="${H}" fill="#eee"/><text x="500" y="${H / 2}" text-anchor="middle" font-size="26" fill="#555">Tegningen findes ikke på denne enhed endnu</text>`);
-      for (const { p, c, nr } of this.planPunkter(t)) o.push(`<g class="pp ${c.ok ? 'ok' : 'ikke'}${!print && this.planVaelg === p.k ? ' valgt' : ''}" data-k="${esc(p.k)}"><title>${esc(nr + '. ' + c.art + ': ' + c.navn + (c.ok ? '' : ' · mangler'))}</title>` +
-        `<circle cx="${p.x * 1000}" cy="${p.y * 1000}" r="18"/><text x="${p.x * 1000}" y="${p.y * 1000 + 7}" text-anchor="middle">${nr}</text></g>`);
+      const skaler = this.planR(t) / 18;  /* prikken tegnes med radius 18 og skaleres, så kant og nummer følger med */
+      for (const { p, c, nr } of this.planPunkter(t)) o.push(`<g class="pp ${c.ok ? 'ok' : 'ikke'}${!print && this.planVaelg === p.k ? ' valgt' : ''}" data-k="${esc(p.k)}" transform="translate(${p.x * 1000} ${p.y * 1000}) scale(${skaler})"><title>${esc(nr + '. ' + c.art + ': ' + c.navn + (c.ok ? '' : ' · mangler'))}</title>` +
+        `<circle r="18"/><text y="7" text-anchor="middle">${nr}</text></g>`);
       if (!print && this.planPts.length) o.push(`<polyline class="pm" points="${this.planPts.map(q => q.x * 1000 + ',' + q.y * 1000).join(' ')}"/>` + this.planPts.map(q => `<circle class="pmp" cx="${q.x * 1000}" cy="${q.y * 1000}" r="5"/>`).join(''));
       const css = print ? '<style>.pp circle{stroke:#fff;stroke-width:3}.pp.ok circle{fill:#0f7d58}.pp.ikke circle{fill:#d4500a}.pp text{fill:#fff;font:bold 20px Arial,sans-serif}</style>' : '';
       return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 ${H}" class="plan-svg"${print ? ' width="100%"' : ''}>${css}${o.join('')}</svg>`;
