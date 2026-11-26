@@ -2,6 +2,15 @@
 
 Nyeste øverst. Versionsnummeret står også i appen som `APP_VERSION`. Hver version siger, hvilken model der lavede den.
 
+## 10.38.0 · 2026-11-26 · Claude Opus 5.5
+
+- Et samlepunkt kan nu være sløjfet fra en brugsgenstand, fx en Tilgang: "Forsynes fra" i samlepunktets formular viser både samlepunkter og brugsgenstande. Dåsen arver gruppen fra brugsgenstanden.
+- Enstregsdiagrammet tegner dåsen efter Tilgangen (eller efter sløjfeprikken på en almindelig brugsgenstand), så fx "Køkken tilgang" står før dåsen. Føringsvejen viser dåsen under brugsgenstanden.
+- ΔU, Iz-strøm, Ik,min og samlet kabellængde regnes gennem dåsens tilgangskabel, brugsgenstandens træk og videre op. Strømmen i brugsgenstandens træk omfatter dåsens last.
+- Kredse er umulige: formularer, Flyt i enstreg og indlæsning afviser eller bryder en forsyning, der ville gå i ring.
+- Kopiér gren og Klon lokale tager dåser sløjfet fra brugsgenstande med. Slettes brugsgenstanden, forsynes dåsen fra det, brugsgenstanden selv var forsynet fra.
+- Datamodel: skema 22, nyt felt `fraEnhed` på samlepunkter (tomt i gamle projekter). Plan: `docs/planer/2026-11-26-samlepunkt-sloejfet.md`.
+
 ## 10.37.0 · 2026-11-26 · Claude Sonnet 5.5
 
 - Fanen Lokaler: ny knap "Ændre rækkefølge", der viser lokalerne som en liste i en popup. De flyttes ved at trække i ⠿ eller med ▲/▼. Det kan fortrydes.

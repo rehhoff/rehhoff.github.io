@@ -1101,6 +1101,60 @@ async def main():
              and r['flyttet'] and r['maalLaast'] and r['skala'] == 20 and r['laengde'] == '6 m' and r['m'] and r['brugt'] is True and r['esc'] and r['lokKnap'] and r['filter'] and r['doc']
              and r['norm'] == '{"id":"t1","billede":"","forhold":0.5,"punkter":[{"k":"e:a","x":1,"y":0.5}],"navn":"","lokaleId":"","skala":0}', r)
 
+        # 4w. Skema 22: samlepunkt sløjfet fra en brugsgenstand (Tilgang før dåsen). Opgradering fra skema 21, arvet gruppe, ΔU, strøm og Ik-R gennem Tilgangen,
+        #     enstreg, sporing, føringsvej, formular, kredse afvist (kanForsyne, flytTjek, norm), klon lokale, kopiér gren, sletning og fortryd. Ryddes op bagefter
+        r0 = await pg.evaluate("""(()=>{const i=JSON.parse(localStorage.getItem('tavleoversigt.projekter'));i.schema=21;const id=i.aktiv;
+          const p=JSON.parse(localStorage.getItem('tavleoversigt.p.'+id));p.projekt.navn='Skema 21-projekt';p.daaser.forEach(x=>delete x.fraEnhed);
+          localStorage.setItem('tavleoversigt.p.'+id,JSON.stringify(p));localStorage.setItem('tavleoversigt.projekter',JSON.stringify(i));localStorage.removeItem('tavleoversigt.backups');
+          return {p:JSON.stringify(p), n:p.daaser.length}})()""")
+        await pg.goto(URL); await pg.wait_for_timeout(500)
+        r1 = await pg.evaluate(f"""(()=>{{const a={A};const d=JSON.parse(JSON.stringify(a.db)), p=JSON.parse({json.dumps(r0['p'])});
+          const ens=['tavler','lokaler','daaser','grupper','enheder','afbrydere'].every(k=>p[k].length===d[k].length&&p[k].every((x,n)=>Object.keys(x).every(f=>JSON.stringify(x[f])===JSON.stringify(d[k][n][f]))));
+          a.save(); return {{ens, tom:d.daaser.every(x=>x.fraEnhed===''), meta:[d.projekt.navn, a.backups.length>=1, JSON.parse(localStorage.getItem('tavleoversigt.projekter')).schema]}}}})()""")
+        tjek('opgradering fra skema 21: backup taget, data intakte, samlepunkter får fraEnhed tom',
+             r0['n'] > 0 and r1['ens'] and r1['tom'] and r1['meta'] == ['Skema 21-projekt', True, SKEMA], r1)
+        r = await pg.evaluate(f"""(async()=>{{const a={A};const T=n=>new Promise(f=>setTimeout(f,n));const d=a.db, n0=JSON.stringify([d.tavler.length,d.grupper.length,d.enheder.length,d.daaser.length,d.lokaler.length]), o={{}}, rd=x=>Math.round(x*100000)/100000;
+          const E=(id,navn,sym,P,L,x)=>Object.assign({{id,gruppeId:'gw',lokaleId:'lw',daaseId:'',fraEnhed:'',fase:'',navn,effekt:P,kabel:'PVC',ledere:'3G',tv:2.5,laengde:L,symbol:sym,hoejde:'',placering:'',trukket:false,note:''}},x||{{}});
+          try {{
+            a.mutate(()=>{{
+              d.tavler.push({{id:'tw',navn:'TW',placering:'',forsikring:35,hovedafbryder:0,fra:'',fraGruppe:'',tilgang:'',tKabel:'PVC',tLedere:'5G',tTv:6,tLaengde:0,ze:0.3,ikMaks:0,tTrukket:false,tNote:''}});
+              d.grupper.push({{id:'gw',tavleId:'tw',nr:1,navn:'W',type:'stik',kar:'B',In:13,faser:1,fase:'L1',rcdId:'',sf:1,brydeevne:6,maal:{{riso:'',zs:'',rcd:'',ok:false}},metode:'',temp:'',samlet:'',lag:''}});
+              d.lokaler.push({{id:'lw',navn:'LW',etage:'',billeder:[]}});
+              d.enheder.push(E('T1','Køkken tilgang W','tilgang',0,10), E('S1','Stik W','stik',2300,5,{{gruppeId:'',daaseId:'D1'}}));
+              d.daaser.push({{id:'D1',navn:'DW',type:'Membrandåse',gruppeId:'',parentId:'',fraEnhed:'T1',lokaleId:'lw',kabel:'PVC',ledere:'3G',tv:2.5,laengde:4,hoejde:'',placering:'',trukket:false,note:'',billeder:[]}});
+            }});
+            const t1=a.enhed('T1'), s1=a.enhed('S1'), d1=a.daase('D1');
+            o.arv=[d1.gruppeId, s1.gruppeId, d1.parentId];
+            o.du=rd(a.du(s1))===rd(a.duSeg(10,5,2.5,false)+a.duSeg(10,4,2.5,false)+a.duSeg(10,10,2.5,false)); o.duOp=rd(a.duOp('D1'))===rd(a.duSeg(10,4,2.5,false)+a.duSeg(10,10,2.5,false));
+            o.I=[rd(a.enhedI(t1)), rd(a.daaseI('D1')), rd(a.gruppeI('gw'))]; o.R=rd(a.enhedR(s1))===rd(a.rSloejfe('PVC',5,2.5)+a.rSloejfe('PVC',4,2.5)+a.rSloejfe('PVC',10,2.5));
+            o.laengde=[a.fvTotal({{kind:'daase',o:d1}}), a.fvTotal({{kind:'enhed',o:s1}})]; o.via=a.rows().find(x=>x.e.id==='dD1').via;
+            o.spor=a.spor('e:S1').map(x=>x.key).filter(k=>/^[ed]:/.test(k)).join();
+            a.fvFoldAlle(true); const tr=a.foeringTrae(), rd1=tr.find(x=>x.k==='daase:D1'); o.fv=rd1&&[rd1.par, rd1.fra, tr.filter(x=>x.k==='daase:D1').length]; a.fvFoldAlle(false);
+            a.go('enstreg'); await T(200); const hx=k=>[...document.querySelectorAll('[data-k="'+k+'"] > rect.hit')].map(x=>[Number(x.getAttribute('x')),Number(x.getAttribute('y'))]);
+            const ht=hx('e:T1'), hd=hx('d:D1'), hs=hx('e:S1'); o.sld=[ht.length, hd.length, hs.length, hd.length&&ht.length&&hd[0][0]>ht[0][0]&&hd[0][1]===ht[0][1], hs.length&&hs[0][0]>hd[0][0]];
+            a.go('tavle'); await T(50);
+            o.ring=[a.kanForsyne(s1,'D1'), a.kanForsyne(t1,'D1'), a.flytTjek('T1','d:D1').ok, a.flytTjek('T1','e:S1').ok, a.flytTjek('S1','g:gw').ok];
+            a.openForm('daase', d1); await T(80); const ov=[...document.querySelectorAll('#m-dpar option')].map(x=>x.value); o.form=[ov.includes('e:T1'), ov.includes('e:S1'), ov.includes('d:D1'), document.getElementById('m-dgr').disabled, document.querySelector('#m-dpar').selectedOptions[0].value];
+            a.daaseFraSaet(''); o.formTavle=[a.form.fraEnhed, a.form.parentId]; a.modal=null; await T(40);
+            const n=norm({{enheder:[{{id:'x',navn:'X',daaseId:'y',fraEnhed:''}}],daaser:[{{id:'y',navn:'Y',fraEnhed:'x',parentId:'q'}},{{id:'z',navn:'Z',fraEnhed:'ukendt'}}]}}); o.norm=[n.daaser[0].fraEnhed, n.daaser[0].parentId, n.enheder[0].daaseId, n.daaser[1].fraEnhed];
+            a.klonLokale('lw', {{}}, 'LW2'); const l2=d.lokaler.find(l=>l.navn==='LW2'), d2=d.daaser.find(x=>x.lokaleId===l2.id), t2=a.enhed(d2.fraEnhed);
+            o.klon=[!!t2&&t2.lokaleId===l2.id&&t2.symbol==='tilgang', d2.gruppeId, d.enheder.filter(e=>e.lokaleId===l2.id&&e.daaseId===d2.id).length];
+            const nE=d.enheder.length, nD=d.daaser.length; o.gren=a.grenKopier('enhed','T1',1,'');
+            const d3=d.daaser[d.daaser.length-1], t3=a.enhed(d3.fraEnhed); o.grenDele=[d.enheder.length-nE, d.daaser.length-nD, !!t3&&t3.id!=='T1'&&t3.symbol==='tilgang', d.enheder.filter(e=>e.daaseId===d3.id).length];
+            a.modal={{type:'enhed',id:'T1'}}; a.delCurrent(); o.slet=[a.daase('D1').fraEnhed, a.daase('D1').parentId, a.daase('D1').gruppeId];
+            a.undo(); await T(50); o.fortryd=a.daase('D1').fraEnhed;
+          }} finally {{
+            a.modal=null; await T(50); const d=a.db, g=x=>x.gruppeId!=='gw'; d.enheder=d.enheder.filter(g); d.daaser=d.daaser.filter(g); d.grupper=d.grupper.filter(x=>x.id!=='gw'); d.tavler=d.tavler.filter(x=>x.id!=='tw'); d.lokaler=d.lokaler.filter(l=>l.id!=='lw'&&l.navn!=='LW2'); a.save();
+          }}
+          o.ryddet=JSON.stringify([a.db.tavler.length,a.db.grupper.length,a.db.enheder.length,a.db.daaser.length,a.db.lokaler.length])===n0;
+          return o}})()""")
+        tjek('samlepunkt sløjfet fra brugsgenstand: arvet gruppe, ΔU, strøm og Ik gennem Tilgangen, enstreg med Tilgang før dåsen, føringsvej, formular, ingen kredse, klon, kopiér gren, sletning',
+             r['arv'] == ['gw', 'gw', ''] and r['du'] and r['duOp'] and r['I'] == [10, 10, 10] and r['R'] and r['laengde'] == [14, 19] and r['via'] == 'tilgang fra Køkken tilgang W'
+             and r['spor'] == 'e:T1,d:D1,e:S1' and r['fv'] == ['enhed:T1', 'fra Køkken tilgang W', 1] and r['sld'] == [1, 1, 1, True, True]
+             and r['ring'] == [False, True, False, False, True] and r['form'] == [True, False, False, True, 'e:T1'] and r['formTavle'] == ['', '']
+             and r['norm'] == ['x', '', '', ''] and r['klon'] == [True, 'gw', 1] and r['gren'] == 1 and r['grenDele'] == [2, 1, True, 1]
+             and r['slet'] == ['', '', 'gw'] and r['fortryd'] == 'T1' and r['ryddet'], r)
+
         # 4v. Lokaler: + Dataudtag og + Kamera med lokalet valgt, og brugsgenstande kan flyttes op og ned inden for lokalet
         r = await pg.evaluate(f"""async()=>{{const a={A};const T=n=>new Promise(f=>setTimeout(f,n));const o={{}};
           a.lokF=''; a.lokAlleUd=true; a.go('lokaler'); await T(150);

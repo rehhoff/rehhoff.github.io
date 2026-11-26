@@ -14,8 +14,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=10.37.0">
-<link rel="stylesheet" href="css/tailwind.css?v=10.37.0">
+<link rel="stylesheet" href="css/app.css?v=10.38.0">
+<link rel="stylesheet" href="css/tailwind.css?v=10.38.0">
 </head>
 <body class="min-h-full">
 <p id="fail" hidden style="margin:16px;padding:12px;border:1px solid var(--crit);color:var(--crit)">Appen kunne ikke starte, fordi Alpine.js ikke blev indlæst. Genindlæs siden.</p>
@@ -253,7 +253,7 @@
                 <template x-for="d in daaserFor(sel)" :key="d.id">
                   <li class="border border-line bg-raised rounded px-2 py-1 text-sm flex justify-between gap-2">
                     <span><span x-html="ikon('daase')"></span> <span class="font-medium" x-text="daaseTxt(d.id)"></span>
-                      <span class="block num text-xs text-muted" x-text="(d.parentId ? 'fra ' + daaseTxt(d.parentId) + ' · ' : 'fra tavle · ') + kabelDim(d) + ' · ' + fmt(d.laengde) + ' m · ' + nedstroem(d.id).length + ' brugsgenstande'"></span></span>
+                      <span class="block num text-xs text-muted" x-text="'fra ' + (daaseFraTxt(d) || 'tavle') + ' · ' + kabelDim(d) + ' · ' + fmt(d.laengde) + ' m · ' + nedstroem(d.id).length + ' brugsgenstande'"></span></span>
                     <button class="text-xs underline text-muted hover:text-ink self-start" @click="openForm('daase', d)">Rediger</button>
                   </li>
                 </template>
@@ -410,7 +410,7 @@
               </td>
               <td x-text="r.d.type"></td>
               <td><button class="text-left hover:underline" @click="r.d.gruppeId && goGruppe(r.d.gruppeId)" x-text="gruppe(r.d.gruppeId) ? gruppeTxt(r.d.gruppeId) : 'Ikke tildelt'"></button></td>
-              <td x-text="daase(r.d.parentId) ? daase(r.d.parentId).navn : 'Tavlen'"></td>
+              <td x-text="daaseFraTxt(r.d) || 'Tavlen'"></td>
               <td x-text="lokaleNavn(r.d.lokaleId)"></td>
               <td class="num" x-text="r.d.kabel + ' ' + kabelDim(r.d)"></td>
               <td class="num r" x-text="fmt(r.d.laengde) + ' m'"></td>
@@ -1513,10 +1513,10 @@
                 <template x-for="l in db.lokaler" :key="l.id"><option :value="l.id" :selected="form.lokaleId===l.id" x-text="l.navn"></option></template></select></label>
             <label class="f sm:col-span-2" for="m-fra">Sløjfet fra brugsgenstand
               <select id="m-fra" class="inp" x-model="form.fraEnhed" @change="sloejfeValg()"><option value="">Ingen sløjfe</option>
-                <template x-for="e in db.enheder.filter(e => e.id !== mid() && (!form.gruppeId || e.gruppeId === form.gruppeId) && !(mid() && erSloejfetUnder(e.id, mid())))" :key="e.id"><option :value="e.id" :selected="form.fraEnhed===e.id" x-text="e.navn + ' · ' + lokaleNavn(e.lokaleId) + (e.placering ? ' · ' + e.placering : '')"></option></template></select></label>
+                <template x-for="e in db.enheder.filter(e => e.id !== mid() && (!form.gruppeId || e.gruppeId === form.gruppeId) && kanForsyne(e, mid()))" :key="e.id"><option :value="e.id" :selected="form.fraEnhed===e.id" x-text="e.navn + ' · ' + lokaleNavn(e.lokaleId) + (e.placering ? ' · ' + e.placering : '')"></option></template></select></label>
             <label class="f sm:col-span-2" for="m-via" x-show="!form.fraEnhed">Via samlepunkt
               <select id="m-via" class="inp" x-model="form.daaseId" @change="nyValg($event, 'daase', 'daaseId')"><option value="">Direkte fra tavle</option><option value="__ny">+ Opret nyt samlepunkt …</option>
-                <template x-for="d in db.daaser.filter(d => !form.gruppeId || d.gruppeId === form.gruppeId)" :key="d.id"><option :value="d.id" :selected="form.daaseId===d.id" x-text="daaseTxt(d.id) + ' · ' + gruppeTxt(d.gruppeId)"></option></template></select></label>
+                <template x-for="d in db.daaser.filter(d => (!form.gruppeId || d.gruppeId === form.gruppeId) && kanForsyne(d, mid()))" :key="d.id"><option :value="d.id" :selected="form.daaseId===d.id" x-text="daaseTxt(d.id) + ' · ' + gruppeTxt(d.gruppeId)"></option></template></select></label>
             <label class="f sm:col-span-2" for="m-sym">Symbol i enstregsdiagram
               <span class="flex items-center gap-2">
                 <select id="m-sym" class="inp" x-model="form.symbol" @change="effektAuto()">
@@ -1632,11 +1632,12 @@
                 <template x-for="k in daaseTyper" :key="k"><option :value="k" :selected="form.type===k" x-text="k"></option></template></select></label>
             <p class="text-xs sm:col-span-2" style="color:var(--accent)" x-show="!mid() && daaseHint()" x-text="daaseHint()"></p>
             <label class="f" for="m-dgr">Gruppe
-              <select id="m-dgr" class="inp" x-model="form.gruppeId" :disabled="!!form.parentId" @change="nyValg($event, 'gruppe', 'gruppeId')"><option value="">Ikke tildelt</option><option value="__ny">+ Opret ny gruppe …</option>
+              <select id="m-dgr" class="inp" x-model="form.gruppeId" :disabled="!!form.parentId || !!form.fraEnhed" @change="nyValg($event, 'gruppe', 'gruppeId')"><option value="">Ikke tildelt</option><option value="__ny">+ Opret ny gruppe …</option>
                 <template x-for="g in sorteredeGrupper()" :key="g.id"><option :value="g.id" :selected="form.gruppeId===g.id" x-text="gruppeTxt(g.id)"></option></template></select></label>
             <label class="f" for="m-dpar">Forsynes fra
-              <select id="m-dpar" class="inp" x-model="form.parentId"><option value="">Tavlen (direkte fra gruppen)</option>
-                <template x-for="d in db.daaser.filter(d => d.id !== mid() && !erUnder(d.id, mid()))" :key="d.id"><option :value="d.id" :selected="form.parentId===d.id" x-text="daaseTxt(d.id) + ' · ' + gruppeTxt(d.gruppeId)"></option></template></select></label>
+              <select id="m-dpar" class="inp" @change="daaseFraSaet($event.target.value)"><option value="" :selected="!form.parentId && !form.fraEnhed">Tavlen (direkte fra gruppen)</option>
+                <optgroup label="Samlepunkt"><template x-for="d in db.daaser.filter(d => kanForsyne(d, mid()))" :key="d.id"><option :value="'d:' + d.id" :selected="!form.fraEnhed && form.parentId===d.id" x-text="daaseTxt(d.id) + ' · ' + gruppeTxt(d.gruppeId)"></option></template></optgroup>
+                <optgroup label="Sløjfet fra brugsgenstand"><template x-for="e in db.enheder.filter(e => !erHoejt(e) && kanForsyne(e, mid()))" :key="e.id"><option :value="'e:' + e.id" :selected="form.fraEnhed===e.id" x-text="e.navn + ' · ' + lokaleNavn(e.lokaleId) + (e.placering ? ' · ' + e.placering : '')"></option></template></optgroup></select></label>
             <label class="f" for="m-dlok">Lokale
               <select id="m-dlok" class="inp" x-model="form.lokaleId" @change="dAuto.lok=false; nyValg($event, 'lokale', 'lokaleId')"><option value="">Ikke tildelt</option><option value="__ny">+ Opret nyt lokale …</option>
                 <template x-for="l in db.lokaler" :key="l.id"><option :value="l.id" :selected="form.lokaleId===l.id" x-text="l.navn"></option></template></select></label>
@@ -1914,17 +1915,17 @@
   </div>
 </div>
 
-<script src="js/data.js?v=10.37.0"></script>
-<script src="js/beregning.js?v=10.37.0"></script>
-<script src="js/diagram.js?v=10.37.0"></script>
-<script src="js/lagring.js?v=10.37.0"></script>
-<script src="js/historik.js?v=10.37.0"></script>
-<script src="js/billeder.js?v=10.37.0"></script>
-<script src="js/brand.js?v=10.37.0"></script>
-<script src="js/import.js?v=10.37.0"></script>
-<script src="js/aflevering.js?v=10.37.0"></script>
-<script src="js/plan.js?v=10.37.0"></script>
-<script src="js/app.js?v=10.37.0"></script>
+<script src="js/data.js?v=10.38.0"></script>
+<script src="js/beregning.js?v=10.38.0"></script>
+<script src="js/diagram.js?v=10.38.0"></script>
+<script src="js/lagring.js?v=10.38.0"></script>
+<script src="js/historik.js?v=10.38.0"></script>
+<script src="js/billeder.js?v=10.38.0"></script>
+<script src="js/brand.js?v=10.38.0"></script>
+<script src="js/import.js?v=10.38.0"></script>
+<script src="js/aflevering.js?v=10.38.0"></script>
+<script src="js/plan.js?v=10.38.0"></script>
+<script src="js/app.js?v=10.38.0"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.14.1/cdn.min.js"></script>
 </body>
 </html>
