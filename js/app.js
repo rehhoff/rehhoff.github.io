@@ -737,7 +737,7 @@ function app() {
     dragRul(ev) {
       if (!this.dragL) return;
       const z = 100, y = ev.clientY, d = y < z ? y - z : Math.max(0, y - (innerHeight - z));
-      if (d) scrollBy(0, Math.round(d / 4));
+      if (d) (this.modal ? document.getElementById('dialog') : window).scrollBy(0, Math.round(d / 4));
     },
     slipLokale(til, ev) {
       const fra = this.dragL; this.dragL = null; this.overL = null; if (!fra) return; ev.preventDefault(); if (fra === til) return;

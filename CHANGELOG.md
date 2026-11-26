@@ -2,6 +2,11 @@
 
 Nyeste øverst. Versionsnummeret står også i appen som `APP_VERSION`. Hver version siger, hvilken model der lavede den.
 
+## 10.37.0 · 2026-11-26 · Claude Sonnet 5.5
+
+- Fanen Lokaler: ny knap "Ændre rækkefølge", der viser lokalerne som en liste i en popup. De flyttes ved at trække i ⠿ eller med ▲/▼. Det kan fortrydes.
+- Ingen ændring i datamodellen.
+
 ## 10.36.2 · 2026-11-26 · Claude Sonnet 5.5
 
 - Fanen Lokaler: siden ruller nu selv, når et lokale trækkes hen mod toppen eller bunden af skærmen. Jo tættere på kanten, jo hurtigere.

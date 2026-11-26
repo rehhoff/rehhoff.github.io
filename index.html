@@ -14,8 +14,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=10.36.2">
-<link rel="stylesheet" href="css/tailwind.css?v=10.36.2">
+<link rel="stylesheet" href="css/app.css?v=10.37.0">
+<link rel="stylesheet" href="css/tailwind.css?v=10.37.0">
 </head>
 <body class="min-h-full">
 <p id="fail" hidden style="margin:16px;padding:12px;border:1px solid var(--crit);color:var(--crit)">Appen kunne ikke starte, fordi Alpine.js ikke blev indlæst. Genindlæs siden.</p>
@@ -825,7 +825,7 @@
 
   <!-- ============ LOKALER ============ -->
   <template x-if="view==='lokaler'"><section class="flex flex-col gap-3" @dragover.window="dragRul($event)">
-    <div class="flex flex-wrap gap-2"><button class="btn" @click="openForm('lokale')">+ Lokale <kbd>L</kbd></button><button class="btn" @click="aabnSkabelon()">+ Lokale fra skabelon</button><button class="btn" @click="impAaben('lokale')">Importér fra regneark</button><button class="btn" id="lok-alle" @click="lokAlleUd = !lokAlleUd; lokUd = {}" x-text="lokAlleUd ? 'Fold alle sammen' : 'Udvid alle'"></button></div>
+    <div class="flex flex-wrap gap-2"><button class="btn" @click="openForm('lokale')">+ Lokale <kbd>L</kbd></button><button class="btn" @click="aabnSkabelon()">+ Lokale fra skabelon</button><button class="btn" id="lok-orden-aabn" x-show="db.lokaler.length > 1" @click="modal = { type:'lokorden' }">Ændre rækkefølge</button><button class="btn" @click="impAaben('lokale')">Importér fra regneark</button><button class="btn" id="lok-alle" @click="lokAlleUd = !lokAlleUd; lokUd = {}" x-text="lokAlleUd ? 'Fold alle sammen' : 'Udvid alle'"></button></div>
     <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
       <template x-for="l in db.lokaler.filter(l => !lokF || l.id === lokF)" :key="l.id">
         <article class="panel flex flex-col" :class="dragL && overL===l.id && dragL!==l.id && 'ring-2 ring-accent'" @dragover="dragL && ($event.preventDefault(), overL=l.id)" @drop="slipLokale(l.id, $event)">
@@ -1216,7 +1216,20 @@
   </div>
 
   <!-- ============ DIALOG ============ -->
-  <div x-show="modal" class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4" style="background:rgba(0,0,0,.55)" @click.self="modal=null">
+  <div id="dialog" x-show="modal" class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4" style="background:rgba(0,0,0,.55)" @click.self="modal=null">
+    <template x-if="modal && modal.type==='lokorden'">
+      <div class="panel w-full max-w-md mt-8 shadow-xl" role="dialog" aria-modal="true" aria-labelledby="lokorden-t" id="lokorden">
+        <header class="border-b border-line bg-raised px-4 py-3 flex justify-between items-center"><h2 id="lokorden-t" class="hd text-xl">Ændre rækkefølge</h2><button class="btn" @click="modal=null">Luk</button></header>
+        <ul class="flex flex-col p-4 text-sm">
+          <template x-for="(l, i) in db.lokaler" :key="l.id">
+            <li class="flex items-center justify-between gap-2 border-b border-line last:border-b-0 py-1" :class="dragL && overL===l.id && dragL!==l.id && 'ring-2 ring-accent'" @dragover="dragL && ($event.preventDefault(), overL=l.id)" @drop="slipLokale(l.id, $event)">
+              <span class="flex items-center gap-2 min-w-0"><span class="btn btn-ghost px-1 drag" draggable="true" title="Træk for at flytte lokalet" aria-hidden="true" @dragstart="dragL=l.id; $event.dataTransfer.effectAllowed='move'; $event.dataTransfer.setData('text/plain', l.id)" @dragend="dragL=null; overL=null">⠿</span><span x-text="l.navn"></span><span class="text-xs text-muted" x-text="l.etage"></span></span>
+              <span class="flex shrink-0"><button type="button" class="btn btn-ghost lok-op" :disabled="i === 0" @click="ryk('lokaler', l.id, -1)" :aria-label="'Flyt ' + l.navn + ' op'" title="Flyt op">▲</button><button type="button" class="btn btn-ghost lok-ned" :disabled="i === db.lokaler.length - 1" @click="ryk('lokaler', l.id, 1)" :aria-label="'Flyt ' + l.navn + ' ned'" title="Flyt ned">▼</button></span>
+            </li>
+          </template>
+        </ul>
+      </div>
+    </template>
     <template x-if="modal && modal.type==='projekter'">
       <div class="panel w-full max-w-2xl mt-8 shadow-xl" role="dialog" aria-modal="true">
         <header class="border-b border-line bg-raised px-4 py-3 flex justify-between items-center"><h2 class="hd text-xl">Projekter</h2><button class="btn" @click="modal=null">Luk</button></header>
@@ -1901,17 +1914,17 @@
   </div>
 </div>
 
-<script src="js/data.js?v=10.36.2"></script>
-<script src="js/beregning.js?v=10.36.2"></script>
-<script src="js/diagram.js?v=10.36.2"></script>
-<script src="js/lagring.js?v=10.36.2"></script>
-<script src="js/historik.js?v=10.36.2"></script>
-<script src="js/billeder.js?v=10.36.2"></script>
-<script src="js/brand.js?v=10.36.2"></script>
-<script src="js/import.js?v=10.36.2"></script>
-<script src="js/aflevering.js?v=10.36.2"></script>
-<script src="js/plan.js?v=10.36.2"></script>
-<script src="js/app.js?v=10.36.2"></script>
+<script src="js/data.js?v=10.37.0"></script>
+<script src="js/beregning.js?v=10.37.0"></script>
+<script src="js/diagram.js?v=10.37.0"></script>
+<script src="js/lagring.js?v=10.37.0"></script>
+<script src="js/historik.js?v=10.37.0"></script>
+<script src="js/billeder.js?v=10.37.0"></script>
+<script src="js/brand.js?v=10.37.0"></script>
+<script src="js/import.js?v=10.37.0"></script>
+<script src="js/aflevering.js?v=10.37.0"></script>
+<script src="js/plan.js?v=10.37.0"></script>
+<script src="js/app.js?v=10.37.0"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.14.1/cdn.min.js"></script>
 </body>
 </html>

@@ -1123,10 +1123,16 @@ async def main():
             o.kilde=[t0===0, h===n(0)&&h>0, h0===0, p===n(0), p2, lys()===0, a.view==='lokaler']; }}
           {{ const over=y=>art.dispatchEvent(new DragEvent('dragover',{{bubbles:true,cancelable:true,clientY:y}})), st=document.createElement('div'); st.style.height='3000px'; document.body.append(st); scrollTo(0,500);
             const y0=scrollY; over(innerHeight-5); const udenTraek=scrollY===y0; a.dragL=l.id; over(innerHeight-5); const ned=scrollY>y0, y1=scrollY; over(5); const op=scrollY<y1, y2=scrollY; over(innerHeight/2); o.rul=[udenTraek, ned, op, scrollY===y2]; a.dragL=null; st.remove(); scrollTo(0,0); }}
+          {{ const ord=()=>a.db.lokaler.map(x=>x.id), r0=ord(); document.querySelector('#lok-orden-aabn').click(); await T(100);
+            const li=()=>[...document.querySelectorAll('#lokorden li')], antal=li().length===r0.length, kant=li()[0].querySelector('.lok-op').disabled;
+            li()[0].querySelector('.lok-ned').click(); await T(80); const ned=ord()[1]===r0[0]&&li()[1].textContent.includes(a.db.lokaler[1].navn); a.undo(); await T(60);
+            const dt=new DataTransfer(), z=li()[r0.length-1]; li()[0].querySelector('.drag').dispatchEvent(new DragEvent('dragstart',{{bubbles:true,dataTransfer:dt}})); await T(20);
+            z.dispatchEvent(new DragEvent('dragover',{{bubbles:true,cancelable:true,dataTransfer:dt}})); z.dispatchEvent(new DragEvent('drop',{{bubbles:true,cancelable:true,dataTransfer:dt}})); await T(80);
+            const tr=ord()[r0.length-1]===r0[0]; a.undo(); await T(60); o.orden=[antal, kant, ned, tr, ord().join()===r0.join()]; a.modal=null; await T(40); }}
           a.lokAlleUd=false; a.go('tavle'); await T(50);
           return o}}""")
         tjek('lokaler: + Dataudtag og + Kamera med lokalet valgt; brugsgenstande flyttes op og ned inden for lokalet og kan fortrydes',
-             r['data'] == ['link', 'data', True] and r['kam'] == ['cctv', True] and r['ned'] and r['op'] and r['fortryd'] and r['traek'] and r['traekFortryd'] and r['zebra'] and all(r['kilde']) and all(r['rul']), r)
+             r['data'] == ['link', 'data', True] and r['kam'] == ['cctv', True] and r['ned'] and r['op'] and r['fortryd'] and r['traek'] and r['traekFortryd'] and r['zebra'] and all(r['kilde']) and all(r['rul']) and all(r['orden']), r)
 
         await pg.evaluate(f"{A}.go('tavle')")
 
