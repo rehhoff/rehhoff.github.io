@@ -2,6 +2,11 @@
 
 Nyeste øverst. Versionsnummeret står også i appen som `APP_VERSION`. Hver version siger, hvilken model der lavede den.
 
+## 10.39.0 · 2026-11-26 · Claude Sonnet 5.5
+
+- Svagstrøm: listen Forbindelser og port-mapping er opdelt efter lokalets etage, både for PDS, CCTV og Alle. Etagerne står i lokalernes rækkefølge, og "Uden etage" står sidst.
+- Ingen ændring af datamodellen (skema 22).
+
 ## 10.38.0 · 2026-11-26 · Claude Opus 5.5
 
 - Et samlepunkt kan nu være sløjfet fra en brugsgenstand, fx en Tilgang: "Forsynes fra" i samlepunktets formular viser både samlepunkter og brugsgenstande. Dåsen arver gruppen fra brugsgenstanden.
