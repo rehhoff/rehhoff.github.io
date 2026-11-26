@@ -14,8 +14,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=10.32.1">
-<link rel="stylesheet" href="css/tailwind.css?v=10.32.1">
+<link rel="stylesheet" href="css/app.css?v=10.33.0">
+<link rel="stylesheet" href="css/tailwind.css?v=10.33.0">
 </head>
 <body class="min-h-full">
 <p id="fail" hidden style="margin:16px;padding:12px;border:1px solid var(--crit);color:var(--crit)">Appen kunne ikke starte, fordi Alpine.js ikke blev indlæst. Genindlæs siden.</p>
@@ -536,6 +536,79 @@
     </div>
   </section></template>
 
+  <!-- ============ PLANTEGNING (js/plan.js) ============ -->
+  <template x-if="view==='plan'"><section class="flex flex-col gap-3">
+    <div class="flex flex-wrap gap-2 items-center">
+      <label class="btn btn-primary" for="pl-fil">+ Tegning (billede eller PDF)<input type="file" id="pl-fil" class="sr-only" accept="image/*,application/pdf,.pdf" multiple @change="planFraFil($event)"></label>
+      <span class="text-sm text-muted" x-show="billedArbejder">Gør tegningen klar …</span>
+      <template x-for="t in planListe()" :key="t.id"><button class="btn pl-vaelg" :class="planAkt() && planAkt().id === t.id && 'sel'" @click="planVaelgT(t.id)" x-text="t.navn || 'Tegning'"></button></template>
+    </div>
+    <p class="text-xs text-muted">Upload plantegninger, eltegninger og lignende som billede eller PDF (én tegning pr. side). Placér komponenter som prikker: grøn er trukket eller udført, orange mangler. Sæt målestokken med en kendt afstand, og mål kabelvejen direkte på tegningen. Tegningerne gemmes på enheden og sendes til GitHub, hvis synkronisering er slået til.</p>
+    <p x-show="!billedOk" class="panel p-3 text-sm warn">Browseren tillader ikke lagring af billeder (IndexedDB). Tegninger kan ikke tilføjes her.</p>
+    <p x-show="lagerTxt()" class="panel p-3 text-sm warn" x-text="lagerTxt()"></p>
+    <p x-show="!planListe().length" class="panel p-6 text-muted" x-text="lokF ? 'Ingen tegninger for det valgte lokale. Vis alle lokaler, eller tilføj en tegning.' : 'Ingen tegninger endnu. Tryk på + Tegning.'"></p>
+    <template x-if="planAkt()"><div class="grid gap-3 lg:grid-cols-[minmax(0,1fr)_20rem] items-start">
+      <div class="panel overflow-hidden min-w-0">
+        <header class="flex flex-wrap items-center justify-between gap-2 border-b border-line bg-raised px-3 py-2">
+          <h2 class="hd text-xl" x-text="planAkt().navn || 'Tegning'"></h2>
+          <div class="flex flex-wrap items-center gap-1">
+            <button class="btn" @click="planZoom = Math.max(50, Math.round(planZoom / 1.25))" aria-label="Zoom ud">−</button>
+            <span class="num text-xs w-12 text-center" x-text="planZoom + ' %'"></span>
+            <button class="btn" @click="planZoom = Math.min(500, Math.round(planZoom * 1.25))" aria-label="Zoom ind">+</button>
+            <button class="btn" id="pl-placer" :class="planMode==='placer' && 'sel'" @click="planTilstand('placer')">Placér komponenter</button>
+            <button class="btn" id="pl-skala" :class="planMode==='skala' && 'sel'" @click="planTilstand('skala')">Målestok</button>
+            <button class="btn" id="pl-maal" :class="planMode==='maal' && 'sel'" :disabled="!planAkt().skala" :title="planAkt().skala ? '' : 'Sæt målestokken først'" @click="planTilstand('maal')">Mål kabel</button>
+          </div>
+        </header>
+        <div class="flex flex-wrap items-end gap-2 border-b border-line px-3 py-2 text-sm" x-show="planMode">
+          <template x-if="planMode==='placer'"><div class="contents">
+            <label class="f" for="pl-komp">Komponent
+              <select id="pl-komp" class="inp" x-model="planVaelg"><option value="">Vælg …</option>
+                <template x-for="g in planValg(planAkt())" :key="g.navn"><optgroup :label="g.navn"><template x-for="o in g.L" :key="o.k"><option :value="o.k" :selected="planVaelg===o.k" x-text="o.txt"></option></template></optgroup></template></select></label>
+            <span class="text-xs text-muted pb-2">Klik på tegningen for at placere. Klik på en prik for at flytte den. Esc afslutter.</span>
+          </div></template>
+          <template x-if="planMode==='skala'"><div class="contents">
+            <span class="text-xs text-muted pb-2" x-text="planPts.length < 2 ? 'Klik på to punkter med en kendt afstand (' + planPts.length + ' af 2).' : 'Skriv afstanden mellem punkterne.'"></span>
+            <label class="f" for="pl-skalam">Afstand (m)<input id="pl-skalam" class="inp num" type="text" inputmode="decimal" x-model="planSkalaM" placeholder="5"></label>
+            <button class="btn btn-primary" @click="planSkalaGem(planAkt())">Gem målestok</button>
+          </div></template>
+          <template x-if="planMode==='maal'"><div class="contents">
+            <span class="num text-sm font-semibold pb-2" id="pl-laengde" x-text="fmt(planM(planAkt()), 1) + ' m'"></span>
+            <button class="btn" @click="planPts = planPts.slice(0, -1)" :disabled="!planPts.length">Fortryd punkt</button>
+            <button class="btn" @click="planPts = []" :disabled="!planPts.length">Ryd</button>
+            <label class="f" for="pl-til">Brug længden på
+              <select id="pl-til" class="inp" x-model="planMaalTil"><option value="">Vælg …</option>
+                <template x-for="g in planMaalValg(planAkt())" :key="g.navn"><optgroup :label="g.navn"><template x-for="o in g.L" :key="o.k"><option :value="o.k" :selected="planMaalTil===o.k" x-text="o.txt"></option></template></optgroup></template></select></label>
+            <button class="btn btn-primary" @click="planBrugLaengde(planAkt())">Brug længden</button>
+            <span class="text-xs text-muted pb-2">Klik langs kabelvejen. Længden rundes op til nærmeste 0,5 m.</span>
+          </div></template>
+        </div>
+        <div class="plan-boks">
+          <div id="pl-tegning" :class="planMode && 'plan-mode'" :style="'width:' + planZoom + '%'" @click="planKlik($event, planAkt())" x-html="planSvg(planAkt(), false)"></div>
+        </div>
+      </div>
+      <aside class="panel p-3 flex flex-col gap-3 lg:sticky lg:top-3">
+        <label class="f" for="pl-navn">Navn<input id="pl-navn" class="inp" :value="planAkt().navn" @change="planSaet(planAkt(), 'navn', $event.target.value.trim())"></label>
+        <label class="f" for="pl-lok">Lokale
+          <select id="pl-lok" class="inp" @change="planSaet(planAkt(), 'lokaleId', $event.target.value)"><option value="" :selected="!planAkt().lokaleId">Hele projektet</option>
+            <template x-for="l in db.lokaler" :key="l.id"><option :value="l.id" :selected="planAkt().lokaleId===l.id" x-text="l.navn"></option></template></select></label>
+        <p class="text-xs text-muted" x-text="planAkt().skala ? 'Målestok: tegningen er ' + fmt(planAkt().skala, 1) + ' m bred.' : 'Ingen målestok. Tryk på Målestok for at kunne måle kabler.'"></p>
+        <div>
+          <div class="text-[.7rem] uppercase tracking-wider text-muted mb-1">Placerede komponenter</div>
+          <p x-show="!planPunkter(planAkt()).length" class="text-sm text-muted">Ingen endnu. Tryk på Placér komponenter.</p>
+          <ul class="flex flex-col text-sm" id="pl-punkter">
+            <template x-for="x in planPunkter(planAkt())" :key="x.p.k">
+              <li class="flex items-baseline justify-between gap-2 border-b border-line last:border-b-0 py-1">
+                <button class="text-left hover:underline min-w-0" @click="openForm(x.c.type, x.c.obj)"><span class="num font-semibold" x-text="x.nr + '.'"></span> <span x-text="x.c.navn"></span> <span class="text-xs" :class="x.c.ok ? 'text-muted' : 'warn'" x-text="x.c.ok ? '✓' : 'mangler'"></span></button>
+                <button class="btn btn-ghost px-1" @click="planFjern(planAkt(), x.p.k)" :aria-label="'Fjern ' + x.c.navn + ' fra tegningen'" title="Fjern fra tegningen">×</button></li>
+            </template>
+          </ul>
+        </div>
+        <button class="btn btn-ghost justify-center" :class="confirm==='plslet' && 'armed btn-danger'" @click="ask('plslet', () => planSlet(planAkt()))" x-text="confirm==='plslet' ? 'Bekræft: slet tegningen' : 'Slet tegningen'"></button>
+      </aside>
+    </div></template>
+  </section></template>
+
   <!-- ============ SVAGSTRØM ============ -->
   <template x-if="view==='svag'"><section class="flex flex-col gap-4">
     <div class="flex flex-wrap gap-2">
@@ -785,6 +858,10 @@
                   <button class="typed chip" :class="g.type" @click="goGruppe(g.id)" x-text="gruppeTxt(g.id)"></button>
                 </template>
               </div>
+            </div>
+            <div x-show="db.tegninger.some(t => t.lokaleId === l.id)">
+              <div class="text-[.7rem] uppercase tracking-wider text-muted mb-1">Plantegninger</div>
+              <div class="flex flex-wrap gap-1"><template x-for="t in db.tegninger.filter(t => t.lokaleId === l.id)" :key="t.id"><button class="chip pl-lok" @click="planVaelgT(t.id); go('plan')" x-text="t.navn || 'Tegning'"></button></template></div>
             </div>
             <div class="lok-lister flex flex-col gap-3" :class="!(lokUd[l.id] ?? lokAlleUd) && 'max-h-80 overflow-y-auto'">
             <ul class="flex flex-col text-sm">
@@ -1818,16 +1895,17 @@
   </div>
 </div>
 
-<script src="js/data.js?v=10.32.1"></script>
-<script src="js/beregning.js?v=10.32.1"></script>
-<script src="js/diagram.js?v=10.32.1"></script>
-<script src="js/lagring.js?v=10.32.1"></script>
-<script src="js/historik.js?v=10.32.1"></script>
-<script src="js/billeder.js?v=10.32.1"></script>
-<script src="js/brand.js?v=10.32.1"></script>
-<script src="js/import.js?v=10.32.1"></script>
-<script src="js/aflevering.js?v=10.32.1"></script>
-<script src="js/app.js?v=10.32.1"></script>
+<script src="js/data.js?v=10.33.0"></script>
+<script src="js/beregning.js?v=10.33.0"></script>
+<script src="js/diagram.js?v=10.33.0"></script>
+<script src="js/lagring.js?v=10.33.0"></script>
+<script src="js/historik.js?v=10.33.0"></script>
+<script src="js/billeder.js?v=10.33.0"></script>
+<script src="js/brand.js?v=10.33.0"></script>
+<script src="js/import.js?v=10.33.0"></script>
+<script src="js/aflevering.js?v=10.33.0"></script>
+<script src="js/plan.js?v=10.33.0"></script>
+<script src="js/app.js?v=10.33.0"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.14.1/cdn.min.js"></script>
 </body>
 </html>

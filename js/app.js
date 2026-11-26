@@ -4,10 +4,11 @@ function bland(...dele) { const r = {}; for (const d of dele) Object.definePrope
 function app() {
   return bland({
     view: 'tavle',
+    planId: '', planMode: '', planVaelg: '', planPts: [], planSkalaM: '', planMaalTil: '', planZoom: 100, planTick: 0,  /* Plantegning (js/plan.js) */
     sldStor: false, sldTema: '',  /* enstreg: fylder hele vinduet; egen lys/mørk baggrund */
     lokAlleUd: false, lokUd: {},  /* Lokaler: listerne er foldet sammen til en fast højde; lokUd[id] overstyrer lokAlleUd for ét lokale */
     fvIkke: false, fvFold: new Set(), fvAaben: new Set(), fvHi: '', fvAnc: [], fvBlink: '', gren: null, sfPop: null, fvRed: null, fvTmp: null,
-    views: [ { id:'tavle', l:'Tavle' }, { id:'enstreg', l:'Enstregsdiagram' }, { id:'taending', l:'Tændingsdiagram' }, { id:'samlepunkter', l:'Samlepunkter & dåser' }, { id:'foering', l:'Føringsvej' }, { id:'svag', l:'Svagstrøm' }, { id:'beregning', l:'Beregning' }, { id:'lokaler', l:'Lokaler' }, { id:'kabler', l:'Kabler' }, { id:'dokumentation', l:'Dokumentation' }, { id:'fejlfinder', l:'Fejlfinder' }, { id:'brand', l:'Brandlukning' } ],
+    views: [ { id:'tavle', l:'Tavle' }, { id:'enstreg', l:'Enstregsdiagram' }, { id:'taending', l:'Tændingsdiagram' }, { id:'samlepunkter', l:'Samlepunkter & dåser' }, { id:'foering', l:'Føringsvej' }, { id:'svag', l:'Svagstrøm' }, { id:'beregning', l:'Beregning' }, { id:'lokaler', l:'Lokaler' }, { id:'kabler', l:'Kabler' }, { id:'dokumentation', l:'Dokumentation' }, { id:'fejlfinder', l:'Fejlfinder' }, { id:'brand', l:'Brandlukning' }, { id:'plan', l:'Plantegning' } ],
     db: tom(), dbRev: 0, hist: [], fremtid: [], klon: null, sel: null, drag: null, over: null,
     projekter: [], pid: '', omd: { id:'', navn:'' }, pf: { navn:'', sagsnr:'', kunde:'', adresse:'' }, sldSel: null, z: { x:8, y:8, k:1 }, pan: null, pinch: null, panMoved: false, traek: null,
     filter: { q:'', tavle:'', type:'', lokale:'' }, sort: { key:'gruppe', dir:1 },
@@ -119,7 +120,7 @@ function app() {
       if (!fejl) TIMERS['toast' + t.id] = setTimeout(() => this.lukToast(t.id), Math.min(10000, Math.max(undo ? 6000 : 3500, 2000 + txt.length * 50)));
     },
     lukToast(id) { clearTimeout(TIMERS['toast' + id]); delete TIMERS['toast' + id]; this.toasts = this.toasts.filter(t => t.id !== id); },
-    go(v) { this.view = v; try { location.hash = v; } catch (e) {} this.$nextTick(() => { const t = document.querySelector('.tab[aria-selected="true"]'), c = t && t.parentElement; if (c && c.scrollWidth > c.clientWidth) { const tr = t.getBoundingClientRect(), cr = c.getBoundingClientRect(); c.scrollLeft += tr.left - cr.left - (c.clientWidth - tr.width) / 2; } }); if (v === 'enstreg') this.$nextTick(() => this.tilpas()); },
+    go(v) { this.view = v; if (v === 'plan' || v === 'dokumentation') this.planHentAlle(); try { location.hash = v; } catch (e) {} this.$nextTick(() => { const t = document.querySelector('.tab[aria-selected="true"]'), c = t && t.parentElement; if (c && c.scrollWidth > c.clientWidth) { const tr = t.getBoundingClientRect(), cr = c.getBoundingClientRect(); c.scrollLeft += tr.left - cr.left - (c.clientWidth - tr.width) / 2; } }); if (v === 'enstreg') this.$nextTick(() => this.tilpas()); },
     skiftSldTema(v) { this.sldTema = v; try { localStorage.setItem(DTKEY, v); } catch (e) {} },
     skiftTema() { this.tema = { auto:'light', light:'dark', dark:'auto' }[this.tema]; try { localStorage.setItem(TKEY, this.tema); } catch (e) {} this.brugTema(); },
     brugTema() {
@@ -596,7 +597,7 @@ function app() {
         const ryd = ids => d.links.forEach(l => { if (ids.has(l.panelId)) { l.panelId = ''; l.panelPort = 0; } if (ids.has(l.switchId)) { l.switchId = ''; l.switchPort = 0; } if (ids.has(l.nvrId)) l.nvrId = ''; });
         if (type === 'udstyr') { ryd(new Set([id])); d.udstyr = d.udstyr.filter(u => u.id !== id); }
         if (type === 'rack') { ryd(new Set(d.udstyr.filter(u => u.rackId === id).map(u => u.id))); d.udstyr = d.udstyr.filter(u => u.rackId !== id); d.racks = d.racks.filter(r => r.id !== id); }
-        if (type === 'lokale') [d.daaser, d.racks, d.links, d.afbrydere, d.brandlukninger].forEach(a => a.forEach(x => { if (x.lokaleId === id) x.lokaleId = ''; }));
+        if (type === 'lokale') [d.daaser, d.racks, d.links, d.afbrydere, d.brandlukninger, d.tegninger].forEach(a => a.forEach(x => { if (x.lokaleId === id) x.lokaleId = ''; }));
         if (type === 'gruppe') d.tavler.forEach(t => { if (t.fraGruppe === id) t.fraGruppe = ''; });
         if (type === 'gruppe') [d.daaser, d.racks, d.afbrydere].forEach(a => a.forEach(x => { if (x.gruppeId === id) x.gruppeId = ''; }));
         if (type === 'lokale') { d.enheder.forEach(e => { if (e.lokaleId === id) e.lokaleId = ''; }); d.lokaler = d.lokaler.filter(l => l.id !== id); }
@@ -625,6 +626,7 @@ function app() {
       if (ev.key === 'Escape' && this.imp.aaben) { this.imp.aaben = false; return; }
       if (ev.key === 'Escape' && this.sfPop) { this.sfPop = null; return; }
       if (ev.key === 'Escape' && this.lysbillede) { this.lysbillede = null; return; }
+      if (ev.key === 'Escape' && this.planMode && !this.modal) { this.planNulstil(); return; }
       if (ev.key === 'Escape' && this.sldStor && !this.modal) { this.sldStor = false; this.$nextTick(() => this.tilpas()); return; }
       if (ev.key === 'Escape') { this.soegAaben = false; if (this.hurtig.aaben) { this.hurtig.aaben = false; return; } this.modal = null; if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); return; }
       const tag = (ev.target.tagName || '').toLowerCase();
@@ -856,5 +858,5 @@ function app() {
       return out;
     },
 
-  }, APP_BEREGNING(), APP_DIAGRAM(), APP_LAGRING(), APP_HISTORIK(), APP_BILLEDER(), APP_BRAND(), APP_AFLEVERING(), APP_IMPORT());
+  }, APP_BEREGNING(), APP_DIAGRAM(), APP_LAGRING(), APP_HISTORIK(), APP_BILLEDER(), APP_BRAND(), APP_AFLEVERING(), APP_IMPORT(), APP_PLAN());
 }

@@ -1058,6 +1058,49 @@ async def main():
         tjek('enstreg: fuld skærm fylder vinduet og lukkes med Esc; lys og mørk baggrund kun på diagrammet, husket i browseren',
              r['lys'] == [True, '#ffffff', 'lys'] and r['moerk'] == [True, '#242b30', 'moerk'] and r['rod'] and r['stor'] == ['fixed', True, True, True] and r['lukket'], r)
 
+        # 4u. Skema 21: fanen Plantegning. Opgradering fra skema 20, upload af billede og PDF (falsk pdf.js), prikker, målestok, måling, lokale, dokumentation og billedIds
+        r0 = await pg.evaluate("""(()=>{const i=JSON.parse(localStorage.getItem('tavleoversigt.projekter'));i.schema=20;const id=i.aktiv;
+          const p=JSON.parse(localStorage.getItem('tavleoversigt.p.'+id));p.projekt.navn='Skema 20-projekt';delete p.tegninger;
+          localStorage.setItem('tavleoversigt.p.'+id,JSON.stringify(p));localStorage.setItem('tavleoversigt.projekter',JSON.stringify(i));localStorage.removeItem('tavleoversigt.backups');
+          return {p:JSON.stringify(p)}})()""")
+        await pg.goto(URL); await pg.wait_for_timeout(500)
+        r1 = await pg.evaluate(f"""(()=>{{const a={A};const d=JSON.parse(JSON.stringify(a.db)), p=JSON.parse({json.dumps(r0['p'])});
+          const ens=['tavler','lokaler','daaser','grupper','enheder','links','brandlukninger'].every(k=>p[k].length===d[k].length&&p[k].every((x,n)=>Object.keys(x).every(f=>JSON.stringify(x[f])===JSON.stringify(d[k][n][f]))));
+          a.save(); return {{ens, tom:Array.isArray(d.tegninger)&&!d.tegninger.length, meta:[d.projekt.navn, a.backups.length>=1, JSON.parse(localStorage.getItem('tavleoversigt.projekter')).schema]}}}})()""")
+        tjek('opgradering fra skema 20: backup taget, data intakte, tom liste med plantegninger',
+             r1['ens'] and r1['tom'] and r1['meta'] == ['Skema 20-projekt', True, SKEMA], r1)
+        await pg.evaluate(f"""(()=>{{const a={A}; a.lokF=''; window.pdfjsLib={{GlobalWorkerOptions:{{}}, getDocument:()=>({{promise:Promise.resolve({{numPages:2, getPage:async n=>({{
+          getViewport:({{scale}})=>({{width:600*scale,height:400*scale}}), render:({{canvasContext:x}})=>({{promise:(x.fillStyle='#246',x.fillRect(100,100,800,500),Promise.resolve())}})}})}})}})}}; a.go('plan');}})()""")
+        await pg.wait_for_timeout(150)
+        await pg.set_input_files('#pl-fil', files=[{'name': 'Stueetage.png', 'mimeType': 'image/png', 'buffer': png}, {'name': 'El 1.sal.pdf', 'mimeType': 'application/pdf', 'buffer': b'%PDF-1.4 test'}])
+        await pg.wait_for_function(f"{A}.db.tegninger.length===3 && !{A}.billedArbejder", timeout=15000)
+        await pg.wait_for_timeout(150)
+        r = await pg.evaluate(f"""async()=>{{const a={A};const T=n=>new Promise(f=>setTimeout(f,n));const o={{}}, L=a.db.tegninger;
+          o.navne=L.map(t=>t.navn); o.forhold=Math.round(L[1].forhold*1000)/1000; o.bil=L.every(t=>BFULD.has(t.billede)&&!!BMINI[t.billede]); o.ids=L.every(t=>billedIds(a.db).has(t.billede));
+          const t=L[1]; a.planVaelgT(t.id); await T(120); const svg=()=>document.querySelector('#pl-tegning svg');
+          o.vist=!!svg()&&svg().innerHTML.includes('data:image/jpeg');
+          const klik=(x,y)=>{{const s=svg().getBoundingClientRect(); svg().dispatchEvent(new MouseEvent('click',{{bubbles:true,clientX:s.left+x*s.width,clientY:s.top+y*s.width}}));}};
+          const e=a.db.enheder[0], lok=a.db.lokaler[0];
+          document.getElementById('pl-placer').click(); await T(60); a.planVaelg='e:'+e.id; klik(0.5,0.25); await T(80);
+          o.punkt=t.punkter.length===1&&t.punkter[0].k==='e:'+e.id&&Math.abs(t.punkter[0].x-0.5)<0.01&&Math.abs(t.punkter[0].y-0.25)<0.01;
+          o.prik=svg().querySelectorAll('g.pp').length===1;
+          a.planVaelg='e:'+e.id; klik(0.2,0.1); await T(60); o.flyttet=t.punkter.length===1&&Math.abs(t.punkter[0].x-0.2)<0.01;
+          o.maalLaast=document.getElementById('pl-maal').disabled;
+          document.getElementById('pl-skala').click(); await T(60); klik(0.1,0.3); klik(0.6,0.3); a.planSkalaM='10'; a.planSkalaGem(t); await T(60); o.skala=Math.round(t.skala*100)/100;
+          document.getElementById('pl-maal').click(); await T(60); klik(0.1,0.1); klik(0.3,0.1); klik(0.3,0.2); await T(60);
+          o.laengde=document.getElementById('pl-laengde').textContent.trim(); a.planMaalTil='e:'+e.id; const L0=e.laengde, m=a.planM(t); o.m=Math.abs(m-6)<0.05; o.forv=Math.ceil(Math.round(m*100)/50)/2; a.planBrugLaengde(t); o.brugt=e.laengde===o.forv&&o.forv%0.5===0&&o.forv>=m;
+          document.dispatchEvent(new KeyboardEvent('keydown',{{key:'Escape',bubbles:true}})); await T(40); o.esc=a.planMode==='';
+          a.planSaet(t,'lokaleId',lok.id); a.go('lokaler'); await T(150); o.lokKnap=[...document.querySelectorAll('.pl-lok')].some(b=>b.textContent.trim()===t.navn);
+          a.lokF=lok.id; o.filter=a.planListe().map(x=>x.id).join()===t.id; a.lokF='';
+          const doc=a.docHtml(); o.doc=doc.includes('<h1>Plantegninger</h1>')&&doc.includes('<image href="data:image/jpeg')&&doc.includes('✓ Færdig')!==doc.includes('<b>Mangler</b>');
+          o.norm=JSON.stringify(norm({{tegninger:[{{id:'t1',billede:'../x',forhold:0.5,punkter:[{{k:'e:a',x:2,y:0.9}},{{k:'e:a',x:0.1,y:0.1}},{{k:'q:z',x:0,y:0}}]}}]}}).tegninger[0]);
+          e.laengde=L0; a.lokF=''; a.db.tegninger=[]; a.save(); a.planNulstil(); a.go('tavle'); await T(50);
+          return o}}""")
+        tjek('plantegning: billede og PDF (én tegning pr. side) gemt i IndexedDB og billedIds, prik placeres og flyttes, målestok og måling sætter kabellængden, lokale, dokumentation',
+             r['navne'] == ['Stueetage', 'El 1.sal · side 1', 'El 1.sal · side 2'] and r['forhold'] == 0.667 and r['bil'] and r['ids'] and r['vist'] and r['punkt'] and r['prik']
+             and r['flyttet'] and r['maalLaast'] and r['skala'] == 20 and r['laengde'] == '6 m' and r['m'] and r['brugt'] is True and r['esc'] and r['lokKnap'] and r['filter'] and r['doc']
+             and r['norm'] == '{"id":"t1","billede":"","forhold":0.5,"punkter":[{"k":"e:a","x":1,"y":0.5}],"navn":"","lokaleId":"","skala":0}', r)
+
         await pg.evaluate(f"{A}.go('tavle')")
 
         # 5. Backupfil kan hentes og indlæses uden at overskrive. Den indeholder billederne
