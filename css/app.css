@@ -117,6 +117,12 @@ button.din-item{cursor:pointer}
 .port.poe{box-shadow:inset 0 -3px 0 #e8b400} .port.konf{background:var(--crit);border-color:var(--crit);color:var(--raised)}
 .rackb{position:absolute;top:1rem;left:2px;font-size:.8rem;background:var(--raised);border-radius:2px;line-height:1;padding:1px}
 /* enstregsdiagram */
+/* enstreg i fuld skærm og med egen baggrund. Tokens sættes på .sldbox, så kun diagrammet skifter */
+.sld-stor{position:fixed;inset:0;z-index:45;display:flex;flex-direction:column;border-radius:0} .sld-stor .sldbox{flex:1;height:auto}
+.sldbox.sld-lys{--raised:#ffffff; --ink:#181d20; --muted:#566068; --line:#bfc6ca; --accent:#0d6b63; --crit:#b3204f;
+  --lys:#c99700; --lysstik:#6b8a00; --kraft:#d4500a; --stik:#1c6bb0; --data:#7446b8; --cctv:#0f7d58}
+.sldbox.sld-moerk{--raised:#242b30; --ink:#e5e9eb; --muted:#94a1a9; --line:#374148; --accent:#35b5a6; --crit:#f0669a;
+  --lys:#f0b824; --lysstik:#a8d13c; --kraft:#ff7a33; --stik:#55a8ea; --data:#b18cf5; --cctv:#3fcf9a}
 .sldbox{height:36rem;overflow:hidden;cursor:grab;touch-action:none;background:var(--raised);user-select:none;-webkit-user-select:none}
 .tsv svg{display:block}
 .tsv .w{stroke:var(--muted);stroke-width:2;fill:none;stroke-linecap:round} .tsv .lv{stroke:var(--kraft)} .tsv .n{stroke:var(--stik)}

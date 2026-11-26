@@ -4,6 +4,7 @@ function bland(...dele) { const r = {}; for (const d of dele) Object.definePrope
 function app() {
   return bland({
     view: 'tavle',
+    sldStor: false, sldTema: '',  /* enstreg: fylder hele vinduet; egen lys/mørk baggrund */
     lokAlleUd: false, lokUd: {},  /* Lokaler: listerne er foldet sammen til en fast højde; lokUd[id] overstyrer lokAlleUd for ét lokale */
     fvIkke: false, fvFold: new Set(), fvAaben: new Set(), fvHi: '', fvAnc: [], fvBlink: '', gren: null, sfPop: null, fvRed: null, fvTmp: null,
     views: [ { id:'tavle', l:'Tavle' }, { id:'enstreg', l:'Enstregsdiagram' }, { id:'taending', l:'Tændingsdiagram' }, { id:'samlepunkter', l:'Samlepunkter & dåser' }, { id:'foering', l:'Føringsvej' }, { id:'svag', l:'Svagstrøm' }, { id:'beregning', l:'Beregning' }, { id:'lokaler', l:'Lokaler' }, { id:'kabler', l:'Kabler' }, { id:'dokumentation', l:'Dokumentation' }, { id:'fejlfinder', l:'Fejlfinder' }, { id:'brand', l:'Brandlukning' } ],
@@ -55,7 +56,7 @@ function app() {
         for (const e of [n, ...n.querySelectorAll('*')]) if (e._x_effects && e._x_effects.size) { e._x_effects.forEach(f => Alpine.release(f)); e._x_effects.clear(); }
       } }).observe(document.body, { childList:true, subtree:true });
       let idx = null;
-      try { idx = JSON.parse(localStorage.getItem(IDX)); this.tema = localStorage.getItem(TKEY) || 'auto'; } catch (e) { this.storageOk = false; }
+      try { idx = JSON.parse(localStorage.getItem(IDX)); this.tema = localStorage.getItem(TKEY) || 'auto'; this.sldTema = ['lys', 'moerk'].includes(localStorage.getItem(DTKEY)) ? localStorage.getItem(DTKEY) : ''; } catch (e) { this.storageOk = false; }
       if (idx && Array.isArray(idx.liste) && idx.liste.length && (Number(idx.schema) || 0) < SCHEMA) this.lavBackup('Automatisk før opdatering fra skema ' + (Number(idx.schema) || 'uden nummer') + ' til ' + SCHEMA);
       if (idx && idx.sidstBackup) this.sidstBackup = idx.sidstBackup;
       if (idx && Array.isArray(idx.liste) && idx.liste.length) {
@@ -119,6 +120,7 @@ function app() {
     },
     lukToast(id) { clearTimeout(TIMERS['toast' + id]); delete TIMERS['toast' + id]; this.toasts = this.toasts.filter(t => t.id !== id); },
     go(v) { this.view = v; try { location.hash = v; } catch (e) {} this.$nextTick(() => { const t = document.querySelector('.tab[aria-selected="true"]'), c = t && t.parentElement; if (c && c.scrollWidth > c.clientWidth) { const tr = t.getBoundingClientRect(), cr = c.getBoundingClientRect(); c.scrollLeft += tr.left - cr.left - (c.clientWidth - tr.width) / 2; } }); if (v === 'enstreg') this.$nextTick(() => this.tilpas()); },
+    skiftSldTema(v) { this.sldTema = v; try { localStorage.setItem(DTKEY, v); } catch (e) {} },
     skiftTema() { this.tema = { auto:'light', light:'dark', dark:'auto' }[this.tema]; try { localStorage.setItem(TKEY, this.tema); } catch (e) {} this.brugTema(); },
     brugTema() {
       const r = document.documentElement, v = this.tema === 'auto' ? hostTema : this.tema;
@@ -622,6 +624,7 @@ function app() {
       if (ev.key === 'Escape' && this.imp.aaben) { this.imp.aaben = false; return; }
       if (ev.key === 'Escape' && this.sfPop) { this.sfPop = null; return; }
       if (ev.key === 'Escape' && this.lysbillede) { this.lysbillede = null; return; }
+      if (ev.key === 'Escape' && this.sldStor && !this.modal) { this.sldStor = false; this.$nextTick(() => this.tilpas()); return; }
       if (ev.key === 'Escape') { this.soegAaben = false; if (this.hurtig.aaben) { this.hurtig.aaben = false; return; } this.modal = null; if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); return; }
       const tag = (ev.target.tagName || '').toLowerCase();
       if (this.modal || tag === 'input' || tag === 'select' || tag === 'textarea') return;
