@@ -9,7 +9,7 @@ function app() {
     lokAlleUd: false, lokUd: {}, dragE: null, overE: null,  /* dragE/overE: brugsgenstand, der trækkes i Lokaler */  /* Lokaler: listerne er foldet sammen til en fast højde; lokUd[id] overstyrer lokAlleUd for ét lokale */
     lokP: '', lokH: '',  /* Lokaler: fastholdt og musens forsyningskilde ('lokaleId|gruppeId') */
     fvIkke: false, fvFold: new Set(), fvAaben: new Set(), fvHi: '', fvAnc: [], fvBlink: '', gren: null, sfPop: null, fvRed: null, fvTmp: null,
-    views: [ { id:'tavle', l:'Tavle' }, { id:'enstreg', l:'Enstregsdiagram' }, { id:'taending', l:'Tændingsdiagram' }, { id:'samlepunkter', l:'Samlepunkter & dåser' }, { id:'foering', l:'Føringsvej' }, { id:'svag', l:'Svagstrøm' }, { id:'beregning', l:'Beregning' }, { id:'lokaler', l:'Lokaler' }, { id:'kabler', l:'Kabler' }, { id:'dokumentation', l:'Dokumentation' }, { id:'fejlfinder', l:'Fejlfinder' }, { id:'brand', l:'Brandlukning' }, { id:'plan', l:'Plantegning' } ],
+    views: [ { id:'tavle', l:'Tavle' }, { id:'enstreg', l:'Enstregsdiagram' }, { id:'taending', l:'Tændingsdiagram' }, { id:'samlepunkter', l:'Samlepunkter & dåser' }, { id:'foering', l:'Føringsvej' }, { id:'svag', l:'Svagstrøm' }, { id:'beregning', l:'Beregning' }, { id:'lokaler', l:'Lokaler' }, { id:'kabler', l:'Kabler' }, { id:'dokumentation', l:'Dokumentation' }, { id:'fejlfinder', l:'Fejlfinder' }, { id:'brand', l:'Brandlukning' }, { id:'plan', l:'Plantegning' }, { id:'indstillinger', l:'Indstillinger' } ],
     db: tom(), dbRev: 0, hist: [], fremtid: [], klon: null, sel: null, drag: null, over: null,
     projekter: [], pid: '', omd: { id:'', navn:'' }, pf: { navn:'', sagsnr:'', kunde:'', adresse:'' }, sldSel: null, z: { x:8, y:8, k:1 }, pan: null, pinch: null, panMoved: false, traek: null,
     filter: { q:'', tavle:'', type:'', lokale:'' }, sort: { key:'gruppe', dir:1 },
@@ -89,6 +89,12 @@ function app() {
       window.addEventListener('online', () => { this.online = true; if (this.synk) this.synkNu(); });
       window.addEventListener('offline', () => { this.online = false; });
       try { if (navigator.storage && navigator.storage.persist) navigator.storage.persisted().then(p => p || navigator.storage.persist()).then(p => { this.persistent = !!p; }).catch(() => {}); } catch (e) {}
+      /* dialoger: fokus ind i dialogen ved åbning og tilbage til det, der åbnede den, ved lukning */
+      let fokus = null;
+      this.$watch('modal', m => {
+        if (m && !fokus) { fokus = document.activeElement; this.$nextTick(() => { const d = document.querySelector('#dialog [role=dialog]'); if (d && !d.contains(document.activeElement)) { const f = this.fokuserbare(d)[0]; if (f) f.focus(); } }); }
+        else if (!m && fokus) { const f = fokus; fokus = null; this.$nextTick(() => { if (f.isConnected && f.focus && !document.querySelector('#dialog [role=dialog]')) f.focus(); }); }
+      });
       window.addEventListener('storage', ev => {
         /* en anden fane har gemt et projekt: hukommelsens kopi er forældet, så laes() skal hente fra localStorage */
         if (ev.key && ev.key.startsWith(PK('')) && ev.key !== PK(this.pid)) delete MEM[ev.key.slice(PK('').length)];
@@ -644,10 +650,12 @@ function app() {
       if (this.confirm === key) { this.confirm = null; fn(); return; }
       this.confirm = key; setTimeout(() => { if (this.confirm === key) this.confirm = null; }, 3500);
     },
-    reset(medEksempel) { this.mutate(() => { const p = this.db.projekt; this.db = medEksempel ? seed() : Object.assign(tom(), { projekt:p }); }); this.sel = (this.sorteredeGrupper()[0] || {}).id || null; this.say(medEksempel ? 'Eksempeldata indlæst.' : 'Alle data ryddet.', true); },
+    reset(medEksempel) { this.mutate(() => { const p = this.db.projekt; this.db = medEksempel ? seed() : Object.assign(tom(), { projekt:p }); }); this.sel = (this.sorteredeGrupper()[0] || {}).id || null; this.say(medEksempel ? 'Eksempeldata indlæst.' : 'Projektet er ryddet.', true); },
 
     /* når siden skjules eller lukkes: felter bundet direkte til db (fx måleskemaet) gemmer først ved change, så gem også en ændring, der ikke er nået dertil */
     gemAlt() { if (!UGEMT) return this.gemNu(); let gemt = MEM[this.pid]; if (gemt == null) try { gemt = localStorage.getItem(PK(this.pid)); } catch (e) {} const s = JSON.stringify(this.db); if (s !== gemt) this.save(s); this.gemNu(); },
+
+    fokuserbare(el) { return [...el.querySelectorAll('a[href],button:not([disabled]),input:not([disabled]):not([type=hidden]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])')].filter(x => x.offsetParent !== null); },
 
     /* tastatur */
     key(ev) {
@@ -658,6 +666,12 @@ function app() {
       if (ev.key === 'Escape' && this.planMode && !this.modal) { this.planNulstil(); return; }
       if (ev.key === 'Escape' && this.sldStor && !this.modal) { this.sldStor = false; this.$nextTick(() => this.tilpas()); return; }
       if (ev.key === 'Escape') { this.soegAaben = false; if (this.hurtig.aaben) { this.hurtig.aaben = false; return; } if (this.lukModal() && document.activeElement && document.activeElement.blur) document.activeElement.blur(); return; }
+      /* Tab bliver i den åbne dialog */
+      if (ev.key === 'Tab' && this.modal) {
+        const d = document.querySelector('#dialog [role=dialog]'), f = d ? this.fokuserbare(d) : [];
+        if (f.length) { const i = f.indexOf(document.activeElement); if (i < 0 || (ev.shiftKey ? i === 0 : i === f.length - 1)) { ev.preventDefault(); f[ev.shiftKey ? f.length - 1 : 0].focus(); } }
+        return;
+      }
       const tag = (ev.target.tagName || '').toLowerCase();
       if (this.modal || tag === 'input' || tag === 'select' || tag === 'textarea') return;
       if ((ev.ctrlKey || ev.metaKey) && (ev.key.toLowerCase() === 'y' || (ev.shiftKey && ev.key.toLowerCase() === 'z'))) { ev.preventDefault(); this.redo(); return; }

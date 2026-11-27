@@ -14,8 +14,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=10.46.2">
-<link rel="stylesheet" href="css/tailwind.css?v=10.46.2">
+<link rel="stylesheet" href="css/app.css?v=10.47.0">
+<link rel="stylesheet" href="css/tailwind.css?v=10.47.0">
 </head>
 <body class="min-h-full">
 <p id="fail" hidden style="margin:16px;padding:12px;border:1px solid var(--crit);color:var(--crit)">Appen kunne ikke starte, fordi Alpine.js ikke blev indlæst. Genindlæs siden.</p>
@@ -34,7 +34,7 @@
       </div>
       <input id="p-navn" class="hd text-3xl font-bold bg-transparent w-full min-w-0 border-b border-dashed border-line hover:border-muted focus:border-accent focus:border-solid" x-model="db.projekt.navn" @change="db.projekt.navn = db.projekt.navn.trim() || 'Uden navn'; save()" aria-label="Projektnavn" title="Klik for at omdøbe projektet" placeholder="Projektnavn">
       <p class="text-sm text-muted" x-show="stamTxt()" x-text="stamTxt()"></p>
-      <p class="text-xs mt-1" :class="storageOk ? 'text-muted' : 'warn'" x-text="(storageOk ? 'Gemmes automatisk i browseren' : 'Kan ikke gemme i browseren (lageret er fuldt, eller lagring er slået fra). Hent en backup under Dokumentation.') + synkTxt() + ' · version ' + appVersion"></p>
+      <p class="text-xs mt-1" :class="storageOk ? 'text-muted' : 'warn'" x-text="(storageOk ? 'Gemmes automatisk i browseren' : 'Kan ikke gemme i browseren (lageret er fuldt, eller lagring er slået fra). Hent en backup under Indstillinger.') + synkTxt() + ' · version ' + appVersion"></p>
     </div>
     <div class="flex flex-wrap gap-2">
       <div class="relative" @click.outside="soegAaben=false">
@@ -53,6 +53,7 @@
       <button class="btn" @click="undo()" :disabled="!hist.length" title="Ctrl+Z">↶ Fortryd</button>
       <button class="btn" id="gentag" @click="redo()" :disabled="!fremtid.length" title="Ctrl+Y">↷ Gentag</button>
       <button class="btn" @click="skiftTema()" x-text="'Tema: ' + ({auto:'Auto', light:'Lys', dark:'Mørk'})[tema]"></button>
+      <button class="btn" id="indst-knap" @click="go('indstillinger')" :class="view==='indstillinger' && 'sel'" title="Backup, synkronisering, app, firma og import" aria-label="Indstillinger"><span aria-hidden="true">⚙</span> Indstillinger</button>
       <button class="btn" @click="modal={type:'help'}">Genveje <kbd>?</kbd></button>
     </div>
   </header>
@@ -792,7 +793,7 @@
             </ul>
             <div class="flex flex-wrap items-center gap-2">
               <button class="btn btn-primary" id="fase-anvend" @click="faseAnvend()">Anvend forslag</button>
-              <button class="btn" @click="faseFs = null">Annullér</button>
+              <button class="btn" @click="faseFs = null">Annuller</button>
               <span class="text-xs text-muted">Intet ændres, før du vælger Anvend. Bagefter kan det fortrydes.</span>
             </div>
           </div>
@@ -1037,98 +1038,16 @@
         <label class="f" for="p-dato">Dato<input id="p-dato" class="inp" type="date" x-model="db.projekt.dato" @change="save()"></label>
       </div>
       <div class="panel p-3 flex flex-col gap-2">
-        <h2 class="hd text-lg">Datasikring</h2>
-        <p class="text-xs text-muted">Projekterne gemmes i denne browser på denne enhed. Opdateringer af appen sletter dem ikke, og der tages automatisk en backup i browseren, før data opgraderes. Backupfilen indeholder også billederne; de automatiske backups i browseren gør ikke, men billederne bliver liggende på enheden. Ryddes browserdata, eller skifter du enhed, er en backupfil eller synkronisering via GitHub den eneste kopi.</p>
-        <button class="btn justify-center btn-primary" @click="hentBackup()" x-text="'Hent backup af alle ' + projekter.length + ' projekter'"></button>
-        <p class="text-xs num" :class="!sidstBackup && 'warn'" x-text="sidstBackup ? 'Seneste backupfil: ' + datoTxt(sidstBackup) : 'Der er ikke hentet en backupfil endnu.'"></p>
-        <p x-show="lagerTxt()" class="text-xs warn" id="lager-adv" x-text="lagerTxt()"></p>
-        <button class="btn justify-center" id="opryd-knap" @click="billedOprydAabn()">Find ubrugte billeder …</button>
-        <p class="text-xs text-muted" x-text="persistent ? 'Browseren har givet varig lagring, så data ryddes ikke automatisk ved pladsmangel.' : 'Browseren har ikke bekræftet varig lagring. Hent en backupfil jævnligt.'"></p>
-        <template x-if="backups.length">
-          <div class="flex flex-col gap-1 border-t border-line pt-2">
-            <span class="text-xs font-semibold uppercase tracking-wider text-muted">Automatiske backups i browseren</span>
-            <div class="flex items-center justify-between gap-2 text-xs" x-show="!storageOk"><span class="warn">Lageret er fuldt. De automatiske backups fylder; hent en backupfil først.</span>
-              <button class="btn" :class="confirm==='bslet' && 'armed btn-danger'" @click="ask('bslet', () => backupsSlet())" x-text="confirm==='bslet' ? 'Bekræft' : 'Slet automatiske backups'"></button></div>
-            <template x-for="(b, i) in backups" :key="b.tid">
-              <div class="flex items-center justify-between gap-2 text-xs">
-                <span><span class="num" x-text="datoTxt(b.tid)"></span> · <span x-text="Object.keys(b.raw || {}).length + ' projekter'"></span><span class="block text-muted" x-text="b.grund"></span></span>
-                <button class="btn" :class="confirm==='b'+i && 'armed btn-danger'" @click="ask('b'+i, () => gendanBackup(i))" x-text="confirm==='b'+i ? 'Bekræft' : 'Gendan som kopi'"></button>
-              </div>
-            </template>
-          </div>
-        </template>
-      </div>
-      <div class="panel p-3 flex flex-col gap-2">
-        <h2 class="hd text-lg">App på telefon og computer</h2>
-        <p class="text-xs text-muted" x-show="installeret">Appen kører som installeret app. Den virker også uden net, og projekterne gemmes i appen som før.</p>
-        <template x-if="!installeret">
-          <div class="flex flex-col gap-2">
-            <p class="text-xs text-muted">Appen kan installeres på hjemmeskærmen og virker derefter også uden net. Projekterne ligger i browseren som før, og synkroniseringen kører, når der er net igen.</p>
-            <button class="btn justify-center btn-primary" x-show="installPrompt" @click="installer()">Installér appen</button>
-            <p class="text-xs" x-show="!installPrompt && erIos()">På iPhone og iPad: tryk på Del-knappen i Safari og vælg <b>Føj til hjemmeskærm</b>.</p>
-            <p class="text-xs" x-show="!installPrompt && !erIos()">Installér fra browserens menu: <b>Installér app</b> eller <b>Føj til startskærm</b>. I Chrome og Edge på computeren står den også i adresselinjen.</p>
-          </div>
-        </template>
-        <p class="text-xs num" :class="online ? 'text-muted' : 'warn'" x-text="(online ? 'Online' : 'Offline: ændringer gemmes i browseren') + (swOk ? ' · klar til brug uden net' : '')"></p>
-      </div>
-      <div class="panel p-3 flex flex-col gap-2">
-        <h2 class="hd text-lg">Synkronisering mellem enheder</h2>
-        <template x-if="!synk">
-          <div class="flex flex-col gap-2">
-            <p class="text-xs text-muted">Projekterne kan gemmes i en hemmelig Gist på din egen GitHub-konto og hentes på dine andre enheder. Opret et token, der kun har adgangen gist, og indsæt det her på hver enhed.</p>
-            <a class="btn justify-center" href="https://github.com/settings/tokens/new?scopes=gist&amp;description=ElPlanner" target="_blank" rel="noopener">Opret token på GitHub ↗</a>
-            <label class="f" for="synk-token">GitHub-token<input id="synk-token" class="inp num" type="password" autocomplete="off" spellcheck="false" x-model="synkTokenInput" placeholder="ghp_…" @keydown.enter="synkForbind()"></label>
-            <button class="btn justify-center btn-primary" :disabled="!synkTokenInput.trim() || synkKoerer" @click="synkForbind()" x-text="synkKoerer ? 'Forbinder …' : 'Forbind'"></button>
-            <p class="text-xs text-muted">Tokenet gemmes kun i denne browser. Giv det ingen andre rettigheder end gist.</p>
-          </div>
-        </template>
-        <template x-if="synk">
-          <div class="flex flex-col gap-2">
-            <p class="text-xs" x-text="'Forbundet' + (synk?.login ? ' som ' + synk.login : '') + '. Ændringer sendes automatisk. Ændringer fra dine andre enheder hentes ved start, når fanen vises igen, og efter hver ændring.'"></p>
-            <p class="text-xs num" x-text="synkKoerer ? 'Synkroniserer …' : synk?.sidst ? 'Seneste synkronisering: ' + datoTxt(synk.sidst) : 'Ikke synkroniseret endnu.'"></p>
-            <button class="btn justify-center btn-primary" :disabled="synkKoerer" @click="synkNu()">Synkronisér nu</button>
-            <button class="btn justify-center" :disabled="!online" @click="historikAabn()">Tidligere versioner af dette projekt</button>
-            <a class="text-xs text-muted underline" :href="'https://gist.github.com/' + (synk?.gistId || '')" target="_blank" rel="noopener">Åbn Gist'en på GitHub, med historik over alle versioner ↗</a>
-            <p class="text-xs text-muted">Er et projekt rettet på to enheder, før de nåede at synkronisere, beholdes begge udgaver, og den ene får "fra anden enhed" i navnet. Uændrede eksempelprojekter synkroniseres ikke.</p>
-            <button class="btn justify-center" :class="confirm==='synkaf' && 'armed btn-danger'" @click="ask('synkaf', () => synkAfbryd())" x-text="confirm==='synkaf' ? 'Bekræft: slå fra på denne enhed' : 'Slå synkronisering fra'"></button>
-          </div>
-        </template>
-        <p class="text-xs warn" x-show="synkFejl" x-text="synkFejl"></p>
-      </div>
-      <div class="panel p-3 flex flex-col gap-2">
         <h2 class="hd text-lg">Eksport</h2>
         <button class="btn justify-center btn-primary" @click="udskriv()">Udskriv / gem som PDF</button>
         <template x-for="t in db.tavler" :key="'tf' + t.id"><button class="btn justify-center" @click="udskrivFortegnelse(t.id)" x-text="'Udskriv tavlefortegnelse · ' + t.navn"></button></template>
         <button class="btn justify-center" @click="hent(filnavn('dokumentation','html'), docHtml())">Hent dokumentation som HTML-fil</button>
         <p class="text-xs text-muted">Indeholder stamdata, enstregsdiagram, gruppeskema, måleskema og underskriftsfelt for det aktive projekt, sat op til A4. Vælg "Gem som PDF" som printer i udskriftsdialogen for at få en PDF-fil.</p>
-        <div class="flex flex-col gap-2 border-t border-line pt-2">
-          <h3 class="text-sm font-semibold">Firma på dokumentationen</h3>
-          <label class="f" for="fa-navn">Firmanavn<input id="fa-navn" class="inp" x-model="firma.navn" @input="firmaGem()"></label>
-          <label class="f" for="fa-cvr">CVR<input id="fa-cvr" class="inp" x-model="firma.cvr" @input="firmaGem()"></label>
-          <label class="f" for="fa-adr">Adresse<input id="fa-adr" class="inp" x-model="firma.adresse" @input="firmaGem()"></label>
-          <label class="f" for="fa-tlf">Telefon<input id="fa-tlf" class="inp" x-model="firma.telefon" @input="firmaGem()"></label>
-          <label class="f" for="fa-logo">Logo (PNG eller JPEG)<input id="fa-logo" class="inp" type="file" accept="image/png,image/jpeg,image/gif,image/webp" @change="firmaLogo($event)"></label>
-          <template x-if="firma.logo"><div class="flex items-center gap-2"><img :src="firma.logo" alt="Logo" class="max-h-12 max-w-[10rem] bg-white rounded"><button class="btn" @click="firmaFjernLogo()">Fjern logo</button></div></template>
-          <p class="text-xs text-muted">Gemmes kun i denne browser, gælder alle projekter og synkroniseres ikke.</p>
-        </div>
         <button class="btn justify-center" @click="hent(filnavn('projekt','json'), exportJson())">Hent projekt som JSON</button>
         <p class="text-xs text-muted" x-show="harBilleder()">Projekt-JSON indeholder ikke billederne, kun deres id'er. Backupfilen af alle projekter indeholder billederne.</p>
         <button class="btn justify-center" @click="kopier(exportJson())">Kopiér JSON</button>
         <button class="btn justify-center" @click="kopier(gruppeTsv())">Kopiér gruppeskema til regneark</button>
-      </div>
-      <div class="panel p-3 flex flex-col gap-2">
-        <h2 class="hd text-lg">Import</h2>
-        <p class="text-xs text-muted">Både et enkelt projekt og en fuld backup kan indlæses her. En backup tilføjer projekterne og overskriver ingenting.</p>
-        <label class="f" for="imp-file">JSON-fil<input id="imp-file" class="inp" type="file" accept=".json,application/json" @change="importFil($event)"></label>
-        <label class="f" for="imp-txt">Eller indsæt JSON
-          <textarea id="imp-txt" class="inp num" rows="5" x-model="io" placeholder='{"tavler": [...]}'></textarea></label>
-        <button class="btn justify-center btn-primary" :disabled="!io.trim()" @click="importJson(io, true)">Indlæs som nyt projekt</button>
-        <button class="btn justify-center" :disabled="!io.trim()" @click="importJson(io, false)">Indlæs og erstat aktivt projekt</button>
-        <p class="text-xs text-muted">En valgt fil indlæses altid som nyt projekt.</p>
-        <div class="flex flex-wrap gap-1 border-t border-line pt-2">
-          <button class="btn btn-ghost" :class="confirm==='seed' && 'armed btn-danger'" @click="ask('seed', () => reset(true))" x-text="confirm==='seed' ? 'Bekræft: overskriv' : 'Indlæs eksempeldata'"></button>
-          <button class="btn btn-ghost btn-danger" :class="confirm==='wipe' && 'armed'" @click="ask('wipe', () => reset(false))" x-text="confirm==='wipe' ? 'Bekræft: slet alt' : 'Ryd alle data'"></button>
-        </div>
+        <p class="text-xs text-muted">Firmanavn og logo til dokumentationen, backup, synkronisering og import findes under <button type="button" class="underline" @click="go('indstillinger')">Indstillinger</button>.</p>
       </div>
     </div>
 
@@ -1196,11 +1115,104 @@
     </div>
   </section></template>
 
+  <!-- ============ INDSTILLINGER ============ -->
+  <template x-if="view==='indstillinger'"><section class="grid gap-4 md:grid-cols-2 xl:grid-cols-3 items-start">
+    <div class="flex flex-col gap-4">
+      <div class="panel p-3 flex flex-col gap-2">
+        <h2 class="hd text-lg">Datasikring</h2>
+        <p class="text-xs text-muted">Projekterne gemmes i denne browser på denne enhed. Opdateringer af appen sletter dem ikke, og der tages automatisk en backup i browseren, før data opgraderes. Backupfilen indeholder også billederne; de automatiske backups i browseren gør ikke, men billederne bliver liggende på enheden. Ryddes browserdata, eller skifter du enhed, er en backupfil eller synkronisering via GitHub den eneste kopi.</p>
+        <button class="btn justify-center btn-primary" @click="hentBackup()" x-text="'Hent backup af alle ' + projekter.length + ' projekter'"></button>
+        <p class="text-xs num" :class="!sidstBackup && 'warn'" x-text="sidstBackup ? 'Seneste backupfil: ' + datoTxt(sidstBackup) : 'Der er ikke hentet en backupfil endnu.'"></p>
+        <p x-show="lagerTxt()" class="text-xs warn" id="lager-adv" x-text="lagerTxt()"></p>
+        <button class="btn justify-center" id="opryd-knap" @click="billedOprydAabn()">Find ubrugte billeder …</button>
+        <p class="text-xs text-muted" x-text="persistent ? 'Browseren har givet varig lagring, så data ryddes ikke automatisk ved pladsmangel.' : 'Browseren har ikke bekræftet varig lagring. Hent en backupfil jævnligt.'"></p>
+        <template x-if="backups.length">
+          <div class="flex flex-col gap-1 border-t border-line pt-2">
+            <span class="text-xs font-semibold uppercase tracking-wider text-muted">Automatiske backups i browseren</span>
+            <div class="flex items-center justify-between gap-2 text-xs" x-show="!storageOk"><span class="warn">Lageret er fuldt. De automatiske backups fylder; hent en backupfil først.</span>
+              <button class="btn" :class="confirm==='bslet' && 'armed btn-danger'" @click="ask('bslet', () => backupsSlet())" x-text="confirm==='bslet' ? 'Bekræft' : 'Slet automatiske backups'"></button></div>
+            <template x-for="(b, i) in backups" :key="b.tid">
+              <div class="flex items-center justify-between gap-2 text-xs">
+                <span><span class="num" x-text="datoTxt(b.tid)"></span> · <span x-text="Object.keys(b.raw || {}).length + ' projekter'"></span><span class="block text-muted" x-text="b.grund"></span></span>
+                <button class="btn" :class="confirm==='b'+i && 'armed btn-danger'" @click="ask('b'+i, () => gendanBackup(i))" x-text="confirm==='b'+i ? 'Bekræft' : 'Gendan som kopi'"></button>
+              </div>
+            </template>
+          </div>
+        </template>
+      </div>
+    </div>
+    <div class="flex flex-col gap-4">
+      <div class="panel p-3 flex flex-col gap-2">
+        <h2 class="hd text-lg">App på telefon og computer</h2>
+        <p class="text-xs text-muted" x-show="installeret">Appen kører som installeret app. Den virker også uden net, og projekterne gemmes i appen som før.</p>
+        <template x-if="!installeret">
+          <div class="flex flex-col gap-2">
+            <p class="text-xs text-muted">Appen kan installeres på hjemmeskærmen og virker derefter også uden net. Projekterne ligger i browseren som før, og synkroniseringen kører, når der er net igen.</p>
+            <button class="btn justify-center btn-primary" x-show="installPrompt" @click="installer()">Installér appen</button>
+            <p class="text-xs" x-show="!installPrompt && erIos()">På iPhone og iPad: tryk på Del-knappen i Safari og vælg <b>Føj til hjemmeskærm</b>.</p>
+            <p class="text-xs" x-show="!installPrompt && !erIos()">Installér fra browserens menu: <b>Installér app</b> eller <b>Føj til startskærm</b>. I Chrome og Edge på computeren står den også i adresselinjen.</p>
+          </div>
+        </template>
+        <p class="text-xs num" :class="online ? 'text-muted' : 'warn'" x-text="(online ? 'Online' : 'Offline: ændringer gemmes i browseren') + (swOk ? ' · klar til brug uden net' : '')"></p>
+      </div>
+      <div class="panel p-3 flex flex-col gap-2">
+        <h2 class="hd text-lg">Synkronisering mellem enheder</h2>
+        <template x-if="!synk">
+          <div class="flex flex-col gap-2">
+            <p class="text-xs text-muted">Projekterne kan gemmes i en hemmelig Gist på din egen GitHub-konto og hentes på dine andre enheder. Opret et token, der kun har adgangen gist, og indsæt det her på hver enhed.</p>
+            <a class="btn justify-center" href="https://github.com/settings/tokens/new?scopes=gist&amp;description=ElPlanner" target="_blank" rel="noopener">Opret token på GitHub ↗</a>
+            <label class="f" for="synk-token">GitHub-token<input id="synk-token" class="inp num" type="password" autocomplete="off" spellcheck="false" x-model="synkTokenInput" placeholder="ghp_…" @keydown.enter="synkForbind()"></label>
+            <button class="btn justify-center btn-primary" :disabled="!synkTokenInput.trim() || synkKoerer" @click="synkForbind()" x-text="synkKoerer ? 'Forbinder …' : 'Forbind'"></button>
+            <p class="text-xs text-muted">Tokenet gemmes kun i denne browser. Giv det ingen andre rettigheder end gist.</p>
+          </div>
+        </template>
+        <template x-if="synk">
+          <div class="flex flex-col gap-2">
+            <p class="text-xs" x-text="'Forbundet' + (synk?.login ? ' som ' + synk.login : '') + '. Ændringer sendes automatisk. Ændringer fra dine andre enheder hentes ved start, når fanen vises igen, og efter hver ændring.'"></p>
+            <p class="text-xs num" x-text="synkKoerer ? 'Synkroniserer …' : synk?.sidst ? 'Seneste synkronisering: ' + datoTxt(synk.sidst) : 'Ikke synkroniseret endnu.'"></p>
+            <button class="btn justify-center btn-primary" :disabled="synkKoerer" @click="synkNu()">Synkronisér nu</button>
+            <button class="btn justify-center" :disabled="!online" @click="historikAabn()">Tidligere versioner af dette projekt</button>
+            <a class="text-xs text-muted underline" :href="'https://gist.github.com/' + (synk?.gistId || '')" target="_blank" rel="noopener">Åbn Gist'en på GitHub, med historik over alle versioner ↗</a>
+            <p class="text-xs text-muted">Er et projekt rettet på to enheder, før de nåede at synkronisere, beholdes begge udgaver, og den ene får "fra anden enhed" i navnet. Uændrede eksempelprojekter synkroniseres ikke.</p>
+            <button class="btn justify-center" :class="confirm==='synkaf' && 'armed btn-danger'" @click="ask('synkaf', () => synkAfbryd())" x-text="confirm==='synkaf' ? 'Bekræft: slå fra på denne enhed' : 'Slå synkronisering fra'"></button>
+          </div>
+        </template>
+        <p class="text-xs warn" x-show="synkFejl" x-text="synkFejl"></p>
+      </div>
+    </div>
+    <div class="flex flex-col gap-4">
+      <div class="panel p-3 flex flex-col gap-2">
+        <h2 class="hd text-lg">Firma på dokumentationen</h2>
+        <label class="f" for="fa-navn">Firmanavn<input id="fa-navn" class="inp" x-model="firma.navn" @input="firmaGem()"></label>
+        <label class="f" for="fa-cvr">CVR<input id="fa-cvr" class="inp" x-model="firma.cvr" @input="firmaGem()"></label>
+        <label class="f" for="fa-adr">Adresse<input id="fa-adr" class="inp" x-model="firma.adresse" @input="firmaGem()"></label>
+        <label class="f" for="fa-tlf">Telefon<input id="fa-tlf" class="inp" x-model="firma.telefon" @input="firmaGem()"></label>
+        <label class="f" for="fa-logo">Logo (PNG eller JPEG)<input id="fa-logo" class="inp" type="file" accept="image/png,image/jpeg,image/gif,image/webp" @change="firmaLogo($event)"></label>
+        <template x-if="firma.logo"><div class="flex items-center gap-2"><img :src="firma.logo" alt="Logo" class="max-h-12 max-w-[10rem] bg-white rounded"><button class="btn" @click="firmaFjernLogo()">Fjern logo</button></div></template>
+        <p class="text-xs text-muted">Gemmes kun i denne browser, gælder alle projekter og synkroniseres ikke.</p>
+      </div>
+      <div class="panel p-3 flex flex-col gap-2">
+        <h2 class="hd text-lg">Import</h2>
+        <p class="text-xs text-muted">Både et enkelt projekt og en fuld backup kan indlæses her. En backup tilføjer projekterne og overskriver ingenting.</p>
+        <label class="f" for="imp-file">JSON-fil<input id="imp-file" class="inp" type="file" accept=".json,application/json" @change="importFil($event)"></label>
+        <label class="f" for="imp-txt">Eller indsæt JSON
+          <textarea id="imp-txt" class="inp num" rows="5" x-model="io" placeholder='{"tavler": [...]}'></textarea></label>
+        <button class="btn justify-center btn-primary" :disabled="!io.trim()" @click="importJson(io, true)">Indlæs som nyt projekt</button>
+        <button class="btn justify-center" :class="confirm==='erstat' && 'armed btn-danger'" :disabled="!io.trim()" @click="ask('erstat', () => importJson(io, false))" x-text="confirm==='erstat' ? 'Bekræft: erstat aktivt projekt' : 'Indlæs og erstat aktivt projekt'"></button>
+        <p class="text-xs text-muted">En valgt fil indlæses altid som nyt projekt.</p>
+        <div class="flex flex-wrap gap-1 border-t border-line pt-2">
+          <button class="btn btn-ghost" :class="confirm==='seed' && 'armed btn-danger'" @click="ask('seed', () => reset(true))" x-text="confirm==='seed' ? 'Bekræft: overskriv dette projekt' : 'Indlæs eksempeldata i dette projekt'"></button>
+          <button class="btn btn-ghost btn-danger" :class="confirm==='wipe' && 'armed'" @click="ask('wipe', () => reset(false))" x-text="confirm==='wipe' ? 'Bekræft: ryd projektet' : 'Ryd dette projekt'"></button>
+        </div>
+      </div>
+    </div>
+  </section></template>
+
   <!-- ============ FEJLFINDER ============ -->
   <template x-if="view==='fejlfinder'"><section class="flex flex-col gap-4">
     <div class="panel p-3 flex flex-col gap-2" id="afl-panel">
       <h2 class="hd text-lg">Klar til aflevering?</h2>
-      <p x-show="!aflAntal()" id="afl-klar" class="flex items-center gap-2 font-semibold" style="color:var(--cctv)"><span aria-hidden="true">✓</span> Klar til aflevering</p>
+      <p x-show="!aflAntal()" id="afl-klar" class="flex items-center gap-2 font-semibold" style="color:var(--ok)"><span aria-hidden="true">✓</span> Klar til aflevering</p>
       <p x-show="aflAntal()" class="warn" x-text="aflAntal() + (aflAntal() === 1 ? ' punkt mangler' : ' punkter mangler')"></p>
       <template x-for="k in aflTjek().filter(k => k.punkter.length)" :key="k.k">
         <div class="afl-kat">
@@ -1268,8 +1280,8 @@
       </div>
     </template>
     <template x-if="modal && modal.type==='projekter'">
-      <div class="panel w-full max-w-2xl mt-8 shadow-xl" role="dialog" aria-modal="true">
-        <header class="border-b border-line bg-raised px-4 py-3 flex justify-between items-center"><h2 class="hd text-xl">Projekter</h2><button class="btn" @click="modal=null">Luk</button></header>
+      <div class="panel w-full max-w-2xl mt-8 shadow-xl" role="dialog" aria-modal="true" aria-labelledby="dlg-t1">
+        <header class="border-b border-line bg-raised px-4 py-3 flex justify-between items-center"><h2 id="dlg-t1" class="hd text-xl">Projekter</h2><button class="btn" @click="modal=null">Luk</button></header>
         <ul class="flex flex-col">
           <template x-for="p in projekter" :key="p.id">
             <li class="flex flex-wrap items-center gap-3 border-b border-line px-4 py-2" :class="p.id===pid && 'bg-raised'">
@@ -1278,7 +1290,7 @@
                 <form class="flex flex-wrap gap-1" x-show="omd.id===p.id" @submit.prevent="omdoebGem()" @keydown.escape.stop="omd.id=''">
                   <label class="sr-only" for="omd-navn">Nyt projektnavn</label>
                   <template x-if="omd.id===p.id"><input id="omd-navn" class="inp inp-s flex-1 min-w-[10rem]" x-model="omd.navn" placeholder="Projektnavn" required></template>
-                  <button class="btn btn-primary">Gem</button><button type="button" class="btn" @click="omd.id=''">Annullér</button>
+                  <button class="btn btn-primary">Gem</button><button type="button" class="btn" @click="omd.id=''">Annuller</button>
                 </form>
                 <div class="text-xs text-muted" x-text="[p.sagsnr && 'Sag ' + p.sagsnr, p.kunde, p.adresse].filter(Boolean).join(' · ') || 'Ingen stamdata'"></div>
                 <div class="num text-xs text-muted" x-text="p.grupper + ' grupper · ' + p.enheder + ' brugsgenstande · ændret ' + datoTxt(p.opdateret)"></div>
@@ -1306,8 +1318,8 @@
       </div>
     </template>
     <template x-if="modal && modal.type==='skabelon'">
-      <form class="panel w-full max-w-2xl mt-8 shadow-xl" role="dialog" aria-modal="true" @submit.prevent="indsaetSkabelon()">
-        <header class="border-b border-line bg-raised px-4 py-3"><h2 class="hd text-xl">Lokale fra skabelon</h2>
+      <form class="panel w-full max-w-2xl mt-8 shadow-xl" role="dialog" aria-modal="true" aria-labelledby="dlg-t2" @submit.prevent="indsaetSkabelon()">
+        <header class="border-b border-line bg-raised px-4 py-3"><h2 id="dlg-t2" class="hd text-xl">Lokale fra skabelon</h2>
           <p class="text-xs text-muted">Opretter lokalet med typiske brugsgenstande og, hvis du vælger en tavle, de tilhørende grupper.</p></header>
         <div class="grid gap-3 p-4 sm:grid-cols-2">
           <label class="f" for="sk-valg">Skabelon
@@ -1331,8 +1343,8 @@
       </form>
     </template>
     <template x-if="modal && modal.type==='gren' && gren">
-      <form class="panel w-full max-w-lg mt-8 shadow-xl" role="dialog" aria-modal="true" @submit.prevent="grenGem()">
-        <header class="border-b border-line bg-raised px-4 py-3"><h2 class="hd text-xl">Kopiér gren</h2>
+      <form class="panel w-full max-w-lg mt-8 shadow-xl" role="dialog" aria-modal="true" aria-labelledby="dlg-t3" @submit.prevent="grenGem()">
+        <header class="border-b border-line bg-raised px-4 py-3"><h2 id="dlg-t3" class="hd text-xl">Kopiér gren</h2>
           <p class="text-xs text-muted" x-text="'Kopierer ' + gren.navn + ' og alt, der er sløjfet eller forsynet fra den, med samme kabler. Kopien er ikke trukket.'"></p></header>
         <div class="grid gap-3 p-4 sm:grid-cols-2">
           <label class="f" for="gren-plac">Ny placering (valgfri)<input id="gren-plac" class="inp" x-model="gren.placering" placeholder="Væg B"></label>
@@ -1345,8 +1357,8 @@
       </form>
     </template>
     <template x-if="modal && modal.type==='klon' && klon">
-      <form class="panel w-full max-w-lg mt-8 shadow-xl" role="dialog" aria-modal="true" @submit.prevent="klonGem()">
-        <header class="border-b border-line bg-raised px-4 py-3"><h2 class="hd text-xl">Klon lokale</h2>
+      <form class="panel w-full max-w-lg mt-8 shadow-xl" role="dialog" aria-modal="true" aria-labelledby="dlg-t4" @submit.prevent="klonGem()">
+        <header class="border-b border-line bg-raised px-4 py-3"><h2 id="dlg-t4" class="hd text-xl">Klon lokale</h2>
           <p class="text-xs text-muted" x-text="'Kopierer ' + lokaleNavn(klon.lid) + ' med brugsgenstande, samledåser og udtag. Vælg, hvilken gruppe kopierne skal på.'"></p></header>
         <div class="grid gap-3 p-4">
           <label class="f" for="klon-navn">Det nye lokales navn<input id="klon-navn" class="inp" x-model="klon.navn" required></label>
@@ -1407,8 +1419,8 @@
       </div>
     </template>
     <template x-if="modal && modal.type==='help'">
-      <div class="panel w-full max-w-md mt-8 shadow-xl" role="dialog" aria-modal="true">
-        <header class="border-b border-line bg-raised px-4 py-3 flex justify-between items-center"><h2 class="hd text-xl">Tastaturgenveje</h2><button class="btn" @click="modal=null">Luk</button></header>
+      <div class="panel w-full max-w-md mt-8 shadow-xl" role="dialog" aria-modal="true" aria-labelledby="dlg-t5">
+        <header class="border-b border-line bg-raised px-4 py-3 flex justify-between items-center"><h2 id="dlg-t5" class="hd text-xl">Tastaturgenveje</h2><button class="btn" @click="modal=null">Luk</button></header>
         <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 p-4 text-sm items-center">
           <dt><kbd>1</kbd> – <kbd>9</kbd>, <kbd>0</kbd></dt><dd>Skift visning (de første ti faner). 0 åbner Dokumentation</dd>
           <dt><kbd>P</kbd></dt><dd>Projekter: skift, opret, duplikér, slet</dd>
@@ -1427,9 +1439,9 @@
       </div>
     </template>
     <template x-if="modal && modalNavn[modal.type]">
-    <form class="panel w-full max-w-lg mt-8 shadow-xl" role="dialog" aria-modal="true" @submit.prevent="saveForm()">
+    <form class="panel w-full max-w-lg mt-8 shadow-xl" role="dialog" aria-modal="true" aria-labelledby="dlg-t6" @submit.prevent="saveForm()">
       <header class="border-b border-line bg-raised px-4 py-3">
-        <h2 class="hd text-xl" x-text="(modal.id ? 'Rediger ' : 'Ny ') + modalNavn[modal.type]"></h2>
+        <h2 id="dlg-t6" class="hd text-xl" x-text="(modal.id ? 'Rediger ' : 'Ny ') + modalNavn[modal.type]"></h2>
       </header>
       <div class="grid gap-3 p-4 sm:grid-cols-2">
         <template x-if="modal.type==='tavle'">
@@ -1541,6 +1553,7 @@
         <template x-if="modal.type==='enhed'">
           <div class="contents">
             <label class="f sm:col-span-2" for="m-navn">Brugsgenstand<input id="m-navn" class="inp" x-model="form.navn" @input="effektAuto()" placeholder="Downlight 6 stk." list="enh-navne" required></label>
+            <h3 class="frm-afs sm:col-span-2">Forsyning</h3>
             <datalist id="enh-navne"><template x-for="n in enhNavne" :key="n"><option :value="n"></option></template></datalist>
             <label class="f" for="m-gruppe">Gruppe
               <select id="m-gruppe" class="inp" x-model="form.gruppeId" @change="nyValg($event, 'gruppe', 'gruppeId'); belSync()"><option value="">Ikke tildelt</option><option value="__ny">+ Opret ny gruppe …</option>
@@ -1563,6 +1576,7 @@
             <label class="f sm:col-span-2" for="m-fase" x-show="gruppe(form.gruppeId) && gruppe(form.gruppeId).faser == 3">Tilslutning
               <select id="m-fase" class="inp num" x-model="form.fase" @change="belSync()"><option value="" :selected="!form.fase">Som gruppen (3 × 400 V)</option>
                 <template x-for="p in ['L1','L2','L3']" :key="p"><option :value="p" :selected="form.fase===p" x-text="p + ' og nul, 230 V (1-faset)'"></option></template></select></label>
+            <h3 class="frm-afs sm:col-span-2">Last og kabel</h3>
             <div class="sm:col-span-2 grid gap-3 sm:grid-cols-2">
               <label class="f" for="m-effekt">Belastning
                 <span class="flex gap-2"><input id="m-effekt" class="inp num" type="number" min="0" step="any" x-model.number="form.belVal" @input="eAuto=false; belSync()">
@@ -1599,6 +1613,7 @@
                   <template x-for="a in (form.kKabel === hoejtKabel ? htvs : tvs)" :key="a"><option :value="a" :selected="form.kTv==a" x-text="(form.kKabel === hoejtKabel ? '2 × ' : '') + fmt(a, 2)"></option></template></select></label>
               <label class="f" for="m-klen">Længde pr. sløjfe (m)<input id="m-klen" class="inp num" type="number" min="0" step="0.5" x-model.number="form.kLaengde"></label>
             </fieldset></template>
+            <h3 class="frm-afs sm:col-span-2">Placering og status</h3>
             <label class="f" for="m-eplac">Placering<input id="m-eplac" class="inp" x-model="form.placering" placeholder="Væg A, loft …"></label>
             <label class="f" for="m-ehoejde">Højde over gulv (cm)<input id="m-ehoejde" class="inp num" type="number" min="0" step="1" x-model.number="form.hoejde"></label>
             <label class="flex items-center gap-2 text-sm self-end pb-2" for="m-etrukket"><input type="checkbox" id="m-etrukket" x-model="form.trukket"> Kablet er trukket</label>
@@ -1904,9 +1919,9 @@
     </form>
   </div>
   <div x-show="hurtig.aaben" class="fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto p-4" style="background:rgba(0,0,0,.6)" @click.self="hurtig.aaben=false">
-    <form class="panel w-full max-w-md mt-16 shadow-xl" role="dialog" aria-modal="true" @submit.prevent="hurtigGem()">
+    <form class="panel w-full max-w-md mt-16 shadow-xl" role="dialog" aria-modal="true" aria-labelledby="dlg-t7" @submit.prevent="hurtigGem()">
       <header class="border-b border-line bg-raised px-4 py-3">
-        <h2 class="hd text-xl" x-text="({ lokale:'Nyt lokale', gruppe:'Ny gruppe', daase:'Nyt samlepunkt' })[hurtig.type]"></h2>
+        <h2 id="dlg-t7" class="hd text-xl" x-text="({ lokale:'Nyt lokale', gruppe:'Ny gruppe', daase:'Nyt samlepunkt' })[hurtig.type]"></h2>
         <p class="text-xs text-muted">Oprettes med det samme og vælges i formularen bagved.</p>
       </header>
       <div class="grid gap-3 p-4 sm:grid-cols-2">
@@ -1952,17 +1967,17 @@
   </div>
 </div>
 
-<script src="js/data.js?v=10.46.2"></script>
-<script src="js/beregning.js?v=10.46.2"></script>
-<script src="js/diagram.js?v=10.46.2"></script>
-<script src="js/lagring.js?v=10.46.2"></script>
-<script src="js/historik.js?v=10.46.2"></script>
-<script src="js/billeder.js?v=10.46.2"></script>
-<script src="js/brand.js?v=10.46.2"></script>
-<script src="js/import.js?v=10.46.2"></script>
-<script src="js/aflevering.js?v=10.46.2"></script>
-<script src="js/plan.js?v=10.46.2"></script>
-<script src="js/app.js?v=10.46.2"></script>
+<script src="js/data.js?v=10.47.0"></script>
+<script src="js/beregning.js?v=10.47.0"></script>
+<script src="js/diagram.js?v=10.47.0"></script>
+<script src="js/lagring.js?v=10.47.0"></script>
+<script src="js/historik.js?v=10.47.0"></script>
+<script src="js/billeder.js?v=10.47.0"></script>
+<script src="js/brand.js?v=10.47.0"></script>
+<script src="js/import.js?v=10.47.0"></script>
+<script src="js/aflevering.js?v=10.47.0"></script>
+<script src="js/plan.js?v=10.47.0"></script>
+<script src="js/app.js?v=10.47.0"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.14.1/cdn.min.js"></script>
 </body>
 </html>

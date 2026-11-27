@@ -2,6 +2,17 @@
 
 Nyeste øverst. Versionsnummeret står også i appen som `APP_VERSION`. Hver version siger, hvilken model der lavede den.
 
+## 10.47.0 · 2026-11-27 · Claude Opus 5.5
+
+- Ny fane Indstillinger, også som knappen ⚙ Indstillinger i hovedet: Datasikring (backup), App på telefon og computer, Synkronisering, Firma på dokumentationen og Import er flyttet hertil fra Dokumentation. Dokumentation har nu kun projektoplysninger, eksport og arkene.
+- "Indlæs og erstat aktivt projekt" kræver bekræftelse. "Indlæs eksempeldata" og "Ryd alle data" hedder nu "… i dette projekt" og "Ryd dette projekt", da de kun gælder det aktive projekt.
+- Dialoger: fokus flyttes ind i dialogen, når den åbnes, og tilbage, når den lukkes. Tab bliver i dialogen. Alle dialoger har en titel for skærmlæsere. "Annullér" staves ens ("Annuller").
+- Brugsgenstandens formular er delt i afsnittene Forsyning, Last og kabel, Placering og status.
+- Større trykflader på touchskærme: små knapper (▲/▼), fold-knapper, afkrydsningsfelter og porte.
+- Farvetokens `--ok` (Klar til aflevering, trukne prikker på plantegningen) og `--gul` (PoE og testknap) i lyst og mørkt tema.
+- Rettelse til 10.46.0: I<sub>z</sub> i brugsgenstandens formular regnes på den redigerede tilslutning, ikke den gemte.
+- Ingen ændring af datamodellen (skema 25). Plan: `docs/planer/2026-11-27-indstillinger-a11y.md`.
+
 ## 10.46.2 · 2026-11-27 · Claude Opus 5.5
 
 - Esc eller et klik uden for en ændret formular lukker den ikke længere med det samme. Appen siger, at formularen er ændret, og et nyt tryk inden for 3,5 s lukker den uden at gemme. En uændret formular lukkes som før, og Annuller lukker altid straks.

@@ -31,7 +31,8 @@ const APP_BEREGNING = () => ({
     },
     /* belastede ledere i Iz (aftalt 2026-11-27): et træk, der fører strøm i to eller tre faser, har 3 belastede ledere; i én fase 2. Uden last som trækkets egen tilslutning */
     tre3(v, uden) { const n = PH.filter(p => v[p] > 1e-9).length; return n ? n > 1 : uden; },
-    iz(e, tv) { return this.erHoejt(e) ? 0 : this.izBeregn(e.kabel, tv || e.tv, this.tre3(this.enhedFaser(e), this.tre(e)), this.forhold(this.gruppe(e.gruppeId))); },
+    /* en formular (kopi under redigering) regnes på sin egen tilslutning, da fasestrømmene er mellemlagret pr. id for den gemte udgave */
+    iz(e, tv) { return this.erHoejt(e) ? 0 : this.izBeregn(e.kabel, tv || e.tv, this.enhed(e.id) === e ? this.tre3(this.enhedFaser(e), this.tre(e)) : this.tre(e), this.forhold(this.gruppe(e.gruppeId))); },
     izFejl(e) { const g = this.gruppe(e.gruppeId); return !!g && !!this.iz(e) && g.In > this.iz(e); },
     forslag(e) {
       const g = this.gruppe(e.gruppeId); if (!g || this.erHoejt(e)) return null;

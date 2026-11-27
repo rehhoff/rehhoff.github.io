@@ -4,7 +4,7 @@ const APP_LAGRING = () => ({
     /* projekter: hvert projekt gemmes under sin egen nøgle */
     skriv(id, d, s) { s = s || JSON.stringify(d); MEM[id] = s; if (SAVEP && SAVEP.id === id) { clearTimeout(TIMERS.gem); SAVEP = null; } try { localStorage.setItem(PK(id), s); this.storageOk = true; return true; } catch (e) { this.lagerFejl(); return false; } },
     /* lageret er fuldt eller lagring slået fra: data ligger kun i hukommelsen (MEM). Én fejlbesked, indtil en skrivning lykkes igen */
-    lagerFejl() { if (this.storageOk) this.say('Kunne ikke gemme i browseren. Lageret er sandsynligvis fuldt, så ændringerne findes kun, indtil siden lukkes. Hent en backup under Dokumentation, og slet gamle projekter eller de automatiske backups.', false, true); this.storageOk = false; },
+    lagerFejl() { if (this.storageOk) this.say('Kunne ikke gemme i browseren. Lageret er sandsynligvis fuldt, så ændringerne findes kun, indtil siden lukkes. Hent en backup under Indstillinger, og slet gamle projekter eller de automatiske backups.', false, true); this.storageOk = false; },
     /* frigør plads: sletter de automatiske backups efter brugerens bekræftelse og gemmer det aktive projekt igen */
     backupsSlet() { try { localStorage.removeItem(BKEY); } catch (e) {} this.backups = []; this.save(); this.gemNu(); if (this.storageOk) this.say('De automatiske backups er slettet, og projektet er gemt.'); },
     laes(id) {
@@ -159,7 +159,7 @@ const APP_LAGRING = () => ({
     synkTxt() {
       if (!this.synk) return '';
       if (!this.online) return ' · offline, synkroniserer når der er net';
-      if (this.synkFejl) return ' · synkronisering fejlede, se Dokumentation';
+      if (this.synkFejl) return ' · synkronisering fejlede, se Indstillinger';
       if (this.synkKoerer) return ' · synkroniserer …';
       return this.synk.sidst ? ' · synkroniseret kl. ' + new Date(this.synk.sidst).toLocaleTimeString('da-DK', { hour:'2-digit', minute:'2-digit' }) : ' · synkroniseres via GitHub';
     },
@@ -234,7 +234,7 @@ const APP_LAGRING = () => ({
           }
         }
         if (n.hentet || n.slettet || n.konflikt) this.skrivIdx();
-        if (ikkeGemt) { const e = new Error('Lageret i browseren er fuldt (eller lagring er slået fra), så projekterne kunne ikke gemmes på enheden. Intet er sendt. Slet gamle projekter eller de automatiske backups under Dokumentation, og synkronisér igen.'); e.status = 'lager'; throw e; }
+        if (ikkeGemt) { const e = new Error('Lageret i browseren er fuldt (eller lagring er slået fra), så projekterne kunne ikke gemmes på enheden. Intet er sendt. Slet gamle projekter eller de automatiske backups under Indstillinger, og synkronisér igen.'); e.status = 'lager'; throw e; }
       } finally { this.iSynk = false; }
       if (Object.keys(filer).length) {
         /* gem før afsendelsen, hvad der allerede er hentet, og hvad der er på vej: afbrydes appen eller nettet, må næste synkronisering ikke se det som to ændringer */
