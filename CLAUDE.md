@@ -2,7 +2,7 @@
 
 Webapp til elektrikerarbejde: tavler, grupper, lokaler, kabler, samlepunkter, afbrydere og svagstrøm, med beregninger (ΔU, I<sub>z</sub>, fasebalance), diagrammer og dokumentation. Ejer: Alexander. Brugerfladen er på dansk.
 
-- Live: https://rehhoff.github.io/ElPlanner/ (GitHub Pages fra `main`, mappe `/`). Repoet er offentligt: skriv ingen personlige oplysninger i filer eller commits.
+- Live: https://rehhoff.github.io/elplanner/ (GitHub Pages fra `main`, mappe `/`). Repoet er offentligt: skriv ingen personlige oplysninger i filer eller commits.
 - Ét lille byggetrin: Tailwind-CSS'en bygges med `python tools/byg_css.py` (Tailwinds officielle program v3.4.17, hentes automatisk til `~/.cache/el-oversigt/`). Alpine.js 3.14.1 fra cdnjs. Almindelige scripts, der deler globalt scope, indlæst i denne rækkefølge:
   - `index.html`: markup med Alpine-direktiver.
   - `css/app.css`: farvetokens, lyst og mørkt tema, egne klasser. `css/tailwind.css`: bygget fra `tailwind.config.js` og `css/tailwind.input.css`. Ret den aldrig i hånden.
@@ -15,7 +15,7 @@ Webapp til elektrikerarbejde: tavler, grupper, lokaler, kabler, samlepunkter, af
 
 ## 1. Data må aldrig gå tabt
 
-Projekterne ligger i browserens localStorage på origin `rehhoff.github.io` (appen ligger under `/ElPlanner/`; origin og nøgler er uændrede efter omdøbningen fra repoet `rehhoff.github.io` i 10.45.0) og kan synkroniseres til en hemmelig GitHub Gist.
+Projekterne ligger i browserens localStorage på origin `rehhoff.github.io` (appen ligger under `/elplanner/`; origin og nøgler er uændrede efter omdøbningen fra repoet `rehhoff.github.io` i 10.45.0) og kan synkroniseres til en hemmelig GitHub Gist.
 
 1. Omdøb eller fjern aldrig disse nøgler: `tavleoversigt.projekter`, `tavleoversigt.p.<id>`, `tavleoversigt.backups`, `tavleoversigt.tema`, `tavleoversigt.diagramtema`, `tavleoversigt.firma`, `tavleoversigt.sync`, samt de gamle `tavleoversigt.v1` og `.v2`, som stadig migreres. Det samme gælder IndexedDB-databasen `tavleoversigt-billeder` (tabellerne `billeder` og `mini`), hvor billederne til brandlukninger (skema 15) og til tavler, lokaler og samledåser (skema 16) ligger.
 2. Ændres datamodellen: udvid `norm()` med standardværdier og migrering af gamle felter, og hæv `SCHEMA`. Første start efter en hævning tager automatisk en backup (`lavBackup`).
@@ -41,7 +41,7 @@ Projekterne ligger i browserens localStorage på origin `rehhoff.github.io` (app
    Med npm: `npm install` og `python3 tests/smoke.py`. Sæt `PYTHONIOENCODING=utf-8`, hvis æ, ø og å giver fejl i konsollen.
 6. Commit med en beskrivelse på dansk, og nævn planen, hvis der er en. Push branchen.
 7. Claude merger selv (aftalt med Alexander 2026-11-16), når røgtesten giver `OK`. Hent først den nyeste `main` ind i branchen (`git fetch && git merge origin/main`), løs konflikter, sæt versionen ud fra den aktuelle `main`, og kør røgtesten igen. Derefter `git checkout main && git pull && git merge --no-ff <branch>` og `git push origin main`. Der bruges ingen pull request.
-8. Efter merge: slet branchen lokalt og på GitHub (`git push origin --delete <branch>`), så `main` er den eneste branch, og kontrollér at `APP_VERSION` på https://rehhoff.github.io/ElPlanner/ er den nye. Pages er 1–10 minutter om at opdatere. Tag merge-commit'en med versionen (`git tag -a v<version> -m "Udgivet version <version>"` og `git push origin v<version>`), så alle udgivne versioner kan findes og rulles tilbage til. Slet aldrig et versionstag. Fortæl Alexander, hvad der er udgivet.
+8. Efter merge: slet branchen lokalt og på GitHub (`git push origin --delete <branch>`), så `main` er den eneste branch, og kontrollér at `APP_VERSION` på https://rehhoff.github.io/elplanner/ er den nye. Pages er 1–10 minutter om at opdatere. Tag merge-commit'en med versionen (`git tag -a v<version> -m "Udgivet version <version>"` og `git push origin v<version>`), så alle udgivne versioner kan findes og rulles tilbage til. Slet aldrig et versionstag. Fortæl Alexander, hvad der er udgivet.
 9. Tilbagerulning, hvis en ny version ødelægger noget (kun når Alexander beder om det): lav en branch fra `main`, gendan filerne fra det ønskede tag med `git checkout v<gammel> -- .` (`git rm` filer, der er kommet til siden), sæt en ny patch-version de fire steder, kør røgtesten og merge som normalt. Historikken bevares, og fejlen kan rettes bagefter.
    - Er `SCHEMA` hævet siden den gamle version, så rul ikke tilbage over hævningen uden at spørge. Den gamle app kan ikke synkronisere med en Gist, der har det nyere skema (afsnit 1, punkt 4). Data i browseren er sikret af den automatiske backup (`lavBackup`), men ret hellere fremad.
 

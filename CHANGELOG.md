@@ -2,6 +2,11 @@
 
 Nyeste øverst. Versionsnummeret står også i appen som `APP_VERSION`. Hver version siger, hvilken model der lavede den.
 
+## 10.45.1 · 2026-11-27 · Claude Opus 5.5
+
+- Adressen skrives nu med små bogstaver. Repoet er omdøbt fra `ElPlanner` til `elplanner`, og appen ligger på https://rehhoff.github.io/elplanner/. Adressen https://rehhoff.github.io/ElPlanner/ virker ikke længere; installer appen igen fra den nye adresse.
+- Data er uændrede: samme origin, samme localStorage-nøgler, IndexedDB og Gist-format.
+
 ## 10.45.0 · 2026-11-27 · Claude Opus 5.5
 
 - Appen hedder nu ElPlanner. Repoet er omdøbt fra `rehhoff.github.io` til `ElPlanner`, og appen ligger på https://rehhoff.github.io/ElPlanner/. Den gamle adresse https://rehhoff.github.io/ virker ikke længere; installer appen igen fra den nye adresse.
