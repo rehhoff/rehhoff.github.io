@@ -316,6 +316,7 @@ const APP_BEREGNING = () => ({
     },
     sortBy(k) { this.sort = { key:k, dir: this.sort.key === k ? -this.sort.dir : 1 }; },
     arrow(k) { return this.sort.key === k ? (this.sort.dir > 0 ? '▲' : '▼') : ''; },
+    sortAria(k) { return this.sort.key !== k ? 'none' : this.sort.dir > 0 ? 'ascending' : 'descending'; },
     optaelling() {
       const m = {}; for (const r of this.rows()) { const k = r.e.kabel + ' ' + this.kabelDim(r.e); m[k] = (m[k] || 0) + (Number(r.e.laengde) || 0); }
       return Object.keys(m).sort().map(k => ({ k, m:m[k] }));

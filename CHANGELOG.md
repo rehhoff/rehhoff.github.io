@@ -2,6 +2,17 @@
 
 Nyeste øverst. Versionsnummeret står også i appen som `APP_VERSION`. Hver version siger, hvilken model der lavede den.
 
+## 10.46.2 · 2026-11-27 · Claude Opus 5.5
+
+- Esc eller et klik uden for en ændret formular lukker den ikke længere med det samme. Appen siger, at formularen er ændret, og et nyt tryk inden for 3,5 s lukker den uden at gemme. En uændret formular lukkes som før, og Annuller lukker altid straks.
+- Genvejshjælpen er rettet: 0 åbner Dokumentation, og / søger i hele projektet.
+- Fanen Beregning har et mærke med antal advarsler, som Fejlfinder.
+- Tomme tilstande på Lokaler, Beregning, Dokumentation og Kabeloptælling. G uden tavle giver en besked, og deaktiverede knapper (+ Gruppe, + HPFI, + Samlepunkt, afbrydere, + Rackudstyr) siger hvorfor.
+- Import fra regneark: punktum som tusindtalsskilletegn i effekt (1.500 W = 1500 W).
+- Fejlfinder: "Ret" hedder nu "Rediger" som andre steder. Kabeltabellens sortering kan læses af skærmlæsere (`aria-sort`).
+- Nye forslag 23–31 i `docs/forslag.md` fra gennemgangen af hele appen.
+- Ingen ændring af datamodellen (skema 25). Plan: `docs/planer/2026-11-27-ui-smaa.md`.
+
 ## 10.46.1 · 2026-11-27 · Claude Opus 5.5
 
 - Fuldt lager i browseren: appen siger nu, at den ikke kan gemme (én fejlbesked), i stedet for at "browseren ikke tillader lokal lagring". Ændringerne ligger i hukommelsen, indtil siden lukkes. Under Dokumentation → Datasikring kan de automatiske backups slettes efter bekræftelse for at frigøre plads; projektet gemmes så igen. Intet slettes automatisk.

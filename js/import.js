@@ -82,7 +82,7 @@ const APP_IMPORT = () => ({
           if (!ledOk && this.tre(o)) o.ledere = '5G';
           else if (!ledOk && ['4G', '5G'].includes(o.ledere)) o.ledere = '3G';
           for (const [k, f] of [['effekt', 1], ['kw', 1000], ['a', 0]]) {
-            if (v[k] == null) continue; const t = this.impTal(v[k]);
+            if (v[k] == null) continue; const t = this.impTal(String(v[k]).trim().replace(/^(\d{1,3})((?:\.\d{3})+)$/, (x, a, b) => a + b.replace(/\./g, '')));  /* 1.500 W = 1500 W (punktum som tusindtalsskilletegn) */
             if (isNaN(t)) { fejl.push('Ugyldig effekt "' + v[k] + '"'); continue; }
             o.effekt = Math.round(k === 'a' ? t * (this.tre(o) ? Math.sqrt(3) * 400 : 230) : t * f);
           }
