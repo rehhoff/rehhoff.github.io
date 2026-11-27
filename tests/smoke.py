@@ -278,7 +278,7 @@ async def main():
         tjek('dokumentation uden firmaoplysninger som før, med underskriftsfelt og A4-CSS', r['uden'] and r['sig'] and r['a4'] and r['gruppeskema'] and r['gemt'] is None, r)
         png = bytes.fromhex('89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000d49444154789c6360f8cfc00000030101001'
                             '8dd8db00000000049454e44ae426082')
-        sidstVisning = await pg.evaluate(f"{A}.view"); await pg.evaluate(f"{A}.view='dokumentation'"); await pg.wait_for_timeout(200)
+        sidstVisning = await pg.evaluate(f"{A}.view"); await pg.evaluate(f"{A}.view='indstillinger'"); await pg.wait_for_timeout(200)
         await pg.set_input_files('#fa-logo', files=[{'name': 'logo.png', 'mimeType': 'image/png', 'buffer': png}])
         await pg.fill('#fa-navn', 'Test El ApS'); await pg.fill('#fa-cvr', '12345678'); await pg.wait_for_timeout(500)
         r = await pg.evaluate(f"""(()=>{{const a={A};const u=a.docHtml(), s=JSON.parse(localStorage.getItem('tavleoversigt.firma')), f=a.firmaLaes();
@@ -896,6 +896,23 @@ async def main():
         tjek('import fra regneark: kan fortrydes i ét trin, og import af lokaler virker (semikolon, dublet afvises)',
              r['besked'] and r['fortrudt'] == r['foer'] and r['lok'][:2] == [True, 2] and 'findes allerede' in r['lok'][2]
              and r['lokNy'] == ['ImpLok/1. sal', 'ImpLok2/'] and r['lokFort'] is False, r)
+        # Indstillinger som egen fane, fokus i dialoger, afsnit i formularen (gennemgang 2026-11-27)
+        r = await pg.evaluate(f"""async()=>{{const a={A},T=n=>new Promise(f=>setTimeout(f,n)),o={{}},tab=(s)=>document.dispatchEvent(new KeyboardEvent('keydown',{{key:'Tab',shiftKey:!!s,bubbles:true}}));
+          a.go('tavle'); await T(60); document.getElementById('indst-knap').click(); await T(120);
+          const t=document.body.textContent; o.indst=[a.view, ['Datasikring','App på telefon og computer','Synkronisering mellem enheder','Firma på dokumentationen','Import'].every(x=>t.includes(x)), !!document.getElementById('fa-navn'), !!document.getElementById('synk-token')||!!a.synk];
+          a.go('dokumentation'); await T(120); const d=document.body.textContent; o.dok=[d.includes('Eksport'), !d.includes('Synkronisering mellem enheder'), !document.getElementById('fa-navn'), d.includes('findes under')];
+          a.go('indstillinger'); await T(80); a.io='{{}}'; await T(30); const erst=[...document.querySelectorAll('button')].find(b=>b.textContent.includes('erstat aktivt projekt')); const n0=JSON.stringify(a.db).length; erst.click(); await T(40); o.erstat=[a.confirm==='erstat', JSON.stringify(a.db).length===n0]; a.confirm=null; a.io='';
+          a.go('tavle'); await T(60); const knap=document.querySelector('button[title="Ctrl+Z"]')||document.getElementById('indst-knap'); const aabner=document.getElementById('indst-knap'); aabner.focus(); a.modal={{type:'help'}}; await T(80);
+          const dlg=document.querySelector('#dialog [role=dialog]'), f=a.fokuserbare(dlg); o.ind=dlg.contains(document.activeElement);
+          f[f.length-1].focus(); tab(); await T(20); o.rundt=document.activeElement===f[0]; tab(true); await T(20); o.tilbage=document.activeElement===f[f.length-1];
+          a.modal=null; await T(80); o.retur=document.activeElement===aabner;
+          o.labels=[...document.querySelectorAll('[role=dialog][aria-modal=true]')].every(x=>x.getAttribute('aria-labelledby')||x.getAttribute('aria-label'));
+          a.openForm('enhed'); await T(100); o.afsnit=[...document.querySelectorAll('#dialog h3.frm-afs')].map(x=>x.textContent); a.modal=null; await T(40);
+          return o}}""")
+        tjek('indstillinger: egen fane og knap i hovedet med datasikring, app, synkronisering, firma og import; Dokumentation har kun projektdata og eksport; erstat kræver bekræftelse',
+             r['indst'] == ['indstillinger', True, True, True] and r['dok'] == [True, True, True, True] and r['erstat'] == [True, True], r)
+        tjek('dialoger: fokus flyttes ind, Tab og Shift+Tab bliver i dialogen, fokus tilbage ved lukning, alle har en titel; brugsgenstand har afsnit',
+             r['ind'] and r['rundt'] and r['tilbage'] and r['retur'] and r['labels'] and r['afsnit'] == ['Forsyning', 'Last og kabel', 'Placering og status'], r)
         # Esc og klik udenfor på en ændret formular, genvejshjælp, tom-tilstande, mærke på Beregning, aria-sort (gennemgang 2026-11-27)
         r = await pg.evaluate(f"""async()=>{{const a={A},T=n=>new Promise(f=>setTimeout(f,n)),o={{}},esc=()=>document.dispatchEvent(new KeyboardEvent('keydown',{{key:'Escape',bubbles:true}}));
           a.toasts.slice().forEach(t=>a.lukToast(t.id));
@@ -950,7 +967,7 @@ async def main():
           const doc=a.docHtml(), i=doc.indexOf('<h1>Billeder</h1>'), j=doc.indexOf('</section>', i);
           o.doc=[i>0, (doc.slice(i,j).match(/<img class="bl" src="data:image[/]jpeg/g)||[]).length, doc.slice(i,j).includes('<h2>Tavler</h2>')&&doc.slice(i,j).includes('<h2>Lokaler</h2>')&&doc.slice(i,j).includes('<h2>Samlepunkter</h2>'), i<doc.indexOf('<h1>Brandlukninger</h1>')];
           a.db.lokaler[1].billeder=['mangler9']; o.mangler=a.docHtml().includes('billede mangler på denne enhed'); a.db.lokaler[1].billeder=[];
-          const lag=v=>Object.defineProperty(navigator,'storage',{{configurable:true,value:{{estimate:async()=>v}}}}); lag({{usage:95e6,quota:100e6}}); await a.billedLager(); a.go('dokumentation'); await T(80);
+          const lag=v=>Object.defineProperty(navigator,'storage',{{configurable:true,value:{{estimate:async()=>v}}}}); lag({{usage:95e6,quota:100e6}}); await a.billedLager(); a.go('indstillinger'); await T(80);
           const el=document.querySelector('#lager-adv'); o.lager=[!!el&&el.offsetParent!==null&&/ved at være fuldt: 91 MB af 95 MB/.test(el.textContent)];
           lag({{usage:5e6,quota:100e6}}); await a.billedLager(); await T(40); o.lager.push(a.lagerTxt()===''); delete navigator.storage; a.lager=null; a.go('tavle');
           return o}}""")

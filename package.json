@@ -1,6 +1,6 @@
 {
   "name": "elplanner",
-  "version": "10.46.2",
+  "version": "10.47.0",
   "private": true,
   "description": "ElPlanner: tavler, grupper, kabler og diagrammer. Hele appen er index.html.",
   "scripts": {

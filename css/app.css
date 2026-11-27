@@ -5,7 +5,7 @@
 :root{
   --bg:#e6e9ea; --panel:#f6f7f7; --raised:#ffffff; --ink:#181d20; --muted:#566068; --line:#bfc6ca;
   --accent:#0d6b63; --on-accent:#ffffff; --crit:#b3204f;
-  --lys:#c99700; --lysstik:#6b8a00; --kraft:#d4500a; --stik:#1c6bb0; --data:#7446b8; --cctv:#0f7d58;
+  --lys:#c99700; --lysstik:#6b8a00; --kraft:#d4500a; --stik:#1c6bb0; --data:#7446b8; --cctv:#0f7d58; --ok:#0f7d58; --gul:#e8b400;
   --l1:#8a5a2b; --l2:#16181a; --l3:#9aa2a8;
   --cab:#d3d8db; --rail:#aab2b7; --dev:#eef0f1; --dev-line:#8f989e;
 }
@@ -14,7 +14,7 @@
     color-scheme:dark;
     --bg:#13171a; --panel:#1c2226; --raised:#242b30; --ink:#e5e9eb; --muted:#94a1a9; --line:#374148;
     --accent:#35b5a6; --on-accent:#08201d; --crit:#f0669a;
-    --lys:#f0b824; --lysstik:#a8d13c; --kraft:#ff7a33; --stik:#55a8ea; --data:#b18cf5; --cctv:#3fcf9a;
+    --lys:#f0b824; --lysstik:#a8d13c; --kraft:#ff7a33; --stik:#55a8ea; --data:#b18cf5; --cctv:#3fcf9a; --ok:#3fcf9a; --gul:#f0c419;
     --l1:#b9824c; --l2:#050606; --l3:#aab3b9;
     --cab:#0c0f11; --rail:#4a555c; --dev:#cfd4d7; --dev-line:#6f7a81;
   }
@@ -23,7 +23,7 @@
   color-scheme:dark;
   --bg:#13171a; --panel:#1c2226; --raised:#242b30; --ink:#e5e9eb; --muted:#94a1a9; --line:#374148;
   --accent:#35b5a6; --on-accent:#08201d; --crit:#f0669a;
-  --lys:#f0b824; --lysstik:#a8d13c; --kraft:#ff7a33; --stik:#55a8ea; --data:#b18cf5; --cctv:#3fcf9a;
+  --lys:#f0b824; --lysstik:#a8d13c; --kraft:#ff7a33; --stik:#55a8ea; --data:#b18cf5; --cctv:#3fcf9a; --ok:#3fcf9a; --gul:#f0c419;
   --l1:#b9824c; --l2:#050606; --l3:#aab3b9;
   --cab:#0c0f11; --rail:#4a555c; --dev:#cfd4d7; --dev-line:#6f7a81;
 }
@@ -103,7 +103,7 @@ button.din-item{cursor:pointer}
 .din-item.on .dev{outline:3px solid var(--accent);outline-offset:1px}
 .din-item.drop .dev{outline:3px dashed var(--accent);outline-offset:1px;background:color-mix(in srgb,var(--accent) 25%,var(--dev))}
 .flagb{position:absolute;top:.9rem;right:0;background:var(--crit);color:#fff;font-size:.62rem;border-radius:2px;padding:0 .22rem;line-height:1.4}
-.testb{width:1rem;height:1rem;background:#e8b400;border:1px solid rgba(0,0,0,.5);border-radius:2px;font-size:.6rem;font-weight:700;line-height:.9rem}
+.testb{width:1rem;height:1rem;background:var(--gul);border:1px solid rgba(0,0,0,.5);border-radius:2px;font-size:.6rem;font-weight:700;line-height:.9rem}
 .drag{cursor:grab} .drag:active{cursor:grabbing}
 /* ikoner og svagstrøm */
 .ik{width:1.05em;height:1.05em;display:inline-block;vertical-align:-.15em}
@@ -115,7 +115,7 @@ button.din-item{cursor:pointer}
 .port{width:1.55rem;height:1.35rem;font:500 .6rem "IBM Plex Mono",monospace;border:1px solid var(--line);background:var(--raised);color:var(--muted);border-radius:2px;cursor:pointer;line-height:1}
 .port:hover{border-color:var(--ink)}
 .port.data{background:var(--data);border-color:var(--data);color:var(--raised)} .port.cctv{background:var(--cctv);border-color:var(--cctv);color:var(--raised)}
-.port.poe{box-shadow:inset 0 -3px 0 #e8b400} .port.konf{background:var(--crit);border-color:var(--crit);color:var(--raised)}
+.port.poe{box-shadow:inset 0 -3px 0 var(--gul)} .port.konf{background:var(--crit);border-color:var(--crit);color:var(--raised)}
 .rackb{position:absolute;top:1rem;left:2px;font-size:.8rem;background:var(--raised);border-radius:2px;line-height:1;padding:1px}
 /* enstregsdiagram */
 /* Lokaler: hver anden linje en tand anderledes (lysere i mørkt tema), så navn, tværsnit og længde kan læses vandret. nth-of-type, fordi x-for's template også er et barn */
@@ -123,7 +123,7 @@ button.din-item{cursor:pointer}
 .lok-lister ul > li.lok-lys.lok-lys{background:color-mix(in srgb,var(--t) 35%,transparent)}
 /* Plantegning: tegning som SVG med nummererede prikker (grøn = færdig, orange = mangler) og kabelvej under måling */
 .plan-boks{max-height:75vh;overflow:auto;background:var(--raised);touch-action:pan-x pan-y pinch-zoom} .plan-svg{display:block;width:100%;height:auto;background:#fff}
-.plan-mode{cursor:crosshair} .plan-svg .pp{cursor:pointer} .plan-svg .pp circle{stroke:#fff;stroke-width:3} .plan-svg .pp.ok circle{fill:var(--cctv)} .plan-svg .pp.ikke circle{fill:var(--kraft)}
+.plan-mode{cursor:crosshair} .plan-svg .pp{cursor:pointer} .plan-svg .pp circle{stroke:#fff;stroke-width:3} .plan-svg .pp.ok circle{fill:var(--ok)} .plan-svg .pp.ikke circle{fill:var(--kraft)}
 .plan-svg .pp.valgt circle{stroke:var(--accent);stroke-width:6} .plan-svg .pp text{fill:#fff;font:600 20px "IBM Plex Sans",sans-serif;pointer-events:none}
 .pl-info{position:absolute;z-index:5;pointer-events:none;min-width:9rem;max-width:16rem;padding:.4rem .5rem;font-size:.75rem;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:4px;box-shadow:0 2px 8px rgba(0,0,0,.25)} .pl-info.tryk{pointer-events:auto}
 .plan-svg .pm{fill:none;stroke:var(--crit);stroke-width:3;stroke-dasharray:8 5} .plan-svg .pmp{fill:var(--crit)}
@@ -193,6 +193,10 @@ button.din-item{cursor:pointer}
 .fv-fra{display:block;text-align:left;text-decoration:underline dotted}
 .fv-fra:hover{color:var(--accent)}
 .fv-fold{width:1.25rem;line-height:1;flex:none}
+/* Touch: større trykflader på små knapper, afkrydsningsfelter og porte */
+@media (pointer:coarse){.fv-fold{width:2rem}.btn.px-1{min-width:2.25rem;justify-content:center}input[type=checkbox]{width:1.25rem;height:1.25rem}.port{min-width:1.9rem;min-height:1.75rem}}
+/* Afsnit i lange formularer (brugsgenstand) */
+.frm-afs{font-size:.7rem;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);border-top:1px solid var(--line);padding-top:.5rem;margin-top:.25rem}
 .fv-tavle,.fv-gruppe{background:var(--raised)}
 .fv .fv-note{width:11rem;max-width:100%}
 .fv-kabel{border-bottom:1px dashed var(--line)}
