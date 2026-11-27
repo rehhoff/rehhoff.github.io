@@ -483,9 +483,13 @@ async def main():
             o.zeTxt=[a.docHtml().includes('(beregnet fra forsynende tavle)'),a.zeBeregnet(a.tavle('tu')),a.zeBeregnet(a.tavle('tk'))]; const v0=a.view; a.go('beregning'); await T(150); o.zeDom=document.body.innerText.includes('(beregnet fra forsynende tavle)'); a.go(v0);
             o.sg1=!w('sg:gk'); gu.In=13; o.sg2=w('sg:gk'); gu.In=10; const tu=a.tavle('tu'); tu.forsikring=10; o.sfu=!w('sf:tu')&&!w('sf:tk'); tu.forsikring=16;
             o.hpfi1=w('sr:ru'); rk.selektiv=true; o.hpfi2=w('sr:ru'); rk.idn=100; o.hpfi3=!w('sr:ru'); rk.selektiv=false; o.hpfi4=w('sr:ru');
+            d.grupper.push({{id:'gu2',tavleId:'tu',nr:2,navn:'U2',type:'stik',kar:'B',In:10,faser:1,fase:'L1',rcdId:'',sf:1,brydeevne:6,maal:{{riso:'',zs:'',rcd:'',ok:false}},metode:'',temp:'',samlet:'',lag:''}});
+            o.foran=[!w('rgu2'),a.maalVurdering(a.gruppe('gu2')).harRcd,!a.gruppeFejl('gu2').some(x=>x.includes('HPFI')),a.rcdBeskyt(a.gruppe('gu2')).id];
+            rk.idn=30; a.gruppe('gk').rcdId=''; o.foranUden=[w('rgu2'),a.maalVurdering(a.gruppe('gu2')).harRcd]; a.gruppe('gk').rcdId='rk';
+            e.effekt=3000; e.laengde=40; g.In=25; o.duIz=[w('dek'),w('iek')]; e.effekt=0; e.laengde=20; g.In=16;
             t.forsikring=25; const doc=a.docHtml(); o.doc=doc.includes('Kortslutning og selektivitet')&&doc.includes('Selektivitet er ikke sikret')&&doc.includes('Ik,min (A)');
           }} finally {{
-            d.tavler=d.tavler.filter(x=>!['tk','tu'].includes(x.id)); d.rcds=d.rcds.filter(x=>!['rk','ru'].includes(x.id)); d.grupper=d.grupper.filter(x=>!['gk','gu'].includes(x.id));
+            d.tavler=d.tavler.filter(x=>!['tk','tu'].includes(x.id)); d.rcds=d.rcds.filter(x=>!['rk','ru'].includes(x.id)); d.grupper=d.grupper.filter(x=>!['gk','gu','gu2'].includes(x.id));
             d.enheder=d.enheder.filter(x=>x.id!=='ek'); d.daaser=d.daaser.filter(x=>x.id!=='dk');
           }}
           o.ryddet=d.tavler.length===n.t&&d.grupper.length===n.g&&d.rcds.length===n.r&&d.enheder.length===n.e&&d.daaser.length===n.d;
@@ -497,6 +501,9 @@ async def main():
         tjek('kortslutning: Ik,min lige under Ia vises rundet ned (159,6 A står som 159 A, ikke 160 A)', r['afrund'] == [159.6, False, '159', True, True], r)
         tjek('selektivitet: forsikring under 1,6 × største sikring, gruppe foran undertavle, ingen dobbelt advarsel fra undertavlens egen forsikring, HPFI i serie med og uden type S, med i dokumentationen',
              r['sel1'] and r['sel2'] and r['sfu'] and r['sg1'] and r['sg2'] and r['hpfi1'] and r['hpfi2'] and r['hpfi3'] and r['hpfi4'] and r['doc'], r)
+        tjek('HPFI foran: gruppe i undertavle forsynet fra en gruppe med HPFI har ingen "ingen HPFI"-advarsel og kræver HPFI-måling; uden HPFI foran advares der',
+             r['foran'] == [True, True, True, 'rk'] and r['foranUden'] == [True, False], r)
+        tjek('advarsler: ΔU over og Iz under sikringen giver begge advarsler for samme brugsgenstand', r['duIz'] == [True, True], r)
 
         # 4g. Opgradering fra skema 12: data intakte, nye felter til føringsvej med tomme standardværdier
         r0 = await pg.evaluate("""(()=>{const i=JSON.parse(localStorage.getItem('tavleoversigt.projekter'));i.schema=12;const id=i.aktiv;
@@ -758,6 +765,10 @@ async def main():
             o.farve=!!chip&&cs!==''&&getComputedStyle(chip).getPropertyValue('--t').trim()===cs;
             a.go('kabler'); await T(150); o.filter=[...document.querySelectorAll('#f-type option')].some(x=>x.value==='lysstik'&&x.textContent==='Lys og stik');
             o.print=a.sld(true).includes('.lysstik .tc');
+            d.enheder.push(E('p6','P6 L1','gqp',2300,'L1',10), E('p7','P7 L2 sløjfe','gqp',2300,'L2',5,{{fraEnhed:'p6'}}));
+            d.daaser.push({{id:'dq',navn:'DQ',type:'Forfradåse',gruppeId:'gqp',parentId:'',lokaleId:'',kabel:'PVC',ledere:'5G',tv:2.5,laengde:10,hoejde:'',placering:'',trukket:false,note:''}});
+            d.enheder.push(E('p8','P8 L1','gqp',2300,'L1',0,{{daaseId:'dq'}})); a.dbRev++;
+            o.izFaser=[a.iz(a.enhed('p6')),a.iz(a.enhed('p7')),a.daaseIz(a.daase('dq')),a.daaseIz(a.daase('dp')),a.iz(p1)];
           }} finally {{
             a.sel=sel0; a.modal=null; await T(50); const g=x=>!['gqp','gq1','gql'].includes(x.gruppeId); d.enheder=d.enheder.filter(g); d.daaser=d.daaser.filter(g); d.grupper=d.grupper.filter(x=>x.tavleId!=='tqp'); d.tavler=d.tavler.filter(x=>x.id!=='tqp'); a.save();
           }}
@@ -769,6 +780,8 @@ async def main():
              and r['sloejfe'] == [20, 10, 10, 20, 1.16913, 1.56044] and r['faser2'] == [20, 20, 10]
              and r['daase'] == [20, 1.16913, 1.16913] and r['en1'] == ['', 10, 10, 0, 'L3']
              and r['rows'] and r['doc'] and r['beregning'] and r['form'] == [True, 'L2', True] and r['belA'] == 10 and r['belW'] == 1840 and r['form3'] and r['skjult'] and r['ryddet'], r)
+        tjek('Iz med belastede faser (aftalt 2026-11-27): L1-træk med L2-sløjfe 3 belastede (24 A), sløjfen alene 2 (27 A), dåse med kun L1 2, dåse med 3F 3, 3-faset brugsgenstand 3',
+             r['izFaser'] == [24, 27, 27, 24, 24], r)
         tjek('gruppetype Lys og stik: label, ΔU-grænse 3 %, samtidighed som lys, afbryder, farvetoken, filter, printfarve',
              r['ls'] == ['Lys og stik', 3, True, True, True] and r['afb'] == 'gql' and r['farve'] and r['filter'] and r['print'], r)
 

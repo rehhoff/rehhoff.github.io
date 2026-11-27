@@ -2,6 +2,14 @@
 
 Nyeste øverst. Versionsnummeret står også i appen som `APP_VERSION`. Hver version siger, hvilken model der lavede den.
 
+## 10.46.0 · 2026-11-27 · Claude Opus 5.5
+
+- I<sub>z</sub> regnes nu ud fra de faser, trækket faktisk fører strøm i: et træk med strøm i to eller tre faser har 3 belastede ledere, i én fase 2. Før fik en 1-faset brugsgenstand (fx L1) på en 3-faset gruppe I<sub>z</sub> for 2 belastede ledere, også når dens sløjfer førte strøm i L2 eller L3 (PVC metode C 2,5 mm²: 27 A i stedet for 24 A). Dåser regnes på samme måde; før altid med 3 på en 3-faset gruppe.
+- En gruppe i en undertavle, der forsynes fra en gruppe med HPFI, får ikke længere advarslen "ingen HPFI tilknyttet". Måleskemaet kræver HPFI-udløsetid for den, og Beregning viser "Foran: <HPFI>". Retter også "Klar til aflevering".
+- En brugsgenstand med både for stort ΔU og for lav I<sub>z</sub> viser nu begge advarsler; før skjulte ΔU-advarslen I<sub>z</sub>-advarslen.
+- Beregning: forklaringen på korrektionsfaktorerne bruger gruppens kabeltype i stedet for altid PVC.
+- Ingen ændring af datamodellen (skema 25). Plan: `docs/planer/2026-11-27-beregning-advarsler.md`.
+
 ## 10.45.1 · 2026-11-27 · Claude Opus 5.5
 
 - Adressen skrives nu med små bogstaver. Repoet er omdøbt fra `ElPlanner` til `elplanner`, og appen ligger på https://rehhoff.github.io/elplanner/. Adressen https://rehhoff.github.io/ElPlanner/ virker ikke længere; installer appen igen fra den nye adresse.

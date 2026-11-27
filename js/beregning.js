@@ -29,7 +29,9 @@ const APP_BEREGNING = () => ({
       const pr = this.duEget(e, null, 1), did = this.enhedDaase(e), g = Math.max(0, this.duGraense(e) - (did ? this.duOp(did) : 0) - this.duSloejfe(e) - this.tavleDu((this.gruppe(e.gruppeId) || {}).tavleId, 0)); if (!pr) return null;
       return g / pr;
     },
-    iz(e, tv) { return this.erHoejt(e) ? 0 : this.izBeregn(e.kabel, tv || e.tv, this.tre(e), this.forhold(this.gruppe(e.gruppeId))); },
+    /* belastede ledere i Iz (aftalt 2026-11-27): et træk, der fører strøm i to eller tre faser, har 3 belastede ledere; i én fase 2. Uden last som trækkets egen tilslutning */
+    tre3(v, uden) { const n = PH.filter(p => v[p] > 1e-9).length; return n ? n > 1 : uden; },
+    iz(e, tv) { return this.erHoejt(e) ? 0 : this.izBeregn(e.kabel, tv || e.tv, this.tre3(this.enhedFaser(e), this.tre(e)), this.forhold(this.gruppe(e.gruppeId))); },
     izFejl(e) { const g = this.gruppe(e.gruppeId); return !!g && !!this.iz(e) && g.In > this.iz(e); },
     forslag(e) {
       const g = this.gruppe(e.gruppeId); if (!g || this.erHoejt(e)) return null;
@@ -122,7 +124,7 @@ const APP_BEREGNING = () => ({
       const g = this.gruppe(gid); if (!g) return [];
       const out = [], I = this.gruppeI(gid);
       if (I > g.In) out.push('Overbelastet: ' + this.fmt(I) + ' A på ' + g.kar + g.In + '.');
-      if (!this.rcd(g) && !this.underTavler(g.id).length) out.push('Ingen HPFI tilknyttet.');
+      if (!this.rcdBeskyt(g) && !this.underTavler(g.id).length) out.push('Ingen HPFI tilknyttet.');
       { const k = this.ikMin(g); if (k && k.ok === false) out.push('Ik,min ' + this.ikVis(k) + ' A under Ia ' + this.fmt(k.Ia, 0) + ' A.'); if (this.brydeFejl(g.tavleId).includes(g)) out.push('Ik,maks ' + this.fmt(this.tavleIkMaks(g.tavleId)) + ' kA over brydeevnen på ' + this.fmt(Number(g.brydeevne) || 6) + ' kA.'); }
       for (const d of this.daaserFor(gid)) if (this.daaseIzFejl(d)) out.push(this.daaseTxt(d.id) + ': tilgang ' + this.fmt(d.tv) + ' mm² har Iz ' + this.fmt(this.daaseIz(d)) + ' A, under sikringen på ' + g.In + ' A.');
       for (const e of this.enhederFor(gid)) {
@@ -163,11 +165,13 @@ const APP_BEREGNING = () => ({
       for (const t of this.db.tavler) {
         const gs = this.brydeFejl(t.id);
         if (gs.length) out.push({ k:'kb:' + t.id, t:t.id, g:gs[0].id, txt:`${t.navn}: Ik,maks ${this.fmt(this.tavleIkMaks(t.id))} kA er større end brydeevnen for gruppe ${gs.map(g => g.nr + ' (' + this.fmt(Number(g.brydeevne) || 6) + ' kA)').join(', ')}.` });
-        for (const g of this.grupperFor(t.id)) { const k = this.ikMin(g); if (k && k.ok === false) out.push({ k:'ik:' + g.id, t:t.id, g:g.id, txt:`${t.navn} · gruppe ${g.nr} ${g.navn}: Ik,min ${this.ikVis(k)} A er under Ia ${this.fmt(k.Ia, 0)} A for ${g.kar}${g.In}.` + (this.rcd(g) ? ' Udkobling ved jordfejl afhænger af HPFI.' : '') }); }
+        for (const g of this.grupperFor(t.id)) { const k = this.ikMin(g); if (k && k.ok === false) out.push({ k:'ik:' + g.id, t:t.id, g:g.id, txt:`${t.navn} · gruppe ${g.nr} ${g.navn}: Ik,min ${this.ikVis(k)} A er under Ia ${this.fmt(k.Ia, 0)} A for ${g.kar}${g.In}.` + (this.rcdBeskyt(g) ? ' Udkobling ved jordfejl afhænger af HPFI.' : '') }); }
       }
       return out;
     },
     /* selektivitet (aftalt 2026-11-16): forsikring ≥ 1,6 × største efterfølgende sikring. En tavle forsynet fra en gruppe tjekkes på gruppen, ikke på sin egen forsikring. HPFI i serie: den forreste type S og IΔn ≥ 3 × den bageste. Vejledende. */
+    /* gruppens egen HPFI eller en HPFI foran tavlen (undertavle forsynet fra en gruppe med HPFI) */
+    rcdBeskyt(g) { return this.rcd(g) || this.rcdForan(g.tavleId); },
     rcdForan(tid, n) { const t = this.tavle(tid), g = t && this.gruppe(t.fraGruppe); if (!g || n > 8) return null; return this.rcd(g) || this.rcdForan(g.tavleId, (n || 0) + 1); },
     selektivitet() {
       const out = [], stoerst = l => l.reduce((m, x) => !m || x.In > m.In ? x : m, null), gr = tid => this.grupperFor(tid).map(g => ({ In:Number(g.In) || 0, txt:'gruppe ' + g.nr + ' (' + g.kar + g.In + ')' }));
@@ -185,7 +189,7 @@ const APP_BEREGNING = () => ({
       return out;
     },
     maalVurdering(g) {
-      const m = g.maal || {}, riso = this.maalTal(m.riso), zs = this.maalTal(m.zs), t = this.maalTal(m.rcd), zmax = this.zsMax(g), harRcd = !!this.rcd(g);
+      const m = g.maal || {}, riso = this.maalTal(m.riso), zs = this.maalTal(m.zs), t = this.maalTal(m.rcd), zmax = this.zsMax(g), harRcd = !!this.rcdBeskyt(g);
       const vurd = (x, ok) => x == null ? null : isNaN(x) ? false : ok(x);
       const r = { riso:vurd(riso, x => x >= 1), zs:zmax ? vurd(zs, x => x <= zmax) : null, rcd:harRcd ? vurd(t, x => x <= 300) : null, zmax, harRcd, fejl:[] };
       if (r.riso === false) r.fejl.push(isNaN(riso) ? 'isolationsmodstand kan ikke læses' : 'isolationsmodstand ' + this.fmt(riso, 2) + ' MΩ under 1 MΩ');
@@ -208,11 +212,11 @@ const APP_BEREGNING = () => ({
       for (const g of this.sorteredeGrupper()) {
         const I = this.gruppeI(g.id), n = this.tavleNavn(g.tavleId) + ' · gruppe ' + g.nr + ' ' + g.navn;
         if (I > g.In) out.push({ k:'o' + g.id, g:g.id, txt:`${n}: ${this.fmt(I)} A summeret last på ${g.kar}${g.In}.` });
-        if (!this.rcd(g) && !this.underTavler(g.id).length) out.push({ k:'r' + g.id, g:g.id, txt:`${n}: ingen HPFI tilknyttet.` });
+        if (!this.rcdBeskyt(g) && !this.underTavler(g.id).length) out.push({ k:'r' + g.id, g:g.id, txt:`${n}: ingen HPFI tilknyttet.` });
         for (const e of this.enhederFor(g.id)) {
           const fix = this.forslag(e);
           if (this.duOver(e)) out.push({ k:'d' + e.id, g:g.id, e:e.id, fix: fix && fix != e.tv ? fix : null, txt:`${e.navn}: spændingsfald ${this.fmt(this.du(e), 2)} % over ${this.duGraense(e)} % (${this.kabelDim(e)}, ${this.fmt(e.laengde)} m).` });
-          else if (this.izFejl(e)) out.push({ k:'i' + e.id, g:g.id, e:e.id, fix: fix && fix != e.tv ? fix : null, txt:`${e.navn}: ${this.kabelDim(e)} har Iz ${this.fmt(this.iz(e))} A, under ${g.kar}${g.In}.` });
+          if (this.izFejl(e)) out.push({ k:'i' + e.id, g:g.id, e:e.id, fix: fix && fix != e.tv ? fix : null, txt:`${e.navn}: ${this.kabelDim(e)} har Iz ${this.fmt(this.iz(e))} A, under ${g.kar}${g.In}.` });
         }
       }
       for (const d of this.db.daaser) if (this.daaseIzFejl(d)) out.push({ k:'z' + d.id, g:d.gruppeId, txt:`${this.daaseTxt(d.id)}: tilgangskabel ${this.kabelDim(d)} har Iz ${this.fmt(this.daaseIz(d))} A, under gruppens sikring.` });

@@ -215,7 +215,7 @@ function app() {
     },
     daaseFaser(did) { return this.mk('daaseFaser', did, () => this.faseSum(this.nedstroem(did))); },
     daaseI(did) { const v = this.daaseFaser(did); return Math.max(v.L1, v.L2, v.L3); },
-    daaseIz(d) { const g = this.gruppe(d.gruppeId); return this.izBeregn(d.kabel, d.tv, !!g && g.faser == 3, this.forhold(g)); },
+    daaseIz(d) { const g = this.gruppe(d.gruppeId); return this.izBeregn(d.kabel, d.tv, this.tre3(this.daaseFaser(d.id), !!g && g.faser == 3), this.forhold(g)); },
     daaseIzFejl(d) { const g = this.gruppe(d.gruppeId); return !!g && !!this.daaseIz(d) && g.In > this.daaseIz(d); },
     duSeg(I, L, A, tre) { return tre ? Math.sqrt(3) * L * I * RHO / A / 400 * 100 : 2 * L * I * RHO / A / 230 * 100; },
     /* ΔU fra gruppen frem til dåsen: dåsens tilgangskabel og alle træk før den (dåser og brugsgenstande) */
