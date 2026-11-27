@@ -885,15 +885,37 @@ async def main():
           o.lokNy=a.db.lokaler.filter(l=>/^ImpLok/.test(l.navn)).map(l=>l.navn+'/'+l.etage);
           a.undo(); await T(60); o.lokFort=a.db.lokaler.some(l=>/^ImpLok/.test(l.navn));
           a.impAaben('enhed'); a.imp.tekst='Brugsgenstand;kabel;A\\nSpot;PVC;10'; a.impAnalyser(); o.amp=a.imp.fh[0].o.effekt; a.imp.aaben=false;
+          a.impAaben('enhed'); a.imp.tekst='Brugsgenstand;Effekt\\nOvn;1.500\\nLille;1.5\\nStor;12.000'; a.impAnalyser(); o.tus=a.imp.fh.map(x=>x.o.effekt); a.imp.aaben=false;
           return o}}""")
         tjek('import fra regneark: overskrifter, kW og komma-decimaler, nyt lokale, standardværdier; fejlrækker oprettes ikke',
              r['hdr'] is True and r['map'] == 'navn,lokale,gruppe,kw,kabel,laengde,tv' and r['ok'] == 2 and r['knap'] == 'Importér 2 rækker' and r['rader'] == 4
              and r['fejl'] == ['Ukendt kabeltype "Gummi"', 'Ukendt tavle "99"'] and r['efter'] == [r['foer'][0] + 2, r['foer'][1] + 1] and r['lukket']
              and r['ovn'] == [2500, 'XLPE', 2.5, 7.5, 'Importrum', True] and r['tom'][:5] == [0, 'PVC', '3G', 1.5, 10] and r['tom'][6] == 'auto'
              and r['ingenFejl'] and r['amp'] == 2300, r)
+        tjek('import fra regneark: punktum som tusindtalsskilletegn i effekt (1.500 W = 1500 W), 1.5 er stadig 1,5', r['tus'] == [1500, 2, 12000], r)
         tjek('import fra regneark: kan fortrydes i ét trin, og import af lokaler virker (semikolon, dublet afvises)',
              r['besked'] and r['fortrudt'] == r['foer'] and r['lok'][:2] == [True, 2] and 'findes allerede' in r['lok'][2]
              and r['lokNy'] == ['ImpLok/1. sal', 'ImpLok2/'] and r['lokFort'] is False, r)
+        # Esc og klik udenfor på en ændret formular, genvejshjælp, tom-tilstande, mærke på Beregning, aria-sort (gennemgang 2026-11-27)
+        r = await pg.evaluate(f"""async()=>{{const a={A},T=n=>new Promise(f=>setTimeout(f,n)),o={{}},esc=()=>document.dispatchEvent(new KeyboardEvent('keydown',{{key:'Escape',bubbles:true}}));
+          a.toasts.slice().forEach(t=>a.lukToast(t.id));
+          a.openForm('lokale'); await T(60); esc(); await T(30); o.uaendret=a.modal===null;
+          a.openForm('lokale'); await T(60); a.form.navn='Halvt udfyldt'; esc(); await T(30); o.foerste=[!!a.modal, a.toasts.some(t=>/Formularen er ændret/.test(t.txt))];
+          document.getElementById('dialog').dispatchEvent(new MouseEvent('click',{{bubbles:true}})); await T(30); o.anden=a.modal===null;
+          a.openForm('lokale'); await T(60); a.form.navn='X'; esc(); await T(30); const aaben=!!a.modal; esc(); await T(30); o.esc2=[aaben, a.modal===null];
+          a.modal={{type:'help'}}; await T(60); const h=document.getElementById('dialog').innerText; o.hjaelp=[h.includes('0 åbner Dokumentation'), h.includes('Søg i hele projektet')]; a.modal=null;
+          const tab=[...document.querySelectorAll('[role=tab]')].find(b=>b.textContent.includes('Beregning')); a.dbRev++; await T(30); o.maerke=!a.warnings().length || tab.textContent.includes(String(a.warnings().length));
+          a.go('kabler'); await T(120); a.sortBy('navn'); await T(40); o.aria=[...document.querySelectorAll('th[aria-sort]')].map(x=>x.getAttribute('aria-sort')).filter(x=>x!=='none'); a.sort={{key:'',dir:1}};
+          const gem=a.db; a.db=tom(); a.dbRev++; await T(60); const kab=document.body.innerText.includes('Ingen kabler.');
+          a.go('lokaler'); await T(80); const lok=document.body.innerText.includes('Ingen lokaler endnu'); a.go('beregning'); await T(80); const ber=document.body.innerText.includes('Ingen tavler endnu. Opret den første under fanen Tavle');
+          document.dispatchEvent(new KeyboardEvent('keydown',{{key:'g',bubbles:true}})); await T(30); const g=[a.modal===null, a.toasts.some(t=>/Opret først en tavle/.test(t.txt))];
+          a.go('tavle'); await T(60); const knap=[...document.querySelectorAll('button')].find(b=>b.textContent.includes('+ Gruppe')); o.tom=[kab, lok, ber, ...g, knap&&knap.title];
+          a.db=gem; a.dbRev++; await T(60); a.toasts.slice().forEach(t=>a.lukToast(t.id));
+          return o}}""")
+        tjek('formular: Esc og klik udenfor lukker en uændret formular straks, en ændret først ved andet forsøg med besked',
+             r['uaendret'] and r['foerste'] == [True, True] and r['anden'] and r['esc2'] == [True, True], r)
+        tjek('brugerflade: genvejshjælpen er rettet, mærke med advarsler på Beregning, aria-sort i Kabler, tomme tilstande, G uden tavle giver besked, deaktiveret knap forklarer',
+             r['hjaelp'] == [True, True] and r['maerke'] and r['aria'] == ['ascending'] and r['tom'] == [True, True, True, True, True, 'Opret først en tavle'], r)
 
         # 4n. Skema 16 (forslag 15): opgradering fra skema 15, billeder på tavle, lokale og samlepunkt, liste, dokumentation og lageradvarsel
         r0 = await pg.evaluate("""(()=>{const i=JSON.parse(localStorage.getItem('tavleoversigt.projekter'));i.schema=15;const id=i.aktiv;

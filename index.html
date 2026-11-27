@@ -14,8 +14,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=10.46.1">
-<link rel="stylesheet" href="css/tailwind.css?v=10.46.1">
+<link rel="stylesheet" href="css/app.css?v=10.46.2">
+<link rel="stylesheet" href="css/tailwind.css?v=10.46.2">
 </head>
 <body class="min-h-full">
 <p id="fail" hidden style="margin:16px;padding:12px;border:1px solid var(--crit);color:var(--crit)">Appen kunne ikke starte, fordi Alpine.js ikke blev indlæst. Genindlæs siden.</p>
@@ -89,7 +89,7 @@
   <nav class="flex flex-col lg:flex-row lg:flex-wrap lg:items-center border-b border-line">
     <div class="faner flex overflow-x-auto lg:contents" role="tablist">
     <template x-for="(v, i) in views" :key="v.id">
-      <button class="tab hd" role="tab" :aria-selected="view===v.id" @click="go(v.id)"><kbd x-show="i < 10" x-text="(i+1) % 10"></kbd><span x-text="v.l"></span><span x-show="v.id==='fejlfinder' && mangler().length" class="tag warn num" x-text="mangler().length"></span></button>
+      <button class="tab hd" role="tab" :aria-selected="view===v.id" @click="go(v.id)"><kbd x-show="i < 10" x-text="(i+1) % 10"></kbd><span x-text="v.l"></span><span x-show="v.id==='fejlfinder' && mangler().length" class="tag warn num" x-text="mangler().length"></span><span x-show="v.id==='beregning' && warnings().length" class="tag warn num" :title="warnings().length + ' advarsler'" x-text="warnings().length"></span></button>
     </template>
     </div>
     <div class="lg:ml-auto flex flex-wrap items-center gap-1 py-2">
@@ -110,10 +110,10 @@
     <div class="flex flex-col gap-4 min-w-0">
       <div class="flex flex-wrap gap-2">
         <button class="btn" @click="openForm('tavle')">+ Tavle</button>
-        <button class="btn" @click="openForm('gruppe')" :disabled="!db.tavler.length">+ Gruppe <kbd>G</kbd></button>
-        <button class="btn" @click="openForm('rcd')" :disabled="!db.tavler.length">+ HPFI</button>
+        <button class="btn" @click="openForm('gruppe')" :disabled="!db.tavler.length" :title="!db.tavler.length ? 'Opret først en tavle' : ''">+ Gruppe <kbd>G</kbd></button>
+        <button class="btn" @click="openForm('rcd')" :disabled="!db.tavler.length" :title="!db.tavler.length ? 'Opret først en tavle' : ''">+ HPFI</button>
         <button class="btn" @click="openForm('enhed')">+ Brugsgenstand <kbd>B</kbd></button>
-        <button class="btn" @click="openForm('daase')" :disabled="!db.grupper.length">+ Samlepunkt</button>
+        <button class="btn" @click="openForm('daase')" :disabled="!db.grupper.length" :title="!db.grupper.length ? 'Opret først en gruppe' : ''">+ Samlepunkt</button>
         <span class="text-xs text-muted self-center">Klik på en automat for detaljer. Træk brugsgenstande hen på en automat for at flytte dem.</span>
       </div>
       <p x-show="!db.tavler.length" class="panel p-6 text-muted">Ingen tavler endnu. Opret den første med + Tavle.</p>
@@ -354,7 +354,7 @@
   <template x-if="view==='taending'"><section class="flex flex-col gap-4">
     <div class="flex flex-wrap gap-2 items-center">
       <template x-for="(l, k) in afbArt" :key="k">
-        <button class="btn" @click="openForm('afbryder', null, {art:k})" :disabled="!db.grupper.length"><span x-html="afbIkon(k)"></span> <span x-text="'+ ' + l"></span></button>
+        <button class="btn" @click="openForm('afbryder', null, {art:k})" :disabled="!db.grupper.length" :title="!db.grupper.length ? 'Opret først en gruppe' : ''"><span x-html="afbIkon(k)"></span> <span x-text="'+ ' + l"></span></button>
       </template>
     </div>
     <p class="text-xs text-muted">Klik på en afbryder eller et tryk i diagrammet for at betjene den. Orange ledere er spændingsførende, blå er nul, grå er spændingsløse. Lampenumrene svarer til listen under diagrammet.</p>
@@ -391,7 +391,7 @@
   <!-- ============ SAMLEPUNKTER ============ -->
   <template x-if="view==='samlepunkter'"><section class="flex flex-col gap-4">
     <div class="flex flex-wrap gap-2 items-center">
-      <button class="btn btn-primary" @click="openForm('daase')" :disabled="!db.grupper.length"><span x-html="ikon('daase')"></span> + Samlepunkt</button>
+      <button class="btn btn-primary" @click="openForm('daase')" :disabled="!db.grupper.length" :title="!db.grupper.length ? 'Opret først en gruppe' : ''"><span x-html="ikon('daase')"></span> + Samlepunkt</button>
       <template x-for="t in daaseTyper" :key="t"><span class="tag num" x-text="t + ': ' + db.daaser.filter(d => d.type === t).length"></span></template>
     </div>
     <p x-show="!db.daaser.length" class="panel p-6 text-muted">Ingen samlepunkter endnu. Opret det første med + Samlepunkt, og knyt brugsgenstande til det under Via samlepunkt.</p>
@@ -638,7 +638,7 @@
   <template x-if="view==='svag'"><section class="flex flex-col gap-4" @dragover.window="dragRul($event)">
     <div class="flex flex-wrap gap-2">
       <button class="btn" @click="openForm('rack')"><span x-html="ikon('rack')"></span> + Rackskab</button>
-      <button class="btn" @click="openForm('udstyr')" :disabled="!db.racks.length">+ Rackudstyr</button>
+      <button class="btn" @click="openForm('udstyr')" :disabled="!db.racks.length" :title="!db.racks.length ? 'Opret først et rack' : ''">+ Rackudstyr</button>
       <button class="btn" @click="openForm('link', null, {art:'data'})"><span class="c-pds" x-html="ikon('pds')"></span> + Dataudtag</button>
       <button class="btn" @click="openForm('link', null, {art:'cctv'})"><span class="c-cctv" x-html="ikon('cctv')"></span> + Kamera</button>
       <span class="text-xs text-muted self-center">Klik på en port for at se eller oprette forbindelsen. Gul kant = PoE.</span>
@@ -776,6 +776,7 @@
       <p class="text-xs text-muted mt-1">Kortslutning og selektivitet er også vejledende: I<sub>k,min</sub> = 0,95 · 230 V / (Z<sub>e</sub> + R<sub>fase</sub> + R<sub>PE</sub>) i gruppens yderste punkt, ledermodstand × 1,2 (PVC) eller 1,28 (XLPE og brandkabel), PE som faseleder. Z<sub>e</sub> og I<sub>k,maks</sub> angives på tavlen. Udkobling er OK, når I<sub>k,min</sub> ≥ I<sub>a</sub> (5/10/20 × I<sub>n</sub> for B/C/D). Brydeevnen (standard 6 kA) sammenlignes med I<sub>k,maks</sub>. Selektivitet: forsikring ≥ 1,6 × største efterfølgende sikring, og HPFI i serie kræver type S forrest med I<sub>Δn</sub> ≥ 3 × den bageste.</p>
     </div>
 
+    <p x-show="!db.tavler.length" class="panel p-6 text-muted">Ingen tavler endnu. Opret den første under fanen Tavle med + Tavle, så vises fasefordeling og gruppeskema her.</p>
     <template x-for="t in db.tavler" :key="t.id">
       <article class="panel overflow-hidden">
         <header class="flex flex-wrap items-center justify-between gap-2 border-b border-line bg-raised px-3 py-2">
@@ -857,6 +858,7 @@
   <!-- ============ LOKALER ============ -->
   <template x-if="view==='lokaler'"><section class="flex flex-col gap-3" @dragover.window="dragRul($event)">
     <div class="flex flex-wrap gap-2"><button class="btn" @click="openForm('lokale')">+ Lokale <kbd>L</kbd></button><button class="btn" @click="aabnSkabelon()">+ Lokale fra skabelon</button><button class="btn" id="lok-orden-aabn" x-show="db.lokaler.length > 1" @click="modal = { type:'lokorden' }">Ændre rækkefølge</button><button class="btn" @click="impAaben('lokale')">Importér fra regneark</button><button class="btn" id="lok-alle" @click="lokAlleUd = !lokAlleUd; lokUd = {}" x-text="lokAlleUd ? 'Fold alle sammen' : 'Udvid alle'"></button></div>
+    <p x-show="!db.lokaler.length" class="panel p-6 text-muted">Ingen lokaler endnu. Opret det første med + Lokale, eller brug + Lokale fra skabelon.</p>
     <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
       <template x-for="l in db.lokaler.filter(l => !lokF || l.id === lokF)" :key="l.id">
         <article class="panel flex flex-col" :class="dragL && overL===l.id && dragL!==l.id && 'ring-2 ring-accent'" @dragover="dragL && ($event.preventDefault(), overL=l.id)" @drop="slipLokale(l.id, $event)">
@@ -960,7 +962,7 @@
       </div>
     </div>
     <div class="panel p-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-5 items-end">
-      <label class="f" for="f-q">Søg <span class="sr-only">i kabeltabel</span><input id="f-q" x-ref="fq" class="inp" type="search" placeholder="Navn eller kabeltype  ( / )" x-model="filter.q"></label>
+      <label class="f" for="f-q">Søg <span class="sr-only">i kabeltabel</span><input id="f-q" x-ref="fq" class="inp" type="search" placeholder="Navn eller kabeltype" x-model="filter.q"></label>
       <label class="f" for="f-tavle">Tavle
         <select id="f-tavle" class="inp" x-model="filter.tavle"><option value="">Alle</option>
           <template x-for="t in db.tavler" :key="t.id"><option :value="t.id" x-text="t.navn"></option></template></select></label>
@@ -975,14 +977,14 @@
     <div class="panel overflow-x-auto">
       <table class="kt">
         <thead><tr>
-          <th><button @click="sortBy('gruppe')">Tavle · gruppe <span x-text="arrow('gruppe')"></span></button></th>
-          <th><button @click="sortBy('navn')">Brugsgenstand <span x-text="arrow('navn')"></span></button></th>
-          <th><button @click="sortBy('lokale')">Lokale <span x-text="arrow('lokale')"></span></button></th>
+          <th :aria-sort="sortAria('gruppe')"><button @click="sortBy('gruppe')">Tavle · gruppe <span x-text="arrow('gruppe')"></span></button></th>
+          <th :aria-sort="sortAria('navn')"><button @click="sortBy('navn')">Brugsgenstand <span x-text="arrow('navn')"></span></button></th>
+          <th :aria-sort="sortAria('lokale')"><button @click="sortBy('lokale')">Lokale <span x-text="arrow('lokale')"></span></button></th>
           <th>Kabel</th>
-          <th class="r"><button @click="sortBy('tv')">Tværsnit <span x-text="arrow('tv')"></span></button></th>
-          <th class="r"><button @click="sortBy('laengde')">Længde <span x-text="arrow('laengde')"></span></button></th>
+          <th class="r" :aria-sort="sortAria('tv')"><button @click="sortBy('tv')">Tværsnit <span x-text="arrow('tv')"></span></button></th>
+          <th class="r" :aria-sort="sortAria('laengde')"><button @click="sortBy('laengde')">Længde <span x-text="arrow('laengde')"></span></button></th>
           <th class="r">Effekt</th><th class="r">Strøm</th>
-          <th class="r"><button @click="sortBy('du')">ΔU <span x-text="arrow('du')"></span></button></th>
+          <th class="r" :aria-sort="sortAria('du')"><button @click="sortBy('du')">ΔU <span x-text="arrow('du')"></span></button></th>
           <th class="r">Maks. længde</th><th class="r">I<sub>z</sub></th><th></th>
         </tr></thead>
         <tbody>
@@ -1015,6 +1017,7 @@
     <div class="panel p-3">
       <h2 class="hd text-lg">Kabeloptælling for viste rækker</h2>
       <div class="mt-2 flex flex-wrap gap-2">
+        <span x-show="!optaelling().length" class="text-sm text-muted">Ingen kabler.</span>
         <template x-for="k in optaelling()" :key="k.k">
           <div class="border border-line bg-raised rounded px-3 py-1.5"><div class="num text-sm" x-text="k.k"></div><div class="num text-lg font-semibold" x-text="fmt(k.m) + ' m'"></div></div>
         </template>
@@ -1130,6 +1133,7 @@
     </div>
 
     <div class="flex flex-col gap-4 min-w-0">
+      <p x-show="!db.tavler.length" class="panel p-6 text-muted">Ingen tavler endnu. Dokumentationen viser gruppeskemaer, når der er oprettet en tavle under fanen Tavle.</p>
       <template x-for="t in db.tavler" :key="t.id">
         <div class="sheet overflow-x-auto">
           <div class="flex flex-wrap justify-between gap-2">
@@ -1226,7 +1230,7 @@
               <td x-text="m.txt"></td>
               <td class="text-right whitespace-nowrap">
                 <button class="btn btn-ghost" x-show="m.spor" @click="sporTil(m.spor)">Spor</button>
-                <button class="btn" @click="openForm(m.type, m.obj)">Ret</button>
+                <button class="btn" @click="openForm(m.type, m.obj)">Rediger</button>
               </td>
             </tr>
           </template>
@@ -1249,7 +1253,7 @@
   </div>
 
   <!-- ============ DIALOG ============ -->
-  <div id="dialog" x-show="modal" class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4" style="background:rgba(0,0,0,.55)" @click.self="modal=null">
+  <div id="dialog" x-show="modal" class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4" style="background:rgba(0,0,0,.55)" @click.self="lukModal()">
     <template x-if="modal && modal.type==='lokorden'">
       <div class="panel w-full max-w-md mt-8 shadow-xl" role="dialog" aria-modal="true" aria-labelledby="lokorden-t" id="lokorden">
         <header class="border-b border-line bg-raised px-4 py-3 flex justify-between items-center"><h2 id="lokorden-t" class="hd text-xl">Ændre rækkefølge</h2><button class="btn" @click="modal=null">Luk</button></header>
@@ -1406,7 +1410,7 @@
       <div class="panel w-full max-w-md mt-8 shadow-xl" role="dialog" aria-modal="true">
         <header class="border-b border-line bg-raised px-4 py-3 flex justify-between items-center"><h2 class="hd text-xl">Tastaturgenveje</h2><button class="btn" @click="modal=null">Luk</button></header>
         <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 p-4 text-sm items-center">
-          <dt><kbd>1</kbd> – <kbd>9</kbd>, <kbd>0</kbd></dt><dd>Skift visning. 0 åbner Fejlfinder</dd>
+          <dt><kbd>1</kbd> – <kbd>9</kbd>, <kbd>0</kbd></dt><dd>Skift visning (de første ti faner). 0 åbner Dokumentation</dd>
           <dt><kbd>P</kbd></dt><dd>Projekter: skift, opret, duplikér, slet</dd>
           <dt><kbd>N</kbd></dt><dd>Hurtig tilføj brugsgenstand</dd>
           <dt><kbd>B</kbd></dt><dd>Ny brugsgenstand med formular</dd>
@@ -1414,7 +1418,7 @@
           <dt><kbd>L</kbd></dt><dd>Nyt lokale</dd>
           <dt><kbd>←</kbd> <kbd>→</kbd></dt><dd>Forrige og næste gruppe i tavlen</dd>
           <dt><kbd>E</kbd></dt><dd>Rediger valgt gruppe</dd>
-          <dt><kbd>/</kbd></dt><dd>Søg i kabeltabel</dd>
+          <dt><kbd>/</kbd></dt><dd>Søg i hele projektet</dd>
           <dt><kbd>Ctrl</kbd> <kbd>Z</kbd></dt><dd>Fortryd seneste ændring</dd>
           <dt><kbd>Ctrl</kbd> <kbd>Y</kbd></dt><dd>Gentag det, der blev fortrudt</dd>
           <dt><kbd>Esc</kbd></dt><dd>Luk dialog</dd>
@@ -1948,17 +1952,17 @@
   </div>
 </div>
 
-<script src="js/data.js?v=10.46.1"></script>
-<script src="js/beregning.js?v=10.46.1"></script>
-<script src="js/diagram.js?v=10.46.1"></script>
-<script src="js/lagring.js?v=10.46.1"></script>
-<script src="js/historik.js?v=10.46.1"></script>
-<script src="js/billeder.js?v=10.46.1"></script>
-<script src="js/brand.js?v=10.46.1"></script>
-<script src="js/import.js?v=10.46.1"></script>
-<script src="js/aflevering.js?v=10.46.1"></script>
-<script src="js/plan.js?v=10.46.1"></script>
-<script src="js/app.js?v=10.46.1"></script>
+<script src="js/data.js?v=10.46.2"></script>
+<script src="js/beregning.js?v=10.46.2"></script>
+<script src="js/diagram.js?v=10.46.2"></script>
+<script src="js/lagring.js?v=10.46.2"></script>
+<script src="js/historik.js?v=10.46.2"></script>
+<script src="js/billeder.js?v=10.46.2"></script>
+<script src="js/brand.js?v=10.46.2"></script>
+<script src="js/import.js?v=10.46.2"></script>
+<script src="js/aflevering.js?v=10.46.2"></script>
+<script src="js/plan.js?v=10.46.2"></script>
+<script src="js/app.js?v=10.46.2"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.14.1/cdn.min.js"></script>
 </body>
 </html>

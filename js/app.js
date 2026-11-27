@@ -13,7 +13,7 @@ function app() {
     db: tom(), dbRev: 0, hist: [], fremtid: [], klon: null, sel: null, drag: null, over: null,
     projekter: [], pid: '', omd: { id:'', navn:'' }, pf: { navn:'', sagsnr:'', kunde:'', adresse:'' }, sldSel: null, z: { x:8, y:8, k:1 }, pan: null, pinch: null, panMoved: false, traek: null,
     filter: { q:'', tavle:'', type:'', lokale:'' }, sort: { key:'gruppe', dir:1 },
-    modal: null, form: {}, confirm: null, toasts: [], storageOk: true, tema: 'auto', qa: '', io: '',
+    modal: null, form: {}, formStart: null, confirm: null, toasts: [], storageOk: true, tema: 'auto', qa: '', io: '',
     typeLabel: { lys:'Lys', lysstik:'Lys og stik', kraft:'Kraft', stik:'Stik', data:'Data og teknik' },
     modalNavn: { afbryder:'afbryder', tavle:'tavle', rcd:'HPFI', lokale:'lokale', gruppe:'gruppe', enhed:'brugsgenstand', daase:'samlepunkt', rack:'rackskab', udstyr:'rackudstyr', link:'forbindelse', brand:'brandlukning' },
     udstArt: { patchpanel:'Patchpanel', switch:'Switch', router:'Router', nvr:'NVR (optager)', andet:'Andet udstyr' },
@@ -548,6 +548,7 @@ function app() {
         if (cctv) { f.poeW = 12.95; f.nvrId = (U.find(u => u.art === 'nvr') || {}).id || ''; }
       }
       this.confirm = null; this.modal = { type, id: item ? item.id : null };
+      this.formStart = null; this.$nextTick(() => { if (this.modal && this.modal.type === type) this.formStart = { type, id:this.modal.id, s:JSON.stringify(this.form) }; });
       this.$nextTick(() => { const el = document.getElementById('m-navn'); if (el) el.focus(); });
     },
     liste(type) { return { afbryder:'afbrydere', tavle:'tavler', rcd:'rcds', lokale:'lokaler', gruppe:'grupper', enhed:'enheder', daase:'daaser', rack:'racks', udstyr:'udstyr', link:'links', brand:'brandlukninger' }[type]; },
@@ -633,6 +634,12 @@ function app() {
       if (this.lokF === id) this.lokF = '';
       this.modal = null; this.say(txt || 'Slettet. Brugsgenstande fra slettede grupper ligger under Ikke tildelt.', true);
     },
+    /* Esc og klik på baggrunden: en ændret formular lukkes først ved andet forsøg inden for 3,5 s, så en halvt udfyldt formular ikke tabes ved et uheld. Annuller lukker straks */
+    lukModal() {
+      const m = this.modal, f = this.formStart;
+      if (m && f && f.type === m.type && f.id === m.id && JSON.stringify(this.form) !== f.s && this.confirm !== 'luk') { this.ask('luk', () => {}); this.say('Formularen er ændret. Tryk Esc eller klik udenfor igen for at lukke uden at gemme.'); return false; }
+      this.confirm = null; this.modal = null; return true;
+    },
     ask(key, fn) {
       if (this.confirm === key) { this.confirm = null; fn(); return; }
       this.confirm = key; setTimeout(() => { if (this.confirm === key) this.confirm = null; }, 3500);
@@ -650,7 +657,7 @@ function app() {
       if (ev.key === 'Escape' && this.planInfoK && !this.modal) { this.planInfoK = ''; return; }
       if (ev.key === 'Escape' && this.planMode && !this.modal) { this.planNulstil(); return; }
       if (ev.key === 'Escape' && this.sldStor && !this.modal) { this.sldStor = false; this.$nextTick(() => this.tilpas()); return; }
-      if (ev.key === 'Escape') { this.soegAaben = false; if (this.hurtig.aaben) { this.hurtig.aaben = false; return; } this.modal = null; if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); return; }
+      if (ev.key === 'Escape') { this.soegAaben = false; if (this.hurtig.aaben) { this.hurtig.aaben = false; return; } if (this.lukModal() && document.activeElement && document.activeElement.blur) document.activeElement.blur(); return; }
       const tag = (ev.target.tagName || '').toLowerCase();
       if (this.modal || tag === 'input' || tag === 'select' || tag === 'textarea') return;
       if ((ev.ctrlKey || ev.metaKey) && (ev.key.toLowerCase() === 'y' || (ev.shiftKey && ev.key.toLowerCase() === 'z'))) { ev.preventDefault(); this.redo(); return; }
@@ -660,7 +667,7 @@ function app() {
       if (/^[0-9]$/.test(k)) { const v = this.views[k === '0' ? 9 : Number(k) - 1]; if (v) this.go(v.id); }
       else if (k === 'n') { ev.preventDefault(); this.$refs.qa.focus(); }
       else if (k === 'b') { ev.preventDefault(); this.openForm('enhed'); }
-      else if (k === 'g' && this.db.tavler.length) { ev.preventDefault(); this.openForm('gruppe'); }
+      else if (k === 'g') { ev.preventDefault(); if (this.db.tavler.length) this.openForm('gruppe'); else this.say('Opret først en tavle (+ Tavle under fanen Tavle).'); }
       else if (k === 'p') { ev.preventDefault(); this.aabnProjekter(); }
       else if (k === 'l') { ev.preventDefault(); this.openForm('lokale'); }
       else if (k === 'e' && this.sg()) { ev.preventDefault(); this.openForm('gruppe', this.sg()); }
