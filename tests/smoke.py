@@ -1101,9 +1101,9 @@ async def main():
           a.save(); return {{ens, tom:Array.isArray(d.tegninger)&&!d.tegninger.length, meta:[d.projekt.navn, a.backups.length>=1, JSON.parse(localStorage.getItem('tavleoversigt.projekter')).schema]}}}})()""")
         tjek('opgradering fra skema 20: backup taget, data intakte, tom liste med plantegninger',
              r1['ens'] and r1['tom'] and r1['meta'] == ['Skema 20-projekt', True, SKEMA], r1)
-        # skema 23 og 24: tegninger fra skema 22 (uden etage) og 23 (uden symbolstørrelse) får standardværdier og er ellers intakte
+        # skema 23, 24 og 25: tegninger fra skema 22 (uden etage), 23 (uden symbolstørrelse) og 24 (uden mørkere tegning) får standardværdier og er ellers intakte
         gl22 = {'id': 'tg-gl', 'navn': 'Gammel', 'lokaleId': '', 'billede': 'gl1', 'forhold': 0.5, 'skala': 12, 'punkter': [{'k': 'e:a', 'x': 0.1, 'y': 0.2}]}
-        for skema, gl, nye in ((22, gl22, {'etage': '', 'symbol': 1}), (23, dict(gl22, etage='Stue'), {'symbol': 1})):
+        for skema, gl, nye in ((22, gl22, {'etage': '', 'symbol': 1, 'moerk': 0}), (23, dict(gl22, etage='Stue'), {'symbol': 1, 'moerk': 0}), (24, dict(gl22, etage='Stue', symbol=1.5), {'moerk': 0})):
             await pg.evaluate(f"""(()=>{{const i=JSON.parse(localStorage.getItem('tavleoversigt.projekter'));i.schema={skema};const p=JSON.parse(localStorage.getItem('tavleoversigt.p.'+i.aktiv));
               p.tegninger=[{json.dumps(gl)}];localStorage.setItem('tavleoversigt.p.'+i.aktiv,JSON.stringify(p));localStorage.setItem('tavleoversigt.projekter',JSON.stringify(i));localStorage.removeItem('tavleoversigt.backups');}})()""")
             await pg.goto(URL); await pg.wait_for_timeout(500)
@@ -1139,6 +1139,12 @@ async def main():
           const sk=()=>Number(svg().querySelector('g.pp').getAttribute('transform').split('scale(')[1].slice(0,-1)), txt=()=>document.getElementById('pl-sym').textContent;
           o.sym=[Math.abs(sk()-150/t.skala/18)<1e-6, txt()]; document.getElementById('pl-sym-op').click(); await T(60); o.sym.push(t.symbol, txt(), Math.abs(sk()-1.25*150/t.skala/18)<1e-6);
           document.getElementById('pl-sym-ned').click(); await T(60); o.sym.push(t.symbol, a.planR({{skala:0,symbol:1}}));
+          const sl=document.getElementById('pl-moerk'); sl.value='50'; sl.dispatchEvent(new Event('input')); await T(60); a.gemNu(); const mr=svg().querySelector('.pl-moerk');
+          o.moerk=[t.moerk, !!mr&&mr.getAttribute('fill-opacity')==='0.5', document.getElementById('pl-moerk-txt').textContent, !a.planSvg(t,true).includes('pl-moerk'), JSON.parse(localStorage.getItem('tavleoversigt.p.'+JSON.parse(localStorage.getItem('tavleoversigt.projekter')).aktiv)).tegninger.find(x=>x.id===t.id).moerk];
+          const info=()=>document.getElementById('pl-info'), vis=()=>getComputedStyle(info()).display!=='none', pr=(el,typ,pt)=>el.dispatchEvent(new PointerEvent(typ,{{bubbles:true,pointerType:pt}}));
+          pr(svg().querySelector('g.pp'),'pointerover','mouse'); await T(60); o.hover=[vis(), info().textContent.includes(e.navn), !a.modal]; pr(svg(),'pointerover','mouse'); await T(60); o.hover.push(vis());
+          pr(document.getElementById('pl-tegning'),'pointerdown','touch'); klik(0.2,0.1); await T(60); o.tryk=[vis(), info().textContent.includes(e.navn), !a.modal];
+          document.getElementById('pl-info-aaben').click(); await T(80); o.tryk.push(!!a.modal&&a.modal.type==='enhed'&&!vis()); a.modal=null; a.planSaet(t,'moerk',0);
           document.getElementById('pl-maal').click(); await T(60); klik(0.1,0.1); klik(0.3,0.1); klik(0.3,0.2); await T(60);
           o.laengde=document.getElementById('pl-laengde').textContent.trim(); a.planMaalTil='e:'+e.id; const L0=e.laengde, m=a.planM(t); o.m=Math.abs(m-6)<0.05; o.forv=Math.ceil(Math.round(m*100)/50)/2; a.planBrugLaengde(t); o.brugt=e.laengde===o.forv&&o.forv%0.5===0&&o.forv>=m;
           document.dispatchEvent(new KeyboardEvent('keydown',{{key:'Escape',bubbles:true}})); await T(40); o.esc=a.planMode==='';
@@ -1148,10 +1154,10 @@ async def main():
           o.norm=JSON.stringify(norm({{tegninger:[{{id:'t1',billede:'../x',forhold:0.5,punkter:[{{k:'e:a',x:2,y:0.9}},{{k:'e:a',x:0.1,y:0.1}},{{k:'q:z',x:0,y:0}}]}}]}}).tegninger[0]);
           e.laengde=L0; a.lokF=''; a.db.tegninger=[]; a.save(); a.planNulstil(); a.go('tavle'); await T(50);
           return o}}""")
-        tjek('plantegning: billede og PDF (én tegning pr. side) gemt i IndexedDB og billedIds, prik placeres og flyttes, målestok og måling sætter kabellængden, lokale, dokumentation',
+        tjek('plantegning: mørkere tegning og infokasse (mus og tryk), billede og PDF (én tegning pr. side) gemt i IndexedDB og billedIds, prik placeres og flyttes, målestok og måling sætter kabellængden, lokale, dokumentation',
              r['navne'] == ['Stueetage', 'El 1.sal · side 1', 'El 1.sal · side 2'] and r['forhold'] == 0.667 and r['etage'] and r['rettet'] and r['grupper'] and r['soeg'] and r['valgt'] and r['skjult'] and r['naer'] and r['sym'] == [True, '30 cm', 1.25, '38 cm', True, 1, 9] and r['bil'] and r['ids'] and r['vist'] and r['punkt'] and r['prik']
-             and r['flyttet'] and r['maalLaast'] and r['skala'] == 20 and r['laengde'] == '6 m' and r['m'] and r['brugt'] is True and r['esc'] and r['lokKnap'] and r['filter'] and r['doc']
-             and r['norm'] == '{"id":"t1","billede":"","forhold":0.5,"punkter":[{"k":"e:a","x":1,"y":0.5}],"navn":"","lokaleId":"","etage":"","skala":0,"symbol":1}', r)
+             and r['flyttet'] and r['maalLaast'] and r['skala'] == 20 and r['laengde'] == '6 m' and r['m'] and r['brugt'] is True and r['moerk'] == [0.5, True, '50 %', True, 0.5] and r['hover'] == [True, True, True, False] and r['tryk'] == [True, True, True, True] and r['esc'] and r['lokKnap'] and r['filter'] and r['doc']
+             and r['norm'] == '{"id":"t1","billede":"","forhold":0.5,"punkter":[{"k":"e:a","x":1,"y":0.5}],"navn":"","lokaleId":"","etage":"","skala":0,"symbol":1,"moerk":0}', r)
 
         # 4w. Skema 22: samlepunkt sløjfet fra en brugsgenstand (Tilgang før dåsen). Opgradering fra skema 21, arvet gruppe, ΔU, strøm og Ik-R gennem Tilgangen,
         #     enstreg, sporing, føringsvej, formular, kredse afvist (kanForsyne, flytTjek, norm), klon lokale, kopiér gren, sletning og fortryd. Ryddes op bagefter

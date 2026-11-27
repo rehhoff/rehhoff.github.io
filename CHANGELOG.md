@@ -2,6 +2,12 @@
 
 Nyeste øverst. Versionsnummeret står også i appen som `APP_VERSION`. Hver version siger, hvilken model der lavede den.
 
+## 10.44.0 · 2026-11-27 · Claude Sonnet 5.5
+
+- Plantegning: skyderen Mørkere tegning (0–80 %) i sidepanelet formørker tegningen, så symbolerne står tydeligere. Gælder kun på skærmen, ikke i dokumentationen.
+- Plantegning: en lille infokasse ved en prik viser art og navn, lokale, gruppe, kabel og status. Med mus vises den ved at holde markøren over prikken; med berøring eller pen ved et tryk (knappen Åbn åbner formularen). Esc lukker den. Prikkens `title` er fjernet på skærmen.
+- Datamodel: skema 25, nyt felt `moerk` på tegninger (0 på gamle tegninger). Plan: `docs/planer/2026-11-27-plan-moerk-info.md`.
+
 ## 10.43.0 · 2026-11-26 · Claude Sonnet 5.5
 
 - Plantegning: symbolerne er blevet mindre og følger målestokken (30 cm i diameter i virkeligheden). Uden målestok er de halvt så store som før. Størrelsen justeres med −/+ pr. tegning i sidepanelet. Det gælder også dokumentationen.
