@@ -20,7 +20,7 @@ const APP_PLAN = () => ({
     planEtager() { return [...new Set([...this.db.lokaler, ...this.db.tegninger].map(x => String(x.etage || '').trim()).filter(Boolean))]; },
     planTitel(t) { return (t.navn || 'Tegning') + (t.etage ? ' · ' + t.etage : ''); },
     planVaelgT(id) { this.planId = id; this.planNulstil(); },
-    planNulstil() { this.planMode = ''; this.planPts = []; this.planVaelg = ''; this.planSoeg = ''; },
+    planNulstil() { this.planMode = ''; this.planPts = []; this.planVaelg = ''; this.planSoeg = ''; this.planInfoK = ''; this.planInfoTryk = false; },
     planTilstand(m) { const ny = this.planMode === m ? '' : m; this.planNulstil(); this.planMode = ny; },
     /* den fulde tegning hentes fra IndexedDB første gang, den bruges; indtil da vises miniaturen */
     planSrc(t) {
@@ -88,6 +88,27 @@ const APP_PLAN = () => ({
       if (a === 'b') { const o = d.brandlukninger.find(b => b.id === id); return o && { navn:'Brandlukning ' + o.nr + (o.placering ? ' · ' + o.placering : ''), type:'brand', obj:o, art:'Brandlukning', ok:o.udfoert && o.maerkat }; }
       return null;
     },
+    /* linjer til infokassen ved en prik: art og navn, lokale, gruppe, kabel, status */
+    planInfo(k) {
+      const c = k && this.planKomp(k); if (!c) return [];
+      const o = c.obj, L = [c.art + ': ' + c.navn], r = this.db.lokaler.find(r => r.id === o.lokaleId);
+      if (r) L.push(r.navn + (r.etage ? ' · ' + r.etage : ''));
+      if ((c.type === 'enhed' || c.type === 'daase') && o.gruppeId) L.push(this.gruppeTxt(o.gruppeId));
+      if (c.type === 'enhed' || c.type === 'daase') { const kab = [o.kabel, Number(o.laengde) > 0 ? this.fmt(Number(o.laengde)) + ' m' : ''].filter(Boolean).join(' · '); if (kab) L.push(kab); }
+      L.push(c.ok ? (c.type === 'brand' ? 'Udført' : 'Trukket') : 'Mangler');
+      return L;
+    },
+    /* kassens plads i procent af tegningen; vendes til venstre og op nær kanten, så den ikke går ud over tegningen */
+    planInfoStil(t) {
+      const p = t && t.punkter.find(p => p.k === this.planInfoK); if (!p) return 'display:none';
+      return 'left:' + p.x * 100 + '%;top:' + p.y / t.forhold * 100 + '%;transform:translate(' + (p.x > 0.6 ? 'calc(-100% - 14px)' : '14px') + ',' + (p.y / t.forhold > 0.6 ? 'calc(-100% - 14px)' : '14px') + ')';
+    },
+    /* mus: kassen følger prikken under markøren. Berøring håndteres i planKlik */
+    planPtr(ev, ind) {
+      if (ev.pointerType !== 'mouse') return; const el = ev.target && ev.target.closest ? ev.target.closest('[data-k]') : null;
+      if (ind) { this.planInfoK = el ? el.getAttribute('data-k') : ''; this.planInfoTryk = false; } else if (el) this.planInfoK = '';
+    },
+    planInfoAaben() { const c = this.planKomp(this.planInfoK); this.planInfoK = ''; if (c) this.openForm(c.type, c.obj); },
     planPunkter(t) { return (t ? t.punkter : []).map(p => ({ p, c:this.planKomp(p.k) })).filter(x => x.c).map((x, i) => Object.assign(x, { nr:i + 1 })); },
     /* komponenter, der kan placeres. Er tegningen knyttet til et lokale, vises kun lokalets (tavler altid) */
     planValg(t) {
@@ -118,6 +139,8 @@ const APP_PLAN = () => ({
       const svg = ev.currentTarget && ev.currentTarget.querySelector('svg'); if (!t || !svg) return;
       const s = svg.getBoundingClientRect(), x = Math.min(1, Math.max(0, (ev.clientX - s.left) / s.width)), y = Math.min(t.forhold, Math.max(0, (ev.clientY - s.top) / s.width));
       const el = ev.target && ev.target.closest ? ev.target.closest('[data-k]') : null, hit = el ? el.getAttribute('data-k') : this.planNaer(t, x, y, s.width), m = this.planMode;
+      const tryk = this.planPtrType !== 'mouse'; this.planPtrType = 'mouse';  /* berøring og pen: første tryk viser kassen, "Åbn" åbner formularen */
+      if (!m && tryk) { const c = hit && this.planKomp(hit); this.planInfoK = c ? hit : ''; this.planInfoTryk = !!c; return; }
       if (!m) { const c = hit && this.planKomp(hit); if (c) this.openForm(c.type, c.obj); return; }
       if (m === 'placer') {
         if (!this.planVaelg) { if (hit) this.planVaelg = hit; else this.say('Vælg først en komponent i listen, eller klik på en prik for at flytte den.'); return; }
@@ -142,8 +165,9 @@ const APP_PLAN = () => ({
       if (!t) return ''; const H = 1000 * t.forhold, src = print ? (TEGN[t.billede] || BMINI[t.billede] || '') : this.planSrc(t), o = [];
       if (/^data:image\//.test(src)) o.push(`<image href="${esc(src)}" x="0" y="0" width="1000" height="${H}" preserveAspectRatio="none"/>`);
       else o.push(`<rect width="1000" height="${H}" fill="#eee"/><text x="500" y="${H / 2}" text-anchor="middle" font-size="26" fill="#555">Tegningen findes ikke på denne enhed endnu</text>`);
+      if (!print && t.moerk > 0) o.push(`<rect class="pl-moerk" width="1000" height="${H}" fill="#000" fill-opacity="${t.moerk}" pointer-events="none"/>`);  /* efter billedet, før prikkerne */
       const skaler = this.planR(t) / 18;  /* prikken tegnes med radius 18 og skaleres, så kant og nummer følger med */
-      for (const { p, c, nr } of this.planPunkter(t)) o.push(`<g class="pp ${c.ok ? 'ok' : 'ikke'}${!print && this.planVaelg === p.k ? ' valgt' : ''}" data-k="${esc(p.k)}" transform="translate(${p.x * 1000} ${p.y * 1000}) scale(${skaler})"><title>${esc(nr + '. ' + c.art + ': ' + c.navn + (c.ok ? '' : ' · mangler'))}</title>` +
+      for (const { p, c, nr } of this.planPunkter(t)) o.push(`<g class="pp ${c.ok ? 'ok' : 'ikke'}${!print && this.planVaelg === p.k ? ' valgt' : ''}" data-k="${esc(p.k)}" transform="translate(${p.x * 1000} ${p.y * 1000}) scale(${skaler})">${print ? `<title>${esc(nr + '. ' + c.art + ': ' + c.navn + (c.ok ? '' : ' · mangler'))}</title>` : ''}` +
         `<circle r="18"/><text y="7" text-anchor="middle">${nr}</text></g>`);
       if (!print && this.planPts.length) o.push(`<polyline class="pm" points="${this.planPts.map(q => q.x * 1000 + ',' + q.y * 1000).join(' ')}"/>` + this.planPts.map(q => `<circle class="pmp" cx="${q.x * 1000}" cy="${q.y * 1000}" r="5"/>`).join(''));
       const css = print ? '<style>.pp circle{stroke:#fff;stroke-width:3}.pp.ok circle{fill:#0f7d58}.pp.ikke circle{fill:#d4500a}.pp text{fill:#fff;font:bold 20px Arial,sans-serif}</style>' : '';

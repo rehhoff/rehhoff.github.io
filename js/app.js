@@ -4,7 +4,7 @@ function bland(...dele) { const r = {}; for (const d of dele) Object.definePrope
 function app() {
   return bland({
     view: 'tavle',
-    planId: '', planMode: '', planVaelg: '', planPts: [], planSkalaM: '', planMaalTil: '', planZoom: 100, planTick: 0, planEtage: '', planSoeg: '', planVisPlac: false,  /* Plantegning (js/plan.js) */
+    planId: '', planMode: '', planVaelg: '', planPts: [], planSkalaM: '', planMaalTil: '', planZoom: 100, planTick: 0, planEtage: '', planSoeg: '', planVisPlac: false, planInfoK: '', planInfoTryk: false, planPtrType: 'mouse',  /* Plantegning (js/plan.js) */
     sldStor: false, sldTema: '',  /* enstreg: fylder hele vinduet; egen lys/mørk baggrund */
     lokAlleUd: false, lokUd: {}, dragE: null, overE: null,  /* dragE/overE: brugsgenstand, der trækkes i Lokaler */  /* Lokaler: listerne er foldet sammen til en fast højde; lokUd[id] overstyrer lokAlleUd for ét lokale */
     lokP: '', lokH: '',  /* Lokaler: fastholdt og musens forsyningskilde ('lokaleId|gruppeId') */
@@ -643,6 +643,7 @@ function app() {
       if (ev.key === 'Escape' && this.imp.aaben) { this.imp.aaben = false; return; }
       if (ev.key === 'Escape' && this.sfPop) { this.sfPop = null; return; }
       if (ev.key === 'Escape' && this.lysbillede) { this.lysbillede = null; return; }
+      if (ev.key === 'Escape' && this.planInfoK && !this.modal) { this.planInfoK = ''; return; }
       if (ev.key === 'Escape' && this.planMode && !this.modal) { this.planNulstil(); return; }
       if (ev.key === 'Escape' && this.sldStor && !this.modal) { this.sldStor = false; this.$nextTick(() => this.tilpas()); return; }
       if (ev.key === 'Escape') { this.soegAaben = false; if (this.hurtig.aaben) { this.hurtig.aaben = false; return; } this.modal = null; if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); return; }

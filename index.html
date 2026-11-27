@@ -14,8 +14,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=10.43.0">
-<link rel="stylesheet" href="css/tailwind.css?v=10.43.0">
+<link rel="stylesheet" href="css/app.css?v=10.44.0">
+<link rel="stylesheet" href="css/tailwind.css?v=10.44.0">
 </head>
 <body class="min-h-full">
 <p id="fail" hidden style="margin:16px;padding:12px;border:1px solid var(--crit);color:var(--crit)">Appen kunne ikke starte, fordi Alpine.js ikke blev indlæst. Genindlæs siden.</p>
@@ -594,7 +594,13 @@
           </div></template>
         </div>
         <div class="plan-boks">
-          <div id="pl-tegning" :class="planMode && 'plan-mode'" :style="'width:' + planZoom + '%'" @click="planKlik($event, planAkt())" x-html="planSvg(planAkt(), false)"></div>
+          <div class="relative" :style="'width:' + planZoom + '%'">
+            <div id="pl-tegning" :class="planMode && 'plan-mode'" @click="planKlik($event, planAkt())" @pointerdown="planPtrType = $event.pointerType" @pointerover="planPtr($event, true)" @pointerout="planPtr($event, false)" x-html="planSvg(planAkt(), false)"></div>
+            <div id="pl-info" class="pl-info" :class="planInfoTryk && 'tryk'" role="tooltip" aria-live="polite" x-show="planInfo(planInfoK).length" :style="planInfoStil(planAkt())">
+              <template x-for="(l, i) in planInfo(planInfoK)" :key="i"><div :class="i === 0 && 'font-semibold'" x-text="l"></div></template>
+              <button class="btn mt-1" id="pl-info-aaben" x-show="planInfoTryk" @click="planInfoAaben()">Åbn</button>
+            </div>
+          </div>
         </div>
       </div>
       <aside class="panel p-3 flex flex-col gap-3 lg:sticky lg:top-3">
@@ -610,6 +616,8 @@
           <span class="num text-xs w-14 text-center" id="pl-sym" aria-live="polite" x-text="planSymbolTxt(planAkt())"></span>
           <button class="btn" id="pl-sym-op" @click="planSymbolTrin(planAkt(), 1.25)" aria-label="Større symboler">+</button>
         </div>
+        <label class="f" for="pl-moerk">Mørkere tegning <span class="num text-xs" id="pl-moerk-txt" x-text="Math.round(planAkt().moerk * 100) + ' %'"></span>
+          <input id="pl-moerk" type="range" min="0" max="80" step="10" :value="Math.round(planAkt().moerk * 100)" @input="planSaet(planAkt(), 'moerk', $event.target.value / 100)"></label>
         <div>
           <div class="text-[.7rem] uppercase tracking-wider text-muted mb-1">Placerede komponenter</div>
           <p x-show="!planPunkter(planAkt()).length" class="text-sm text-muted">Ingen endnu. Tryk på Placér komponenter.</p>
@@ -1938,17 +1946,17 @@
   </div>
 </div>
 
-<script src="js/data.js?v=10.43.0"></script>
-<script src="js/beregning.js?v=10.43.0"></script>
-<script src="js/diagram.js?v=10.43.0"></script>
-<script src="js/lagring.js?v=10.43.0"></script>
-<script src="js/historik.js?v=10.43.0"></script>
-<script src="js/billeder.js?v=10.43.0"></script>
-<script src="js/brand.js?v=10.43.0"></script>
-<script src="js/import.js?v=10.43.0"></script>
-<script src="js/aflevering.js?v=10.43.0"></script>
-<script src="js/plan.js?v=10.43.0"></script>
-<script src="js/app.js?v=10.43.0"></script>
+<script src="js/data.js?v=10.44.0"></script>
+<script src="js/beregning.js?v=10.44.0"></script>
+<script src="js/diagram.js?v=10.44.0"></script>
+<script src="js/lagring.js?v=10.44.0"></script>
+<script src="js/historik.js?v=10.44.0"></script>
+<script src="js/billeder.js?v=10.44.0"></script>
+<script src="js/brand.js?v=10.44.0"></script>
+<script src="js/import.js?v=10.44.0"></script>
+<script src="js/aflevering.js?v=10.44.0"></script>
+<script src="js/plan.js?v=10.44.0"></script>
+<script src="js/app.js?v=10.44.0"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.14.1/cdn.min.js"></script>
 </body>
 </html>

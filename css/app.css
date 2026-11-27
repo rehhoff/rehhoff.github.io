@@ -125,6 +125,7 @@ button.din-item{cursor:pointer}
 .plan-boks{max-height:75vh;overflow:auto;background:var(--raised);touch-action:pan-x pan-y pinch-zoom} .plan-svg{display:block;width:100%;height:auto;background:#fff}
 .plan-mode{cursor:crosshair} .plan-svg .pp{cursor:pointer} .plan-svg .pp circle{stroke:#fff;stroke-width:3} .plan-svg .pp.ok circle{fill:var(--cctv)} .plan-svg .pp.ikke circle{fill:var(--kraft)}
 .plan-svg .pp.valgt circle{stroke:var(--accent);stroke-width:6} .plan-svg .pp text{fill:#fff;font:600 20px "IBM Plex Sans",sans-serif;pointer-events:none}
+.pl-info{position:absolute;z-index:5;pointer-events:none;min-width:9rem;max-width:16rem;padding:.4rem .5rem;font-size:.75rem;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:4px;box-shadow:0 2px 8px rgba(0,0,0,.25)} .pl-info.tryk{pointer-events:auto}
 .plan-svg .pm{fill:none;stroke:var(--crit);stroke-width:3;stroke-dasharray:8 5} .plan-svg .pmp{fill:var(--crit)}
 /* enstreg i fuld skærm og med egen baggrund. Tokens sættes på .sldbox, så kun diagrammet skifter */
 .sld-stor{position:fixed;inset:0;z-index:45;display:flex;flex-direction:column;border-radius:0} .sld-stor .sldbox{flex:1;height:auto}

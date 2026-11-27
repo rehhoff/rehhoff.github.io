@@ -2,7 +2,7 @@
 const KEY = 'tavleoversigt.v2', OLD = 'tavleoversigt.v1', TKEY = 'tavleoversigt.tema', IDX = 'tavleoversigt.projekter';
 const DTKEY = 'tavleoversigt.diagramtema';  /* enstregsdiagrammets baggrund: '' (som appen), 'lys' eller 'moerk'. Kun denne browser */
 /* Versioner: APP_VERSION følger CHANGELOG.md. SCHEMA hæves kun, når datamodellen ændres, og udløser en automatisk backup før migrering. */
-const APP_VERSION = '10.43.0', SCHEMA = 24, BKEY = 'tavleoversigt.backups', BMAX = 3;
+const APP_VERSION = '10.44.0', SCHEMA = 25, BKEY = 'tavleoversigt.backups', BMAX = 3;
 const PK = id => 'tavleoversigt.p.' + id, MEM = {};
 /* Synkronisering: en hemmelig GitHub Gist med en markørfil og én fil pr. projekt. Se docs/planer/2026-11-15-gist-synk.md. */
 const SKEY = 'tavleoversigt.sync', GFIL = 'tavleoversigt.json', GP = id => 'tavleoversigt-' + id + '.json', GPRE = /^tavleoversigt-([A-Za-z0-9_-]+)\.json$/, GH = 'https://api.github.com';
@@ -212,6 +212,7 @@ function norm(d) {
   o.tegninger.forEach((t, i) => { t.id = typeof t.id === 'string' && t.id ? t.id : 'tg' + (i + 1); t.navn = String(t.navn == null ? '' : t.navn); t.lokaleId = String(t.lokaleId || ''); t.etage = String(t.etage || '');  /* etage: skema 23 */
     t.billede = typeof t.billede === 'string' && BID.test(t.billede) ? t.billede : ''; t.forhold = Number(t.forhold) > 0 ? Number(t.forhold) : 0.75; t.skala = Number(t.skala) > 0 ? Number(t.skala) : 0;
     t.symbol = Number(t.symbol) > 0 ? Math.min(10, Math.max(0.2, Number(t.symbol))) : 1;  /* skema 24: faktor på symbolstørrelsen */
+    t.moerk = Math.min(0.8, Math.max(0, Math.round((Number(t.moerk) || 0) * 100) / 100));  /* skema 25: mørkere tegning, 0 til 0,8 */
     const set = new Set(); t.punkter = (Array.isArray(t.punkter) ? t.punkter : []).filter(p => p && /^[tdexb]:[A-Za-z0-9_-]+$/.test(p.k) && !set.has(p.k) && set.add(p.k))
       .map(p => ({ k:p.k, x:Math.min(1, Math.max(0, Number(p.x) || 0)), y:Math.min(t.forhold, Math.max(0, Number(p.y) || 0)) })); });
   /* skema 16: billeder på tavler, lokaler og samledåser (forslag 15). Kun id'erne; billederne ligger i IndexedDB */
