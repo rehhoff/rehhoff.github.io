@@ -14,8 +14,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=10.46.0">
-<link rel="stylesheet" href="css/tailwind.css?v=10.46.0">
+<link rel="stylesheet" href="css/app.css?v=10.46.1">
+<link rel="stylesheet" href="css/tailwind.css?v=10.46.1">
 </head>
 <body class="min-h-full">
 <p id="fail" hidden style="margin:16px;padding:12px;border:1px solid var(--crit);color:var(--crit)">Appen kunne ikke starte, fordi Alpine.js ikke blev indlæst. Genindlæs siden.</p>
@@ -34,7 +34,7 @@
       </div>
       <input id="p-navn" class="hd text-3xl font-bold bg-transparent w-full min-w-0 border-b border-dashed border-line hover:border-muted focus:border-accent focus:border-solid" x-model="db.projekt.navn" @change="db.projekt.navn = db.projekt.navn.trim() || 'Uden navn'; save()" aria-label="Projektnavn" title="Klik for at omdøbe projektet" placeholder="Projektnavn">
       <p class="text-sm text-muted" x-show="stamTxt()" x-text="stamTxt()"></p>
-      <p class="text-xs mt-1" :class="storageOk ? 'text-muted' : 'warn'" x-text="(storageOk ? 'Gemmes automatisk i browseren' : 'Browseren tillader ikke lokal lagring. Hent en backup under Dokumentation.') + synkTxt() + ' · version ' + appVersion"></p>
+      <p class="text-xs mt-1" :class="storageOk ? 'text-muted' : 'warn'" x-text="(storageOk ? 'Gemmes automatisk i browseren' : 'Kan ikke gemme i browseren (lageret er fuldt, eller lagring er slået fra). Hent en backup under Dokumentation.') + synkTxt() + ' · version ' + appVersion"></p>
     </div>
     <div class="flex flex-wrap gap-2">
       <div class="relative" @click.outside="soegAaben=false">
@@ -1044,6 +1044,8 @@
         <template x-if="backups.length">
           <div class="flex flex-col gap-1 border-t border-line pt-2">
             <span class="text-xs font-semibold uppercase tracking-wider text-muted">Automatiske backups i browseren</span>
+            <div class="flex items-center justify-between gap-2 text-xs" x-show="!storageOk"><span class="warn">Lageret er fuldt. De automatiske backups fylder; hent en backupfil først.</span>
+              <button class="btn" :class="confirm==='bslet' && 'armed btn-danger'" @click="ask('bslet', () => backupsSlet())" x-text="confirm==='bslet' ? 'Bekræft' : 'Slet automatiske backups'"></button></div>
             <template x-for="(b, i) in backups" :key="b.tid">
               <div class="flex items-center justify-between gap-2 text-xs">
                 <span><span class="num" x-text="datoTxt(b.tid)"></span> · <span x-text="Object.keys(b.raw || {}).length + ' projekter'"></span><span class="block text-muted" x-text="b.grund"></span></span>
@@ -1946,17 +1948,17 @@
   </div>
 </div>
 
-<script src="js/data.js?v=10.46.0"></script>
-<script src="js/beregning.js?v=10.46.0"></script>
-<script src="js/diagram.js?v=10.46.0"></script>
-<script src="js/lagring.js?v=10.46.0"></script>
-<script src="js/historik.js?v=10.46.0"></script>
-<script src="js/billeder.js?v=10.46.0"></script>
-<script src="js/brand.js?v=10.46.0"></script>
-<script src="js/import.js?v=10.46.0"></script>
-<script src="js/aflevering.js?v=10.46.0"></script>
-<script src="js/plan.js?v=10.46.0"></script>
-<script src="js/app.js?v=10.46.0"></script>
+<script src="js/data.js?v=10.46.1"></script>
+<script src="js/beregning.js?v=10.46.1"></script>
+<script src="js/diagram.js?v=10.46.1"></script>
+<script src="js/lagring.js?v=10.46.1"></script>
+<script src="js/historik.js?v=10.46.1"></script>
+<script src="js/billeder.js?v=10.46.1"></script>
+<script src="js/brand.js?v=10.46.1"></script>
+<script src="js/import.js?v=10.46.1"></script>
+<script src="js/aflevering.js?v=10.46.1"></script>
+<script src="js/plan.js?v=10.46.1"></script>
+<script src="js/app.js?v=10.46.1"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.14.1/cdn.min.js"></script>
 </body>
 </html>

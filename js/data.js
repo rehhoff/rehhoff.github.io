@@ -2,7 +2,7 @@
 const KEY = 'tavleoversigt.v2', OLD = 'tavleoversigt.v1', TKEY = 'tavleoversigt.tema', IDX = 'tavleoversigt.projekter';
 const DTKEY = 'tavleoversigt.diagramtema';  /* enstregsdiagrammets baggrund: '' (som appen), 'lys' eller 'moerk'. Kun denne browser */
 /* Versioner: APP_VERSION følger CHANGELOG.md. SCHEMA hæves kun, når datamodellen ændres, og udløser en automatisk backup før migrering. */
-const APP_VERSION = '10.46.0', SCHEMA = 25, BKEY = 'tavleoversigt.backups', BMAX = 3;
+const APP_VERSION = '10.46.1', SCHEMA = 25, BKEY = 'tavleoversigt.backups', BMAX = 3;
 const PK = id => 'tavleoversigt.p.' + id, MEM = {};
 /* Synkronisering: en hemmelig GitHub Gist med en markørfil og én fil pr. projekt. Se docs/planer/2026-11-15-gist-synk.md. */
 const SKEY = 'tavleoversigt.sync', GFIL = 'tavleoversigt.json', GP = id => 'tavleoversigt-' + id + '.json', GPRE = /^tavleoversigt-([A-Za-z0-9_-]+)\.json$/, GH = 'https://api.github.com';
@@ -96,7 +96,7 @@ const kabMap = k => KABLER.includes(k) ? k : /noik|halogen|xlpe/i.test(k || '') 
 const daaMap = t => DAASER.includes(t) ? t : /underlag|fuga/i.test(t || '') ? 'Underlag' : /membran|ip44|brønd/i.test(t || '') ? 'Membrandåse' : 'PL-dåse';
 const TIMERS = {};
 /* ydelse: indeks og mellemlagring ligger uden for Alpines tilstand, så de ikke selv bliver reaktive */
-let IDXC = null, SAVEP = null;  /* SAVEP: projekt med en udskudt skrivning til localStorage (se save() og gemNu() i lagring.js) */
+let IDXC = null, SAVEP = null, UGEMT = false;  /* SAVEP: projekt med en udskudt skrivning til localStorage (se save() og gemNu() i lagring.js). UGEMT: der er skrevet i et felt bundet direkte til db, som først gemmes ved change (se gemAlt() i app.js) */
 const MEMO = {};
 /* Typiske mærkeeffekter som forslag: [mønster i navnet, W, betegnelse, ganges med antal] */
 const EFFEKT = [
@@ -170,7 +170,7 @@ function norm(d) {
   /* Skema 10: forhold for Iz. Projektets standard, som grupper og tilgangskabler kan overskrive (tom = standard). */
   { const p = o.projekt; p.metode = METODER[p.metode] ? p.metode : 'C'; p.temp = TEMPS.includes(Number(p.temp)) ? Number(p.temp) : 30; p.jtemp = TEMPS.includes(Number(p.jtemp)) ? Number(p.jtemp) : 20;
     p.samlet = Math.round(Number(p.samlet)) >= 1 && Math.round(Number(p.samlet)) <= 20 ? Math.round(Number(p.samlet)) : 1; p.lag = LAG[p.lag] ? p.lag : 'bundt'; }
-  for (const k of ['tavler', 'rcds', 'lokaler', 'grupper', 'enheder', 'daaser', 'afbrydere', 'racks', 'udstyr', 'links', 'brandlukninger', 'tegninger']) if (!Array.isArray(o[k])) o[k] = [];
+  for (const k of ['tavler', 'rcds', 'lokaler', 'grupper', 'enheder', 'daaser', 'afbrydere', 'racks', 'udstyr', 'links', 'brandlukninger', 'tegninger']) o[k] = Array.isArray(o[k]) ? o[k].filter(x => x && typeof x === 'object') : [];  /* null og andet end objekter i en liste ville stoppe norm() og dermed indlæsning og synkronisering */
   o.tavler.forEach(t => { t.forsikring = Number(t.forsikring) || 35; t.fra = t.fra || ''; t.tilgang = t.tilgang || ''; t.hovedafbryder = Number(t.hovedafbryder) || 0; t.tKabel = KABLER.includes(t.tKabel) ? t.tKabel : 'PVC'; t.tLedere = t.tLedere || '5G'; t.tTv = Number(t.tTv) || 6; t.tLaengde = Number(t.tLaengde) || 0; forholdNorm(t, 't');
     /* skema 12: netimpedans Ze (Ω) og prospektiv Ik,maks (kA) ved tavlen. 0 = ukendt */ t.ze = Number(t.ze) > 0 ? Number(t.ze) : 0; t.ikMaks = Number(t.ikMaks) > 0 ? Number(t.ikMaks) : 0;
     /* skema 13: status for tilgangskablet */ t.tTrukket = !!t.tTrukket; t.tNote = String(t.tNote || ''); });

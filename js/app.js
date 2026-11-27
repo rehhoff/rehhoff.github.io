@@ -96,13 +96,14 @@ function app() {
           delete MEM[this.pid]; if (SAVEP && SAVEP.id === this.pid) { clearTimeout(TIMERS.gem); SAVEP = null; } const d = this.laes(this.pid);
           if (d) { this.db = d; this.dbRev++; this.hist = []; this.fremtid = []; this.billedStart(); this.say('Projektet blev ændret i en anden fane og er indlæst igen.'); }
         } else if (ev.key === IDX && ev.newValue) {
-          try { const x = JSON.parse(ev.newValue); if (Array.isArray(x.liste)) { this.projekter = x.liste; if (x.sidstBackup) this.sidstBackup = x.sidstBackup; } } catch (e) {}
+          try { const x = JSON.parse(ev.newValue); if (Array.isArray(x.liste)) { const ids = new Set(x.liste.map(p => p.id)); /* behold egne projekter, som den anden fane ikke kendte, så længe de findes */ this.projekter = x.liste.concat(this.projekter.filter(p => !ids.has(p.id) && (p.id === this.pid || MEM[p.id] != null || localStorage.getItem(PK(p.id))))); if (x.sidstBackup) this.sidstBackup = x.sidstBackup; } } catch (e) {}
         } else if (ev.key === SKEY) this.synk = this.synkLaes();
       });
       this.synk = this.synkLaes();
       if (this.synk) this.synkNu();
-      document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') this.gemNu(); else if (this.synk) this.synkNu(); });
-      window.addEventListener('pagehide', () => this.gemNu()); window.addEventListener('beforeunload', () => this.gemNu());
+      document.addEventListener('input', ev => { const m = [...(ev.target.attributes || [])].find(x => x.name.startsWith('x-model')); if (m && /^(db\.|g\.maal\.)/.test(m.value)) UGEMT = true; }, true);
+      document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') this.gemAlt(); else if (this.synk) this.synkNu(); });
+      window.addEventListener('pagehide', () => this.gemAlt()); window.addEventListener('beforeunload', () => this.gemAlt());
     },
     datoTxt(iso) { const d = new Date(iso); return isNaN(d) ? '–' : d.toLocaleString('da-DK', { dateStyle:'short', timeStyle:'short' }); },
     stamTxt() { const p = this.db.projekt; return [p.sagsnr && 'Sag ' + p.sagsnr, p.kunde, p.adresse].filter(Boolean).join(' · '); },
@@ -637,6 +638,9 @@ function app() {
       this.confirm = key; setTimeout(() => { if (this.confirm === key) this.confirm = null; }, 3500);
     },
     reset(medEksempel) { this.mutate(() => { const p = this.db.projekt; this.db = medEksempel ? seed() : Object.assign(tom(), { projekt:p }); }); this.sel = (this.sorteredeGrupper()[0] || {}).id || null; this.say(medEksempel ? 'Eksempeldata indlæst.' : 'Alle data ryddet.', true); },
+
+    /* når siden skjules eller lukkes: felter bundet direkte til db (fx måleskemaet) gemmer først ved change, så gem også en ændring, der ikke er nået dertil */
+    gemAlt() { if (!UGEMT) return this.gemNu(); let gemt = MEM[this.pid]; if (gemt == null) try { gemt = localStorage.getItem(PK(this.pid)); } catch (e) {} const s = JSON.stringify(this.db); if (s !== gemt) this.save(s); this.gemNu(); },
 
     /* tastatur */
     key(ev) {

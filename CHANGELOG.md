@@ -2,6 +2,15 @@
 
 Nyeste øverst. Versionsnummeret står også i appen som `APP_VERSION`. Hver version siger, hvilken model der lavede den.
 
+## 10.46.1 · 2026-11-27 · Claude Opus 5.5
+
+- Fuldt lager i browseren: appen siger nu, at den ikke kan gemme (én fejlbesked), i stedet for at "browseren ikke tillader lokal lagring". Ændringerne ligger i hukommelsen, indtil siden lukkes. Under Dokumentation → Datasikring kan de automatiske backups slettes efter bekræftelse for at frigøre plads; projektet gemmes så igen. Intet slettes automatisk.
+- Synkronisering: kan et projekt ikke gemmes på enheden (fuldt lager), stopper synkroniseringen uden at sende noget. Før kunne næste start sende den gamle udgave og overskrive en nyere på GitHub.
+- Et projekt med `null` i en liste (fx fra en beskadiget fil) får ikke længere indlæsning eller synkronisering til at stoppe; de tomme poster fjernes. Et projekt i Gist'en, der ikke kan læses, springes over, så de andre stadig synkroniseres.
+- Felter, der gemmes ved change (projektdata og måleskemaet), gemmes også, når appen skjules eller lukkes midt i en indtastning.
+- To faner: et nyt projekt i den ene fane forsvinder ikke længere fra projektlisten, når den anden fane gemmer.
+- Ingen ændring af datamodellen (skema 25). Plan: `docs/planer/2026-11-27-lagring-robusthed.md`.
+
 ## 10.46.0 · 2026-11-27 · Claude Opus 5.5
 
 - I<sub>z</sub> regnes nu ud fra de faser, trækket faktisk fører strøm i: et træk med strøm i to eller tre faser har 3 belastede ledere, i én fase 2. Før fik en 1-faset brugsgenstand (fx L1) på en 3-faset gruppe I<sub>z</sub> for 2 belastede ledere, også når dens sløjfer førte strøm i L2 eller L3 (PVC metode C 2,5 mm²: 27 A i stedet for 24 A). Dåser regnes på samme måde; før altid med 3 på en 3-faset gruppe.
