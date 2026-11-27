@@ -142,7 +142,7 @@ const APP_LAGRING = () => ({
           const g = gs.find(g => g.files && g.files[GFIL]); if (g) gid = g.id;
           if (gs.length < 100) break;
         }
-        if (!gid) gid = (await this.gh('/gists', { method:'POST', body:JSON.stringify({ description:'El-oversigtsappen: synkroniserede projekter', public:false, files:{ [GFIL]:{ content:this.synkMarkoer() } } }) })).id;
+        if (!gid) gid = (await this.gh('/gists', { method:'POST', body:JSON.stringify({ description:'ElPlanner: synkroniserede projekter', public:false, files:{ [GFIL]:{ content:this.synkMarkoer() } } }) })).id;
         this.synk.gistId = gid; this.synkGem(); this.synkTokenInput = '';
       } catch (e) { this.synk = null; this.synkGem(); this.synkFejl = e.message; this.synkKoerer = false; return; }
       this.synkKoerer = false; await this.synkNu();

@@ -1,8 +1,8 @@
-# El-oversigtsappen
+# ElPlanner
 
 Webapp til elektrikere: tavler, grupper, lokaler, brugsgenstande, kabler, samlepunkter, afbrydere og svagstrøm i ét overblik, med beregninger, diagrammer og dokumentation.
 
-**Åbn appen:** https://rehhoff.github.io/
+**Åbn appen:** https://rehhoff.github.io/ElPlanner/
 
 ## Funktioner
 
