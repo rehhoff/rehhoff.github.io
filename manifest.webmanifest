@@ -1,6 +1,6 @@
 {
-  "name": "El-oversigt: tavle- og gruppeoversigt",
-  "short_name": "El-oversigt",
+  "name": "ElPlanner",
+  "short_name": "ElPlanner",
   "description": "Tavler, grupper, kabler, beregninger og diagrammer til elinstallationer.",
   "lang": "da",
   "start_url": "./",

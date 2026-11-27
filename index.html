@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Tavle- og gruppeoversigt</title>
+<title>ElPlanner</title>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#0d6b63">
 <link rel="icon" href="ikoner/ikon.svg" type="image/svg+xml">
@@ -14,8 +14,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=10.44.0">
-<link rel="stylesheet" href="css/tailwind.css?v=10.44.0">
+<link rel="stylesheet" href="css/app.css?v=10.45.0">
+<link rel="stylesheet" href="css/tailwind.css?v=10.45.0">
 </head>
 <body class="min-h-full">
 <p id="fail" hidden style="margin:16px;padding:12px;border:1px solid var(--crit);color:var(--crit)">Appen kunne ikke starte, fordi Alpine.js ikke blev indlæst. Genindlæs siden.</p>
@@ -27,7 +27,7 @@
   <header class="flex flex-col lg:flex-row lg:flex-wrap lg:items-end justify-between gap-3">
     <div class="min-w-0 lg:flex-1">
       <div class="flex flex-wrap items-center gap-2">
-        <span class="hd text-sm text-muted">Tavle- og gruppeoversigt</span>
+        <span class="hd text-sm text-muted">ElPlanner</span>
         <select id="p-skift" class="inp inp-s max-w-[16rem]" aria-label="Skift projekt" @change="skift($event.target.value)">
           <template x-for="p in projekter" :key="p.id"><option :value="p.id" :selected="p.id===pid" x-text="(p.sagsnr ? p.sagsnr + ' · ' : '') + p.navn"></option></template></select>
         <button class="btn" @click="aabnProjekter()">Projekter <kbd>P</kbd></button>
@@ -1071,7 +1071,7 @@
         <template x-if="!synk">
           <div class="flex flex-col gap-2">
             <p class="text-xs text-muted">Projekterne kan gemmes i en hemmelig Gist på din egen GitHub-konto og hentes på dine andre enheder. Opret et token, der kun har adgangen gist, og indsæt det her på hver enhed.</p>
-            <a class="btn justify-center" href="https://github.com/settings/tokens/new?scopes=gist&amp;description=El-oversigtsappen" target="_blank" rel="noopener">Opret token på GitHub ↗</a>
+            <a class="btn justify-center" href="https://github.com/settings/tokens/new?scopes=gist&amp;description=ElPlanner" target="_blank" rel="noopener">Opret token på GitHub ↗</a>
             <label class="f" for="synk-token">GitHub-token<input id="synk-token" class="inp num" type="password" autocomplete="off" spellcheck="false" x-model="synkTokenInput" placeholder="ghp_…" @keydown.enter="synkForbind()"></label>
             <button class="btn justify-center btn-primary" :disabled="!synkTokenInput.trim() || synkKoerer" @click="synkForbind()" x-text="synkKoerer ? 'Forbinder …' : 'Forbind'"></button>
             <p class="text-xs text-muted">Tokenet gemmes kun i denne browser. Giv det ingen andre rettigheder end gist.</p>
@@ -1946,17 +1946,17 @@
   </div>
 </div>
 
-<script src="js/data.js?v=10.44.0"></script>
-<script src="js/beregning.js?v=10.44.0"></script>
-<script src="js/diagram.js?v=10.44.0"></script>
-<script src="js/lagring.js?v=10.44.0"></script>
-<script src="js/historik.js?v=10.44.0"></script>
-<script src="js/billeder.js?v=10.44.0"></script>
-<script src="js/brand.js?v=10.44.0"></script>
-<script src="js/import.js?v=10.44.0"></script>
-<script src="js/aflevering.js?v=10.44.0"></script>
-<script src="js/plan.js?v=10.44.0"></script>
-<script src="js/app.js?v=10.44.0"></script>
+<script src="js/data.js?v=10.45.0"></script>
+<script src="js/beregning.js?v=10.45.0"></script>
+<script src="js/diagram.js?v=10.45.0"></script>
+<script src="js/lagring.js?v=10.45.0"></script>
+<script src="js/historik.js?v=10.45.0"></script>
+<script src="js/billeder.js?v=10.45.0"></script>
+<script src="js/brand.js?v=10.45.0"></script>
+<script src="js/import.js?v=10.45.0"></script>
+<script src="js/aflevering.js?v=10.45.0"></script>
+<script src="js/plan.js?v=10.45.0"></script>
+<script src="js/app.js?v=10.45.0"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.14.1/cdn.min.js"></script>
 </body>
 </html>

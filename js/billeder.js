@@ -147,7 +147,7 @@ const APP_BILLEDER = () => ({
         const plads = (g, n) => (antal[g.id] || 0) + n < BMAKS;
         const vaelg = async () => {
           let g = gists.find(x => x.id === s.bGist && plads(x, 0)) || gists.find(x => plads(x, 0));
-          if (!g) { g = await this.gh('/gists', { method:'POST', body:JSON.stringify({ description:'El-oversigtsappen: billeder', public:false, files:{ [BFIL]:{ content:this.billedMarkoer() } } }) }); antal[g.id] = 0; gists.push(g); }
+          if (!g) { g = await this.gh('/gists', { method:'POST', body:JSON.stringify({ description:'ElPlanner: billeder', public:false, files:{ [BFIL]:{ content:this.billedMarkoer() } } }) }); antal[g.id] = 0; gists.push(g); }
           s.bGist = g.id; gem(); return g;
         };
         let egen = null, portion = {}, str = 0, ids = [];

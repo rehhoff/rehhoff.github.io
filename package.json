@@ -1,8 +1,8 @@
 {
-  "name": "el-oversigtsapp",
-  "version": "10.44.0",
+  "name": "elplanner",
+  "version": "10.45.0",
   "private": true,
-  "description": "El-oversigtsappen: tavler, grupper, kabler og diagrammer. Hele appen er index.html.",
+  "description": "ElPlanner: tavler, grupper, kabler og diagrammer. Hele appen er index.html.",
   "scripts": {
     "test": "python3 tests/smoke.py"
   },
