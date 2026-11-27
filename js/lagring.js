@@ -2,22 +2,26 @@
 const FKEY = 'tavleoversigt.firma';
 const APP_LAGRING = () => ({
     /* projekter: hvert projekt gemmes under sin egen nøgle */
-    skriv(id, d, s) { s = s || JSON.stringify(d); MEM[id] = s; if (SAVEP && SAVEP.id === id) { clearTimeout(TIMERS.gem); SAVEP = null; } try { localStorage.setItem(PK(id), s); } catch (e) { this.storageOk = false; } },
+    skriv(id, d, s) { s = s || JSON.stringify(d); MEM[id] = s; if (SAVEP && SAVEP.id === id) { clearTimeout(TIMERS.gem); SAVEP = null; } try { localStorage.setItem(PK(id), s); this.storageOk = true; return true; } catch (e) { this.lagerFejl(); return false; } },
+    /* lageret er fuldt eller lagring slået fra: data ligger kun i hukommelsen (MEM). Én fejlbesked, indtil en skrivning lykkes igen */
+    lagerFejl() { if (this.storageOk) this.say('Kunne ikke gemme i browseren. Lageret er sandsynligvis fuldt, så ændringerne findes kun, indtil siden lukkes. Hent en backup under Dokumentation, og slet gamle projekter eller de automatiske backups.', false, true); this.storageOk = false; },
+    /* frigør plads: sletter de automatiske backups efter brugerens bekræftelse og gemmer det aktive projekt igen */
+    backupsSlet() { try { localStorage.removeItem(BKEY); } catch (e) {} this.backups = []; this.save(); this.gemNu(); if (this.storageOk) this.say('De automatiske backups er slettet, og projektet er gemt.'); },
     laes(id) {
       let s = MEM[id]; try { s = s || localStorage.getItem(PK(id)); } catch (e) {}
       try { const d = JSON.parse(s); return d && Array.isArray(d.tavler) ? norm(d) : null; } catch (e) { return null; }
     },
     meta(id, d) { const p = d.projekt; return { id, navn:p.navn || 'Uden navn', sagsnr:p.sagsnr, kunde:p.kunde, adresse:p.adresse, grupper:d.grupper.length, enheder:d.enheder.length, opdateret:new Date().toISOString() }; },
-    skrivIdx() { try { localStorage.setItem(IDX, JSON.stringify({ aktiv:this.pid, liste:this.projekter, schema:SCHEMA, app:APP_VERSION, sidstBackup:this.sidstBackup || '' })); } catch (e) { this.storageOk = false; } this.synkSenere(); },
+    skrivIdx() { try { localStorage.setItem(IDX, JSON.stringify({ aktiv:this.pid, liste:this.projekter, schema:SCHEMA, app:APP_VERSION, sidstBackup:this.sidstBackup || '' })); } catch (e) { this.lagerFejl(); } this.synkSenere(); },
     /* gem: strengen lægges straks i MEM, og skrivningen til localStorage (samt meta og projektlisten) udskydes højst 300 ms. gemNu() skriver det ventende med det samme og kaldes før projektskift, backup, eksport, synkronisering og når siden skjules eller lukkes */
     save(s) {
-      this.dbRev++; MEM[this.pid] = s || JSON.stringify(this.db); SAVEP = { id:this.pid };
+      this.dbRev++; MEM[this.pid] = s || JSON.stringify(this.db); SAVEP = { id:this.pid }; UGEMT = false;
       clearTimeout(TIMERS.gem); TIMERS.gem = setTimeout(() => this.gemNu(), 300);
     },
     gemNu() {
       clearTimeout(TIMERS.gem); const p = SAVEP; if (!p) return; SAVEP = null;
       if (MEM[p.id] == null) return;
-      this.storageOk = true; try { localStorage.setItem(PK(p.id), MEM[p.id]); } catch (e) { this.storageOk = false; }
+      try { localStorage.setItem(PK(p.id), MEM[p.id]); this.storageOk = true; } catch (e) { this.lagerFejl(); }
       if (p.id === this.pid) {
         const m = this.meta(p.id, this.db), i = this.projekter.findIndex(x => x.id === p.id);
         if (i > -1) this.projekter.splice(i, 1, m); else this.projekter.push(m);
@@ -192,14 +196,14 @@ const APP_LAGRING = () => ({
         if (f.truncated || txt == null) { let r = null; try { r = await fetch(f.raw_url, { cache:'no-store' }); } catch (e) {} if (!r || !r.ok) throw new Error('Kunne ikke hente ' + navn + ' fra GitHub.'); txt = await r.text(); }
         let d = null; try { d = JSON.parse(txt); } catch (e) {}
         if (!d || !Array.isArray(d.tavler)) { ugyldig.add(m[1]); continue; }
-        d = norm(d); fjern[m[1]] = { d, h:hashD(d), raa:hashTxt(txt) };
+        try { d = norm(d); } catch (e) { ugyldig.add(m[1]); continue; } fjern[m[1]] = { d, h:hashD(d), raa:hashTxt(txt) };
       }
       /* Herfra og til PATCH er alt synkront, så brugeren kan ikke ændre noget midt i fletningen. */
       this.iSynk = true;
       const base = this.synk.base || {}, vej = this.synk.vej || {}, mellem = Object.assign({}, base), sendes = {}, nyBase = {}, filer = {}, n = { hentet:0, sendt:0, slettet:0, konflikt:0 };
-      const fjernSlet = [];
+      const fjernSlet = []; let ikkeGemt = false;  /* et projekt kunne ikke gemmes på enheden (fuldt lager): så sendes og gemmes intet, og base er uændret, ellers ville næste start sende den gamle udgave */
       try {
-        if (this.storageOk) this.skriv(this.pid, norm(JSON.parse(JSON.stringify(this.db))));
+        if (!this.skriv(this.pid, norm(JSON.parse(JSON.stringify(this.db))))) ikkeGemt = true;
         const eks = new Set([seed(), seed2()].map(d => { d.projekt.dato = ''; return hashD(d); }));
         const erEks = d => { const c = JSON.parse(JSON.stringify(d)); c.projekt.dato = ''; return eks.has(hashD(c)); };
         const lokale = new Set(this.projekter.map(p => p.id));
@@ -213,10 +217,10 @@ const APP_LAGRING = () => ({
           if (L && R) {
             if (Lh === R.h) nyBase[id] = Lh;
             else if (R.h === B) send();
-            else if (Lh === B) { this.synkHent(id, R.d); nyBase[id] = R.h; n.hentet++; }
+            else if (Lh === B) { if (!this.synkHent(id, R.d)) ikkeGemt = true; nyBase[id] = R.h; n.hentet++; }
             else {
               const kid = uid(), k = R.d; k.projekt.navn = (k.projekt.navn || 'Projekt') + ' (fra anden enhed ' + this.datoTxt(new Date().toISOString()) + ')';
-              this.synkHent(kid, k); filer[GP(kid)] = { content:JSON.stringify(k) }; nyBase[kid] = sendes[kid] = hashD(k);
+              if (!this.synkHent(kid, k)) ikkeGemt = true; filer[GP(kid)] = { content:JSON.stringify(k) }; nyBase[kid] = sendes[kid] = hashD(k);
               mellem[id] = R.h;  /* den anden udgave er nu bevaret i kopien: mislykkes afsendelsen, laves der ikke en kopi til */
               send(); n.sendt--; n.konflikt++;
             }
@@ -226,10 +230,11 @@ const APP_LAGRING = () => ({
             else send();
           } else if (R) {
             if (B && R.h === B) { filer[GP(id)] = null; fjernSlet.push(id); n.slettet++; }
-            else { this.synkHent(id, R.d); nyBase[id] = R.h; n.hentet++; }
+            else { if (!this.synkHent(id, R.d)) ikkeGemt = true; nyBase[id] = R.h; n.hentet++; }
           }
         }
         if (n.hentet || n.slettet || n.konflikt) this.skrivIdx();
+        if (ikkeGemt) { const e = new Error('Lageret i browseren er fuldt (eller lagring er slået fra), så projekterne kunne ikke gemmes på enheden. Intet er sendt. Slet gamle projekter eller de automatiske backups under Dokumentation, og synkronisér igen.'); e.status = 'lager'; throw e; }
       } finally { this.iSynk = false; }
       if (Object.keys(filer).length) {
         /* gem før afsendelsen, hvad der allerede er hentet, og hvad der er på vej: afbrydes appen eller nettet, må næste synkronisering ikke se det som to ændringer */
@@ -242,9 +247,10 @@ const APP_LAGRING = () => ({
       if (n.konflikt) this.say(n.konflikt + ' projekt' + (n.konflikt > 1 ? 'er' : '') + ' var ændret på to enheder. Begge udgaver er beholdt, og den anden hedder "fra anden enhed".');
     },
     synkHent(id, d) {
-      this.skriv(id, d); const m = this.meta(id, d), i = this.projekter.findIndex(p => p.id === id);
+      const ok = this.skriv(id, d); const m = this.meta(id, d), i = this.projekter.findIndex(p => p.id === id);
       if (i > -1) this.projekter.splice(i, 1, m); else this.projekter.push(m);
       if (id === this.pid) { this.db = this.laes(id) || d; this.dbRev++; this.hist = []; this.fremtid = []; }
+      return ok;
     },
     synkSletLokalt(id) {
       delete MEM[id]; if (SAVEP && SAVEP.id === id) { clearTimeout(TIMERS.gem); SAVEP = null; } try { localStorage.removeItem(PK(id)); } catch (e) {}

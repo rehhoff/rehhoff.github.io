@@ -1036,7 +1036,7 @@ async def main():
         tjek('datasikring: projekt ændret i anden fane læses frisk, Gist med 300 filer afvises uden ændringer, ugyldigt projekt-id fra backup udskiftes',
              r['har'] and r['frisk'] == 'Fra anden fane' and r['gl'] and r['mange'] is True and r['n'] and r['id'], r)
         r0 = await pg.evaluate("""(()=>{const i=JSON.parse(localStorage.getItem('tavleoversigt.projekter')), id=i.aktiv, gl=localStorage.getItem('tavleoversigt.p.'+id);
-          localStorage.setItem('tavleoversigt.p.'+id,'{"tavler":[null]}'); return {id, gl}})()""")
+          localStorage.setItem('tavleoversigt.p.'+id,'{"tavler":[{"id":'); return {id, gl}})()""")
         await pg.goto(URL); await pg.wait_for_timeout(500)
         r = await pg.evaluate(f"""(()=>{{const a={A};return {{pid:a.pid, raa:localStorage.getItem('tavleoversigt.p.'+{json.dumps(r0['id'])}), liste:a.projekter.some(p=>p.id==={json.dumps(r0['id'])}), fejl:a.toasts.some(t=>t.fejl&&/kunne ikke læses/.test(t.txt))}}}})()""")
         await pg.evaluate(f"""(()=>{{const a={A};localStorage.setItem('tavleoversigt.p.'+{json.dumps(r0['id'])},{json.dumps(r0['gl'])});const ny=a.pid;a.sletProjekt(ny);a.gemNu();
@@ -1044,7 +1044,27 @@ async def main():
         await pg.goto(URL); await pg.wait_for_timeout(500)
         tilbage = await pg.evaluate(f"{A}.pid")
         tjek('start: et ulæseligt projekt overskrives ikke, et nyt tomt projekt åbnes, og der vises en fejl',
-             r['pid'] != r0['id'] and r['raa'] == '{"tavler":[null]}' and r['liste'] and r['fejl'] and tilbage == r0['id'], (r, tilbage))
+             r['pid'] != r0['id'] and r['raa'] == '{"tavler":[{"id":' and r['liste'] and r['fejl'] and tilbage == r0['id'], (r, tilbage))
+
+        # 4q2. Fuldt lager, null i lister og gem ved lukning (gennemgang 2026-11-27)
+        r = await pg.evaluate(f"""async()=>{{const a={A};const o={{}}, ls=Storage.prototype, set0=ls.setItem, bak=localStorage.getItem('tavleoversigt.backups'), kunde0=a.db.projekt.kunde;
+          try {{
+            a.toasts.slice().forEach(t=>a.lukToast(t.id));
+            ls.setItem=function(k,v){{ if(String(k).startsWith('tavleoversigt.p.')) throw new DOMException('fuld','QuotaExceededError'); return set0.call(this,k,v); }};
+            a.mutate(()=>{{a.db.projekt.kunde='Fuldt lager'}}); a.gemNu(); a.mutate(()=>{{a.db.projekt.kunde='Fuldt lager 2'}}); a.gemNu();
+            await new Promise(f=>setTimeout(f,60)); o.fuld=[a.storageOk, a.toasts.filter(t=>t.fejl&&/Kunne ikke gemme/.test(t.txt)).length, JSON.parse(MEM[a.pid]).projekt.kunde, a.laes(a.pid).projekt.kunde,
+              document.body.innerText.includes('Kan ikke gemme i browseren')];
+            ls.setItem=set0; a.backupsSlet();
+            o.ryd=[a.storageOk, a.backups.length, localStorage.getItem('tavleoversigt.backups'), JSON.parse(localStorage.getItem('tavleoversigt.p.'+a.pid)).projekt.kunde];
+            const n=norm({{tavler:[null],enheder:[null,5,{{id:'x1',navn:'X'}}],grupper:null}}); o.norm=[n.tavler.length,n.enheder.length,n.enheder[0].id,n.grupper.length];
+            a.db.projekt.kunde='Uden save'; window.dispatchEvent(new Event('pagehide')); o.uden=JSON.parse(localStorage.getItem('tavleoversigt.p.'+a.pid)).projekt.kunde;
+            const fk=document.createElement('input'); fk.setAttribute('x-model','db.projekt.kunde'); document.body.appendChild(fk); fk.dispatchEvent(new Event('input',{{bubbles:true}})); fk.remove(); window.dispatchEvent(new Event('pagehide')); o.luk=JSON.parse(localStorage.getItem('tavleoversigt.p.'+a.pid)).projekt.kunde;
+          }} finally {{ ls.setItem=set0; if(bak) localStorage.setItem('tavleoversigt.backups',bak); a.backups=a.hentBackups(); a.mutate(()=>{{a.db.projekt.kunde=kunde0}}); a.gemNu(); a.toasts.slice().forEach(t=>a.lukToast(t.id)); }}
+          return o}}""")
+        tjek('datasikring: fuldt lager giver én fejlbesked og rigtig tekst, data bliver i hukommelsen, Slet automatiske backups gemmer igen',
+             r['fuld'] == [False, 1, 'Fuldt lager 2', 'Fuldt lager 2', True] and r['ryd'] == [True, 0, None, 'Fuldt lager 2'], r)
+        tjek('datasikring: null og andet end objekter i lister fjernes af norm() i stedet for at stoppe indlæsningen', r['norm'] == [0, 1, 'x1', 0], r)
+        tjek('datasikring: et felt bundet direkte til db (input uden change) gemmes, når siden skjules (pagehide); andre ændringer uden om save() gemmes ikke', r['luk'] == 'Uden save' and r['uden'] != 'Uden save', r)
 
         # 4r. Lokaler: listerne har fast højde med rulning, udvid ét lokale eller alle, og + Samledåse åbner formularen med lokalet valgt
         r = await pg.evaluate(f"""async()=>{{const a={A};const T=n=>new Promise(f=>setTimeout(f,n));const o={{}};
@@ -1342,6 +1362,16 @@ async def main():
           a.mutate(()=>{{a.db.projekt.kunde='Svar tabt'}});await a.synkNu();const fejl=!!a.synkFejl;window.fetch=f;
           a.mutate(()=>{{a.db.projekt.kunde='Næste'}});await a.synkNu();return [fejl,a.synkFejl,{antal}]}}""")
         tjek('synk: tabt svar fra GitHub giver ingen kopi', r == [True, '', 1] and json.loads(GIST['tavleoversigt-' + pid + '.json'])['projekt']['kunde'] == 'Næste', r)
+        # fuldt lager, når en ændring hentes: intet sendes, base er uændret, og næste synkronisering henter igen
+        await pa.evaluate(f"""async()=>{{const a={A};await a.synkNu();a.skift('{pid}');a.mutate(()=>{{a.db.projekt.kunde='Fra A, fuldt lager på B'}});await a.synkNu();}}""")
+        foer_gist = GIST['tavleoversigt-' + pid + '.json']
+        r = await pb.evaluate(f"""async()=>{{const a={A},ls=Storage.prototype,set0=ls.setItem,b0=a.synk.base['{pid}'];
+          ls.setItem=function(k,v){{ if(k==='tavleoversigt.p.{pid}') throw new DOMException('fuld','QuotaExceededError'); return set0.call(this,k,v); }};
+          try {{ await a.synkNu(); }} finally {{ ls.setItem=set0; }}
+          const s=JSON.parse(localStorage.getItem('tavleoversigt.sync')), o=[/fuldt/.test(a.synkFejl), s.base['{pid}']===b0, JSON.parse(localStorage.getItem('tavleoversigt.p.{pid}')).projekt.kunde];
+          await a.synkNu(); o.push(a.synkFejl, JSON.parse(localStorage.getItem('tavleoversigt.p.{pid}')).projekt.kunde, {antal}); a.toasts.slice().forEach(t=>a.lukToast(t.id)); return o}}""")
+        tjek('synk: fuldt lager ved hentning sender intet og ændrer ikke base; næste synkronisering henter ændringen uden kopi',
+             r[0] and r[1] and r[2] == 'Næste' and r[3:] == ['', 'Fra A, fuldt lager på B', 1] and GIST['tavleoversigt-' + pid + '.json'] == foer_gist, r)
         await pa.evaluate(f"""async()=>{{await {A}.synkNu();}}""")
         foer = dict(GIST)
         GIST['tavleoversigt.json'] = json.dumps({'format': 'tavleoversigt-sync', 'schema': 999})
